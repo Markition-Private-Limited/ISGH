@@ -134,23 +134,7 @@ php artisan test --filter=MembershipWildApricotTest
 vendor/bin/pint
 ```
 
-## Notes
 
-- The admin dashboard is available at `/admin/` and uses `ADMIN_TOKEN` for authentication.
-- Stripe webhook endpoints should point to `/membership/webhook` in production.
-- The app stores ZIP-to-center mappings in `public/zip_to_center_mapping.xlsx` and loads them with `app/Services/ZipCenterService.php`.
-- `app/Services/WildApricotService.php` handles Wild Apricot contact, invoice, and payment sync logic.
-
-## Useful Files
-
-- `routes/web.php`
-- `app/Http/Controllers/MembershipController.php`
-- `app/Http/Controllers/OtpController.php`
-- `app/Http/Controllers/AdminController.php`
-- `app/Services/WildApricotService.php`
-- `app/Services/ZipCenterService.php`
-- `database/migrations/`
-- `resources/views/`
 
 ## Production Checklist
 
