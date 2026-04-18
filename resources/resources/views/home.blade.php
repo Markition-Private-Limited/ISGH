@@ -389,7 +389,7 @@
             <span class="star text-xl">★</span>
             <span class="star text-xl">★</span>
           </div>
-          <p class="text-gray-600" style="font-size: 16px;font-weight: bold;">Trusted by over <strong class="text-gray-800">50,000+</strong> active members across the region.</p>
+          <p class="text-gray-600" style="font-size: 16px;font-weight: bold;">Trusted by over <strong class="text-gray-800">Thousands</strong> active members across the region.</p>
         </div>
 
         <div class="fade-up-5 flex items-center gap-6 flex-wrap pt-1 mt-5">
@@ -428,7 +428,7 @@
         <div class="badge-anim-2 hidden lg:block absolute p-[3px] rounded-[18px] bg-[linear-gradient(262.95deg,#FFFFFF_0.59%,#999999_99.41%)] inline-block" style="top: 456px; left: 240px;width: 360px;height: 107px;">
           <div class="rounded-[16px] p-[14px_18px] flex items-center gap-3 bg-[linear-gradient(108.46deg,rgba(31,171,118,0.28)_0%,rgba(71,191,149,0.66)_100%)] backdrop-blur-[28px] shadow-[0_10px_27px_rgba(0,0,0,0.55)]" style="width: 355px;height: 100px;">
             <img src="{{ asset('images/hands1.png') }}" alt="Handshake" style="width:89px;height:53px;object-fit:contain;flex-shrink:0;"/>
-            <p style="color:#ffffff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;line-height:1.4;margin:0;">50,000+ Members (Serving<br/>the Muslim Community)</p>
+            <p style="color:#ffffff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;line-height:1.4;margin:0;">Thousands Members (Serving<br/>the Muslim Community)</p>
           </div>
         </div>
       </div>

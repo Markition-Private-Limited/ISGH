@@ -781,17 +781,36 @@
         </div>
         <div class="fields-stack">
          <div class="field"><label>Email Address</label><input type="email" id="${prefix}_spouse_${idx}_email" placeholder="spouse@example.com"><div id="${prefix}_spouse_${idx}_email_msg" class="email-msg"></div></div>
+         <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="${prefix}_spouse_${idx}_phone" placeholder="e.g. (832) 555-0100"  oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="${prefix}_spouse_${idx}_phone_msg" class="phone-msg"></div></div>
           <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="First Name"></div>
           <div class="field"><label>Middle Name</label><input type="text" id="${prefix}_spouse_${idx}_middle_name" placeholder="Middle Name (Optional)"></div>
           <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Last Name"></div>
-          <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
-          <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="${prefix}_spouse_${idx}_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="${prefix}_spouse_${idx}_phone_msg" class="phone-msg"></div></div>
+          <div class="field">
+                  <label>Date of Birth <span>*</span></label>
+                  <input type="text" placeholder="MM/DD/YYYY">
+                  <div class="dob-msg"></div>
+                </div>
           <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="${prefix}_spouse_${idx}_txdl" placeholder="e.g. TX7234578"></div>
           <div class="field"><label>Gender</label><select id="${prefix}_spouse_${idx}_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
           <div class="field"><label>Street Address</label><input type="text" id="${prefix}_spouse_${idx}_street" placeholder="Auto-filled from primary"></div>
-          <div class="field"><label>City</label><input type="text" id="${prefix}_spouse_${idx}_city" placeholder="Auto-filled from primary"></div>
+          <div style="display:flex;margin-top:-5px;">
+          <div style="flex:1; display:flex; flex-direction:column;">
+            <label style="font-size:12px; margin-left:12px;">State</label>
+            <select id="${prefix}_spouse_${idx}_state" disabled
+              style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6; cursor:not-allowed;">
+              <option value="TX" selected>Texas</option>
+            </select>
+          </div>
+
+          <div style="flex:1; display:flex; flex-direction:column;">
+            <label style="font-size:12px; margin-left:12px;">City</label>
+            <select id="${prefix}_spouse_${idx}_city"
+              style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; color:#6b7280;">
+              <option value="" disabled selected>City</option>
+            </select>
+          </div>
+        </div>
           <div class="field"><label>ZIP Code</label><input type="text" id="${prefix}_spouse_${idx}_zip" placeholder="Auto-filled from primary"></div>
-          <div class="field"><label>State</label><select id="${prefix}_spouse_${idx}_state"><option selected>Texas</option></select></div>
         </div>`;
       autoFillSpouseAddress(prefix, idx);
       attachFieldFeedback(block);
@@ -843,18 +862,57 @@
         </div>
         <div class="fields-stack">
         <div class="field"><label>Email Address <span>*</span></label><input type="email" id="flat_member_${idx}_email" placeholder="member@example.com"><div id="flat_member_${idx}_email_msg" class="email-msg"></div></div>
+        <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flat_member_${idx}_phone" placeholder="e.g. (832) 555-0100"  oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="flat_member_${idx}_phone_msg" class="phone-msg"></div></div>
           <div class="field"><label>First Name <span>*</span></label><input type="text" id="flat_member_${idx}_first_name" placeholder="Ahmad"></div>
           <div class="field"><label>Middle Name</label><input type="text" id="flat_member_${idx}_middle_name" placeholder="Middle Name (Optional)"></div>
           <div class="field"><label>Last Name <span>*</span></label><input type="text" id="flat_member_${idx}_last_name" placeholder="Ali"></div>
-          <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flat_member_${idx}_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="flat_member_${idx}_phone_msg" class="phone-msg"></div></div>
-          <div class="field"><label>Date of Birth <span>*</span></label><input type="text" id="flat_member_${idx}_dob" placeholder="MM/DD/YYYY"></div>
+          <div class="field">
+                  <label>Date of Birth <span>*</span></label>
+                  <input type="text" id="flat_member_${idx}_dob" placeholder="MM/DD/YYYY">
+                  <div class="dob-msg"></div>
+                </div>
           <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="flat_member_${idx}_txdl" placeholder="e.g. TX7234578"></div>
           
           <div class="field"><label>Relation <span>*</span></label><select id="flat_member_${idx}_relation"><option value="">Select Relation</option><option>Child</option><option>Sibling</option><option>Parent</option><option>Spouse</option></select></div>
           <div class="field"><label>Street Address</label><input type="text" id="flat_member_${idx}_street" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
-          <div class="field"><label>City</label><input type="text" id="flat_member_${idx}_city" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+          <div style="display:flex;margin-top:-5px;">
+
+            <!-- STATE -->
+            <div style="flex:1; display:flex; flex-direction:column;">
+              <label style="font-size:12px; margin-left:12px;">
+                State <span style="color:#ef4444;">*</span>
+              </label>
+
+              <select
+                id="flat_member_${idx}_state"
+                onchange="autoFillFlatMemberAddresses()"
+                disabled
+                style="padding:10px; font-size:14px; border-radius:8px;
+                      border:1px solid #d1d5db; background:#f3f4f6;
+                      cursor:not-allowed;"
+              >
+                <option value="TX" selected>Texas</option>
+              </select>
+            </div>
+
+            <!-- CITY -->
+            <div style="flex:1; display:flex; flex-direction:column;">
+              <label style="font-size:12px; margin-left:12px;">
+                City <span style="color:#ef4444;">*</span>
+              </label>
+
+              <select
+                id="flat_member_${idx}_city"
+                onchange="autoFillFlatMemberAddresses()"
+                style="padding:10px; margin-left:5px; font-size:14px;
+                      border-radius:8px; border:1px solid #d1d5db;"
+              >
+                <option value="" disabled selected>City</option>
+              </select>
+            </div>
+
+</div>
           <div class="field"><label>ZIP Code</label><input type="text" id="flat_member_${idx}_zip" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
-          <div class="field"><label>State</label><input type="text" id="flat_member_${idx}_state" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
         </div>`;
       container.appendChild(block);
       autoFillFlatMemberAddress(idx);
@@ -1068,33 +1126,92 @@
     // ─── DOB FORMAT & VALIDATION ─────────────────────────────────────────────
     function formatDob(input) {
       const cursor = input.selectionStart;
-      const prev   = input.value;
+      const prev = input.value;
+
       let v = prev.replace(/\D/g, '');
       if (v.length > 8) v = v.slice(0, 8);
+
       let out = v;
-      if (v.length > 4)      out = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
-      else if (v.length > 2) out = v.slice(0,2) + '/' + v.slice(2);
+
+      if (v.length > 4)
+        out = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+      else if (v.length > 2)
+        out = v.slice(0,2) + '/' + v.slice(2);
+
       input.value = out;
-      // keep cursor roughly in the right place
+
       const added = out.length - prev.length;
-      try { input.setSelectionRange(cursor + added, cursor + added); } catch(_) {}
+      try {
+        input.setSelectionRange(cursor + added, cursor + added);
+      } catch(_) {}
     }
 
     function validateDob(input) {
       const val = input.value.trim();
-      if (!val) { input.style.borderColor = ''; return true; }
+      const msgEl = input.nextElementSibling;
+
+      const error = (msg) => {
+        input.style.borderColor = '#dc2626';
+        if (msgEl) msgEl.textContent = msg;
+        return false;
+      };
+
+      const ok = () => {
+        input.style.borderColor = '#10b981';
+        if (msgEl) msgEl.textContent = '';
+        return true;
+      };
+
+      if (!val) {
+        input.style.borderColor = '';
+        if (msgEl) msgEl.textContent = '';
+        return true;
+      }
+
       const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (!m) { input.style.borderColor = '#dc2626'; return false; }
-      const month = parseInt(m[1], 10), day = parseInt(m[2], 10), year = parseInt(m[3], 10);
-      const date  = new Date(year, month - 1, day);
-      const valid = date.getFullYear() === year
-                 && date.getMonth()    === month - 1
-                 && date.getDate()     === day
-                 && date < new Date();
-      input.style.borderColor = valid ? '#10b981' : '#dc2626';
-      return valid;
+      if (!m) return error("Please enter a valid date.");
+
+      const month = +m[1];
+      const day   = +m[2];
+      const year  = +m[3];
+
+      // 🔴 HARD INVALID DATE CHECK
+      if (!isRealDate(month, day, year)) {
+        return error("Please enter a valid date.");
+      }
+
+      const date = new Date(year, month - 1, day);
+
+      if (date > new Date()) {
+        return error("Please enter a valid date.");
+      }
+
+      // age check
+      let age = new Date().getFullYear() - year;
+
+      const today = new Date();
+      const birthdayPassed =
+        today.getMonth() > (month - 1) ||
+        (today.getMonth() === (month - 1) && today.getDate() >= day);
+
+      if (!birthdayPassed) age--;
+
+      if (age < 18) {
+        return error("Member must be 18 or older to register.");
+      }
+
+      return ok();
     }
 
+    function isRealDate(month, day, year) {
+      const d = new Date(year, month - 1, day);
+
+      return (
+        d.getFullYear() === year &&
+        d.getMonth() === month - 1 &&
+        d.getDate() === day
+      );
+    }
     // ─── REQUIRED-FIELD HIGHLIGHT (replaces alert) ────────────────────────────
     function highlightMissingFields(sectionEl) {
       let firstBad = null;
@@ -1144,29 +1261,62 @@
       });
     }
 
-    function validateUsPhone(input) {
-      const raw    = input.value.trim();
-      const msgId  = input.id + '_msg';
-      const msgEl  = document.getElementById(msgId);
-      if (!raw) { if (msgEl) { msgEl.textContent = ''; msgEl.className = 'phone-msg'; } return true; }
+ function validateUsPhone(input) {
+  const msgEl = document.getElementById(input.id + '_msg');
 
-      // Strip everything except digits and leading +
-      let digits = raw.replace(/[^\d+]/g, '');
-      // Handle +1 country code
-      if (digits.startsWith('+1')) digits = digits.slice(2);
-      else if (digits.startsWith('1') && digits.length === 11) digits = digits.slice(1);
+  let raw = input.value || "";
 
-      const valid = /^\d{10}$/.test(digits);
-      if (msgEl) {
-        msgEl.textContent = valid
-          ? '✓ Valid US phone number'
-          : 'Please enter a valid US phone number. Examples: (832) 555-0100 · +1 713-555-0199 · 2815550100';
-        msgEl.className = 'phone-msg ' + (valid ? 'success' : 'error');
-      }
-      if (!valid) input.style.borderColor = '#dc2626';
-      else         input.style.borderColor = '#10b981';
-      return valid;
+  // ✅ Extract digits only (hard limit 10)
+  let digits = raw.replace(/\D/g, "").slice(0, 10);
+
+  // ✅ Format
+  let formatted = "";
+  if (digits.length > 0) {
+    formatted = "(" + digits.substring(0, 3);
+  }
+  if (digits.length >= 4) {
+    formatted += ") " + digits.substring(3, 6);
+  }
+  if (digits.length >= 7) {
+    formatted += "-" + digits.substring(6, 10);
+  }
+
+  // ✅ Update value ONLY if different (prevents cursor jump issues)
+  if (input.value !== formatted) {
+    input.value = formatted;
+  }
+
+  const isComplete = digits.length === 10;
+
+  // ✅ Empty state
+  if (digits.length === 0) {
+    if (msgEl) {
+      msgEl.textContent = "Phone number is required";
+      msgEl.className = "phone-msg error";
     }
+    input.style.borderColor = "#dc2626";
+    return false;
+  }
+
+  // ✅ While typing (less aggressive UX)
+  if (!isComplete) {
+    if (msgEl) {
+      msgEl.textContent = "Enter 10 digits";
+      msgEl.className = "phone-msg error";
+    }
+    input.style.borderColor = "#dc2626";
+    return false;
+  }
+
+  // ✅ Valid
+  if (msgEl) {
+    msgEl.textContent = "✓ Valid phone number";
+    msgEl.className = "phone-msg success";
+  }
+
+  input.style.borderColor = "#10b981";
+  return true;
+}
 
     // ─── WA EMAIL CHECK (spouse / flat members only — real-time with debounce) ──
     const _emailCheckTimers = {};
@@ -1267,11 +1417,21 @@
       }
     }, true);
 
+    document.addEventListener('change', function(e) {
+      if (e.target.placeholder === 'MM/DD/YYYY') {
+        validateDob(e.target);
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('termsModal')?.addEventListener('click', function(e) {
         if (e.target === this) closeTermsModal();
       });
       updateFlatTotal(); // initialise flat fee display on load
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initCityDropdowns();
     });
 
     // ─── ZIP VALIDATION ──────────────────────────────────────────────────────
@@ -1367,15 +1527,18 @@
 
       // DOB validation — primary + all spouse/member DOB fields in this section
       if (sectionEl) {
-        const allDobInputs = [...sectionEl.querySelectorAll('input[placeholder="MM/DD/YYYY"]')];
-        for (const dobInput of allDobInputs) {
-          if (!validateDob(dobInput)) {
-            dobInput.focus();
-            dobInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
-          }
+      const allDobInputs = [...sectionEl.querySelectorAll('input[placeholder="MM/DD/YYYY"]')];
+
+      for (const dobInput of allDobInputs) {
+        const ok = validateDob(dobInput);
+
+        if (!ok) {
+          dobInput.focus();
+          dobInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
         }
       }
+    }
 
       // ZIP / center validation
       if (!_zipState[prefix]?.valid) {
@@ -1447,6 +1610,87 @@
         alert('Error: ' + err.message);
       }
     }
+
+    const state = "TX"; // future-proof (can be dynamic later)
+function fetchCities(stateCode) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const data = {
+        TX: ["Houston", "Dallas", "Austin", "San Antonio"]
+      };
+      resolve(data[stateCode] || []);
+    }, 300);
+  });
+}
+
+function initCityDropdowns() {
+  const stateSelects = document.querySelectorAll("select[id$='_state']");
+
+  stateSelects.forEach(stateSelect => {
+    const prefix = stateSelect.id.replace("_state", "");
+    const citySelect = document.getElementById(prefix + "_city");
+
+    if (!citySelect) return;
+
+    // load cities on page load
+    loadCitiesFor(prefix);
+
+    // reload when state changes
+    stateSelect.addEventListener("change", () => {
+      loadCitiesFor(prefix);
+    });
+  });
+}
+
+function loadCitiesFor(prefix) {
+  const stateSelect = document.getElementById(prefix + "_state");
+  const citySelect = document.getElementById(prefix + "_city");
+
+  if (!stateSelect || !citySelect) return;
+
+  const state = stateSelect.value;
+
+  citySelect.innerHTML = `<option>Loading cities...</option>`;
+  citySelect.disabled = true;
+
+  fetchCities(state).then(cities => {
+    citySelect.innerHTML = `<option value="">Select City</option>`;
+
+    cities.forEach(city => {
+      const opt = document.createElement("option");
+      opt.value = city;
+      opt.textContent = city;
+      citySelect.appendChild(opt);
+    });
+
+    citySelect.disabled = false;
+  });
+}
+
+// Initialize
+loadCities();
+
+function restrictPhoneInput(input) {
+  // Remove all non-digits
+  let digits = input.value.replace(/\D/g, "");
+
+  // Limit to 10 digits ONLY
+  digits = digits.slice(0, 10);
+
+  // Format
+  let formatted = "";
+  if (digits.length > 0) {
+    formatted = "(" + digits.substring(0, 3);
+  }
+  if (digits.length >= 4) {
+    formatted += ") " + digits.substring(3, 6);
+  }
+  if (digits.length >= 7) {
+    formatted += "-" + digits.substring(6, 10);
+  }
+
+  input.value = formatted;
+}
   </script>
 </head>
 
@@ -1469,35 +1713,122 @@
 <!-- Terms & Conditions Modal -->
 <div id="termsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;max-width:560px;width:92%;padding:2rem 2rem 1.5rem;box-shadow:0 24px 64px rgba(0,0,0,0.25);position:relative;max-height:90vh;overflow-y:auto;">
+    
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
       <div style="width:36px;height:36px;border-radius:50%;background:#1a4a2e;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
+        <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 12l2 2 4-4"/>
+          <path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/>
+        </svg>
       </div>
-      <h2 style="font-size:1.2rem;font-weight:700;color:#1a4a2e;margin:0;">ISGH Membership — Terms &amp; Conditions</h2>
+      <h2 style="font-size:1.2rem;font-weight:700;color:#1a4a2e;margin:0;">
+        ISGH Membership — Terms &amp; Conditions
+      </h2>
       <button onclick="closeTermsModal()" style="margin-left:auto;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#6b7280;line-height:1;">&times;</button>
     </div>
+
     <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.5rem;">
+
+      <!-- ITEM -->
       <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
-        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;margin-top:-1px;">1.</span>
-        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">I agree to the <strong>Terms and Conditions</strong> set by the Islamic Society of Greater Houston and acknowledge that membership is subject to ISGH policies.</p>
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">1.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          I agree to abide by the <strong>Constitution, Bylaws, and policies</strong> of ISGH and acknowledge that membership is subject to approval and compliance.
+        </p>
       </div>
+
       <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
-        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;margin-top:-1px;">2.</span>
-        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">I <strong>assume responsibility</strong> for the accuracy of any information recorded in my membership profile and agree to keep it up to date.</p>
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">2.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          I confirm that all information provided is <strong>accurate and complete</strong>. Incorrect or incomplete information may affect eligibility.
+        </p>
       </div>
+
       <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
-        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;margin-top:-1px;">3.</span>
-        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">I agree that ISGH follows a strict <strong>Privacy Policy</strong> and my personal information will be kept confidential and not shared without consent.</p>
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">3.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          Membership dues are <strong>annual (Jan 1 – Dec 31)</strong>, non-refundable, and must be paid through approved methods.
+        </p>
       </div>
+
       <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
-        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;margin-top:-1px;">4.</span>
-        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">I agree to receive <strong>communications</strong> from ISGH including membership updates, event announcements, and newsletters as specified in the ISGH Privacy Policy.</p>
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">4.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          Voting eligibility requires:
+          <br>• Age 18+
+          <br>• Completed application
+          <br>• Dues paid by June 30
+          <br>• Participation/volunteer requirements
+        </p>
       </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">5.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          Family memberships apply to <strong>husband and spouse only</strong>, and all required spouse information must be provided.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">6.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          ISGH reserves the right to <strong>verify, approve, delay, or decline</strong> applications.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">7.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          I am responsible for maintaining my membership. Failure to renew by June 30 may result in <strong>loss of voting rights</strong>.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">8.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          I agree to maintain <strong>respectful conduct</strong> and uphold ISGH values. Violations may result in suspension.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">9.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          ISGH follows a strict <strong>Privacy Policy</strong> and protects personal information.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">10.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          I consent to receive <strong>communications</strong> including updates, elections, and events.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">11.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          ISGH or affiliated centers may contact me regarding <strong>membership-related matters</strong>.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f8fdf9;border-radius:8px;border-left:3px solid #1a4a2e;">
+        <span style="color:#1a4a2e;font-weight:700;font-size:1.1rem;">12.</span>
+        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+          I confirm that I have read, understood, and agree to all <strong>Terms &amp; Conditions</strong>.
+        </p>
+      </div>
+
     </div>
+
     <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button onclick="closeTermsModal()" style="padding:10px 20px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#6b7280;font-size:14px;cursor:pointer;">Cancel</button>
-      <button onclick="acceptTermsAndClose()" style="padding:10px 24px;border:none;border-radius:8px;background:#1a4a2e;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">I Accept All Terms</button>
+      <button onclick="closeTermsModal()" style="padding:10px 20px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#6b7280;font-size:14px;cursor:pointer;">
+        Cancel
+      </button>
+      <button onclick="acceptTermsAndClose()" style="padding:10px 24px;border:none;border-radius:8px;background:#1a4a2e;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+        I Accept All Terms
+      </button>
     </div>
+
   </div>
 </div>
 
@@ -1540,7 +1871,7 @@
       </p>
       <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full py-2 px-6 mt-2 shadow-lg">
         <div class="flex items-center gap-1 text-yellow-400 text-lg">★ ★ ★ ★ ★</div>
-        <span class="text-white text-sm font-medium" style="font-family:'SF Pro regular';">Join 50,000+ active members across Greater Houston.</span>
+        <span class="text-white text-sm font-medium" style="font-family:'SF Pro regular';">Join thousands active members across Greater Houston.</span>
       </div>
     </div>
   </section>
@@ -1594,11 +1925,14 @@
             <option value="">— Select a Membership Type —</option>
             <!-- <option value="family">Family Membership (Primary and Spouse only) — $40/year</option> -->
             <!-- <option value="individual">Individual Membership — $25/year</option> -->
-            <option value="flat">Flat Membership — $20/year</option>
+             <!-- <option value="flat">Flat Membership — $20/year</option>
             <option value="checkomatic_family">Checkomatic Membership (Primary and Spouse only) — $10/month</option>
             <option value="checkomatic_individual">Checkomatic Membership Individual — $10/month</option>
             <option value="lifetime_family">Lifetime Membership (Family - Primary and Spouse) — $1500/lifetime</option>
-            <option value="lifetime_individual">Lifetime Membership (Individual) — $1000/lifetime</option>
+            <option value="lifetime_individual">Lifetime Membership (Individual) — $1000/lifetime</option> -->
+            <option value="flat">Annual Membership</option>
+            <option value="checkomatic_family">Checkomatic Membership</option>
+            <option value="lifetime_family">Lifetime Membership</option> 
           </select>
         </div>
 
@@ -1633,10 +1967,51 @@
             <div class="step-number">2</div>
             <h3 class="form-section-title">Primary Information</h3>
           </div>
-          <div style="text-align:center;">
-            <div class="scan-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              Scan ID Card
+           <div style="text-align:center;">
+            <div 
+              style="
+                display:inline-flex;
+                align-items:center;
+                gap:16px;
+                padding:1px 9px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:500;
+                color:#eaf7f3;
+                margin-bottom:28px;
+                cursor:pointer;
+
+                /* ✅ exact darker → lighter green feel */
+                background:linear-gradient(90deg, #0f5c45 0%, #2f8f6b 50%, #55c59a 100%);
+
+                box-shadow:0 6px 16px rgba(0,0,0,0.15);
+              "
+            >
+
+              <!-- ✅ Scan corners (rounded like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
+                style="width:34px;height:34px;">
+                <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/>
+              </svg>
+
+              <span style="letter-spacing:0.3px;">
+                Scan ID Card
+              </span>
+
+              <!-- ✅ Stars (outlined + small spark like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
+                style="width:30px;height:30px;">
+                <!-- big star -->
+                <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
+                  stroke-linejoin="round"/>
+                <!-- small sparkle -->
+                <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
+                  stroke-linejoin="round"/>
+              </svg>
+
             </div>
           </div>
 
@@ -1663,13 +2038,13 @@
             <div class="fields-stack">
             <div class="field">
               <label>Phone Number <span>*</span></label>
-              <input type="text" id="fam_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)">
+              <input type="text" id="fam_phone" placeholder="e.g. (832) 555-0100"  oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)">
               <div id="fam_phone_msg" class="phone-msg"></div>
             </div>
           </div>
             <div class="field">
               <label>Date of Birth <span>*</span></label>
-              <input type="text" placeholder="MM/DD/YYYY">
+              <input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div>
               <div class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
             </div>
             <div class="field">
@@ -1681,12 +2056,23 @@
               <label>Street Address <span>*</span></label>
               <input type="text" id="fam_street" placeholder="123 Main Street" oninput="autoFillSpouseAddresses('fam')">
             </div>
-            <div class="field">
-              <label>City <span>*</span></label>
-              <input type="text" id="fam_city" placeholder="Houston" oninput="autoFillSpouseAddresses('fam')">
-              <div class="field-icon"><svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M1 5L5 9L13 1" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div style="display:flex;margin-top:-5px;">
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">State <span style="color:#ef4444;">*</span></label>
+                <select id="fam_state" onchange="autoFillSpouseAddresses('fam')" disabled
+                  style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6; cursor:not-allowed;">
+                  <option value="TX" selected>Texas</option>
+                </select>
+              </div>
+
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">City <span style="color:#ef4444;">*</span></label>
+                <select id="fam_city" onchange="autoFillSpouseAddresses('fam')"
+                  style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                  <option value="" disabled selected>City</option>
+                </select>
+              </div>
             </div>
-            
             <div class="field">
               <label>ZIP Code <span>*</span></label>
               <input type="text" id="fam_zip" placeholder="77001" onblur="validateZip(this,'fam')" oninput="autoFillSpouseAddresses('fam')">
@@ -1695,10 +2081,6 @@
             <div class="field zone-field" id="fam_center_field" style="display:none;">
               <label>Center / Zone</label>
               <div id="fam_center_display"></div>
-            </div>
-            <div class="field">
-              <label>State <span>*</span></label>
-              <select id="fam_state" onchange="autoFillSpouseAddresses('fam')"><option selected>Texas</option></select>
             </div>
           </div>
 
@@ -1722,15 +2104,34 @@
                 <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Fatima"></div>
                 <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
                 <div class="field"><label>Middle Name</label><input type="text" id="fam_spouse_0_middle_name" placeholder="Middle Name (Optional)"></div>
-                <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
-                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="fam_spouse_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="fam_spouse_0_phone_msg" class="phone-msg"></div></div>
+                <div class="field">
+                  <label>Date of Birth <span>*</span></label>
+                  <input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div>
+                  <div class="dob-msg"></div>
+                </div>
+                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="fam_spouse_0_phone" placeholder="e.g. (832) 555-0100"  oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="fam_spouse_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="fam_spouse_0_txdl" placeholder="e.g. TX7234578"></div>
                 <div class="field"><label>Email Address</label><input type="email" id="fam_spouse_0_email" placeholder="spouse@example.com"><div id="fam_spouse_0_email_msg" class="email-msg"></div></div>
                 <div class="field"><label>Gender</label><select id="fam_spouse_0_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                 <div class="field"><label>Street Address</label><input type="text" id="fam_spouse_0_street" placeholder="Auto-filled from primary"></div>
-                <div class="field"><label>City</label><input type="text" id="fam_spouse_0_city" placeholder="Auto-filled from primary"></div>
+                <div style="display:flex;margin-top:-5px;">
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">State</label>
+                    <select id="fam_spouse_0_state" disabled
+                      style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6;">
+                      <option value="TX" selected>Texas</option>
+                    </select>
+                  </div>
+
+                  <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">City</label>
+                    <select id="fam_spouse_0_city"
+                      style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                      <option value="" disabled selected>City</option>
+                    </select>
+                  </div>
+                </div>
                 <div class="field"><label>ZIP Code</label><input type="text" id="fam_spouse_0_zip" placeholder="Auto-filled from primary"></div>
-                <div class="field"><label>State</label><select id="fam_spouse_0_state"><option selected>Texas</option></select></div>
               </div>
             </div>
           </div>
@@ -1814,10 +2215,51 @@
             <div class="step-number">2</div>
             <h3 class="form-section-title">Primary Information</h3>
           </div>
-          <div style="text-align:center;">
-            <div class="scan-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              Scan ID Card
+           <div style="text-align:center;">
+            <div 
+              style="
+                display:inline-flex;
+                align-items:center;
+                gap:16px;
+                padding:1px 9px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:500;
+                color:#eaf7f3;
+                margin-bottom:28px;
+                cursor:pointer;
+
+                /* ✅ exact darker → lighter green feel */
+                background:linear-gradient(90deg, #0f5c45 0%, #2f8f6b 50%, #55c59a 100%);
+
+                box-shadow:0 6px 16px rgba(0,0,0,0.15);
+              "
+            >
+
+              <!-- ✅ Scan corners (rounded like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
+                style="width:34px;height:34px;">
+                <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/>
+              </svg>
+
+              <span style="letter-spacing:0.3px;">
+                Scan ID Card
+              </span>
+
+              <!-- ✅ Stars (outlined + small spark like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
+                style="width:30px;height:30px;">
+                <!-- big star -->
+                <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
+                  stroke-linejoin="round"/>
+                <!-- small sparkle -->
+                <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
+                  stroke-linejoin="round"/>
+              </svg>
+
             </div>
           </div>
 
@@ -1844,13 +2286,13 @@
             <div class="fields-stack">
             <div class="field">
               <label>Phone Number <span>*</span></label>
-              <input type="text" id="ind_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)">
+              <input type="text" id="ind_phone" placeholder="e.g. (832) 555-0100"  oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)">
               <div id="ind_phone_msg" class="phone-msg"></div>
             </div>
           </div>
             <div class="field">
               <label>Date of Birth <span>*</span></label>
-              <input type="text" placeholder="MM/DD/YYYY">
+              <input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div>
               <div class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
             </div>
             <div class="field">
@@ -1862,12 +2304,23 @@
               <label>Street Address <span>*</span></label>
               <input type="text" placeholder="123 Main Street">
             </div>
-            <div class="field">
-              <label>City <span>*</span></label>
-              <input type="text" placeholder="Houston">
-              <div class="field-icon"><svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M1 5L5 9L13 1" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div style="display:flex;margin-top:-5px;">
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">State <span style="color:#ef4444;">*</span></label>
+                <select id="ind_state" disabled
+                  style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6;">
+                  <option value="TX" selected>Texas</option>
+                </select>
+              </div>
+
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">City <span style="color:#ef4444;">*</span></label>
+                <select id="ind_city"
+                  style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                  <option value="" disabled selected>City</option>
+                </select>
+              </div>
             </div>
-            
             <div class="field">
               <label>ZIP Code <span>*</span></label>
               <input type="text" id="ind_zip" placeholder="77001" onblur="validateZip(this,'ind')">
@@ -1876,10 +2329,6 @@
             <div class="field zone-field" id="ind_center_field" style="display:none;">
               <label>Center / Zone</label>
               <div id="ind_center_display"></div>
-            </div>
-            <div class="field">
-              <label>State <span>*</span></label>
-              <select id="ind_state"><option selected>Texas</option></select>
             </div>
           </div>
 
@@ -1934,7 +2383,7 @@
 
           <div class="membership-banner banner-flat">
             <div class="banner-left">
-              <p class="banner-title">Flat Membership</p>
+              <p class="banner-title">Annual Membership</p>
               <p class="banner-subtitle">All household members for one flat rate</p>
               <div class="banner-badges">
                 <span class="banner-badge">✔ Voting Privileges</span>
@@ -1957,29 +2406,87 @@
             <div class="step-number">2</div>
             <h3 class="form-section-title">Primary Information</h3>
           </div>
-          <div style="text-align:center;">
-            <div class="scan-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              Scan ID Card
+        <div style="text-align:center;">
+            <div 
+              style="
+                display:inline-flex;
+                align-items:center;
+                gap:16px;
+                padding:1px 9px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:500;
+                color:#eaf7f3;
+                margin-bottom:28px;
+                cursor:pointer;
+
+                /* ✅ exact darker → lighter green feel */
+                background:linear-gradient(90deg, #0f5c45 0%, #2f8f6b 50%, #55c59a 100%);
+
+                box-shadow:0 6px 16px rgba(0,0,0,0.15);
+              "
+            >
+
+              <!-- ✅ Scan corners (rounded like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
+                style="width:34px;height:34px;">
+                <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/>
+              </svg>
+
+              <span style="letter-spacing:0.3px;">
+                Scan ID Card
+              </span>
+
+              <!-- ✅ Stars (outlined + small spark like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
+                style="width:30px;height:30px;">
+                <!-- big star -->
+                <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
+                  stroke-linejoin="round"/>
+                <!-- small sparkle -->
+                <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
+                  stroke-linejoin="round"/>
+              </svg>
+
             </div>
           </div>
 
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flt_phone" placeholder="e.g. (832) 555-0100"  oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="flt_phone_msg" class="phone-msg"></div></div>
+            </div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
              <div class="field"><label>Middle Name</label><input type="text" id="flt_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
             <div class="fields-stack">
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flt_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="flt_phone_msg" class="phone-msg"></div></div>
-            </div>
-            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
+            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" id="flt_street" placeholder="123 Main Street" oninput="autoFillFlatMemberAddresses()"></div>
-            <div class="field"><label>City <span>*</span></label><input type="text" id="flt_city" placeholder="Houston" oninput="autoFillFlatMemberAddresses()"></div>
+            <!-- <div class="field"><label>City <span>*</span></label><input type="text" id="flt_city" placeholder="Houston" oninput="autoFillFlatMemberAddresses()"></div> -->
+              <!-- State + City Row -->
+                 <div style="display:flex;margin-top:-5px;">
+                  <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">State <span style="color:#ef4444;">*</span></label>
+                    <select id="flt_state" onchange="autoFillFlatMemberAddresses()" disabled
+                      style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6;">
+                      <option value="TX" selected>Texas</option>
+                    </select>
+                  </div>
 
+                  <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">City <span style="color:#ef4444;">*</span></label>
+                    <select id="flt_city" onchange="autoFillFlatMemberAddresses()"
+                      style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                      <option value="" disabled selected>City</option>
+                    </select>
+                  </div>
+                </div>
             <div class="field"><label>ZIP Code <span>*</span></label><input type="text" id="flt_zip" placeholder="77001" onblur="validateZip(this,'flt')" oninput="autoFillFlatMemberAddresses()"><div id="flt_zip_msg" class="zip-msg"></div></div>
             <div class="field zone-field" id="flt_center_field" style="display:none;"><label>Center / Zone</label><div id="flt_center_display"></div></div>
-            <div class="field"><label>State <span>*</span></label><select id="flt_state" onchange="autoFillFlatMemberAddresses()"><option selected>Texas</option></select></div>
+            <!-- <div class="field"><label>State <span>*</span></label><select id="flt_state" onchange="autoFillFlatMemberAddresses()"><option selected>Texas</option></select></div> -->
           </div>
 
           <div class="section-divider"></div>
@@ -2008,7 +2515,7 @@
                 <div class="field"><label>First Name <span>*</span></label><input type="text" id="flat_member_0_first_name" placeholder="Ahmad"></div>
                 <div class="field"><label>Middle Name</label><input type="text" id="flat_member_0_middle_name" placeholder="Middle Name (Optional)"></div>
                 <div class="field"><label>Last Name <span>*</span></label><input type="text" id="flat_member_0_last_name" placeholder="Ali"></div>
-                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flat_member_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="flat_member_0_phone_msg" class="phone-msg"></div></div>
+                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flat_member_0_phone" placeholder="e.g. (832) 555-0100" onblur="validateUsPhone(this)"><div id="flat_member_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>Date of Birth <span>*</span></label><input type="text" id="flat_member_0_dob" placeholder="MM/DD/YYYY"></div>
                 <div class="field"><label>TX DL # or ID Card #</label><input type="text" id="flat_member_0_txdl" placeholder="e.g. TX7234578"></div>
                 <div class="field"><label>Relation <span>*</span></label><select id="flat_member_0_relation"><option value="">Select Relation</option><option>Child</option><option>Sibling</option><option>Parent</option></select></div>
@@ -2085,20 +2592,81 @@
 
           <!-- STEP 2: Primary Information -->
           <div class="step-indicator"><div class="step-number">2</div><h3 class="form-section-title">Primary Information</h3></div>
-          <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
+          <div style="text-align:center;">
+            <div 
+              style="
+                display:inline-flex;
+                align-items:center;
+                gap:16px;
+                padding:1px 9px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:500;
+                color:#eaf7f3;
+                margin-bottom:28px;
+                cursor:pointer;
+
+                /* ✅ exact darker → lighter green feel */
+                background:linear-gradient(90deg, #0f5c45 0%, #2f8f6b 50%, #55c59a 100%);
+
+                box-shadow:0 6px 16px rgba(0,0,0,0.15);
+              "
+            >
+
+              <!-- ✅ Scan corners (rounded like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
+                style="width:34px;height:34px;">
+                <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/>
+              </svg>
+
+              <span style="letter-spacing:0.3px;">
+                Scan ID Card
+              </span>
+
+              <!-- ✅ Stars (outlined + small spark like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
+                style="width:30px;height:30px;">
+                <!-- big star -->
+                <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
+                  stroke-linejoin="round"/>
+                <!-- small sparkle -->
+                <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
+                  stroke-linejoin="round"/>
+              </svg>
+
+            </div>
+          </div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_phone" placeholder="e.g. (832) 555-0100"  oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="ckf_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="ckf_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ckf_phone_msg" class="phone-msg"></div></div>
-            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
+            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" id="ckf_street" placeholder="123 Main Street" oninput="autoFillSpouseAddresses('ckf')"></div>
-            <div class="field"><label>City <span>*</span></label><input type="text" id="ckf_city" placeholder="Houston" oninput="autoFillSpouseAddresses('ckf')"></div>
+            <div style="display:flex;margin-top:-5px;">
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">State <span style="color:#ef4444;">*</span></label>
+                <select id="ckf_state" onchange="autoFillSpouseAddresses('ckf')" disabled
+                  style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6; cursor:not-allowed;">
+                  <option value="TX" selected>Texas</option>
+                </select>
+              </div>
+
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">City <span style="color:#ef4444;">*</span></label>
+                <select id="ckf_city" onchange="autoFillSpouseAddresses('ckf')"
+                  style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                  <option value="" disabled selected>City</option>
+                </select>
+              </div>
+            </div>
             <div class="field"><label>ZIP Code <span>*</span></label><input type="text" id="ckf_zip" placeholder="77001" onblur="validateZip(this,'ckf')" oninput="autoFillSpouseAddresses('ckf')"><div id="ckf_zip_msg" class="zip-msg"></div></div>
             <div class="field zone-field" id="ckf_center_field" style="display:none;"><label>Center / Zone</label><div id="ckf_center_display"></div></div>
-            <div class="field"><label>State <span>*</span></label><select id="ckf_state" onchange="autoFillSpouseAddresses('ckf')"><option selected>Texas</option></select></div>
           </div>
 
           <div class="section-divider"></div>
@@ -2113,17 +2681,32 @@
               </div>
               <div class="fields-stack">
                 <div class="field"><label>Email Address</label><input type="email" id="ckf_spouse_0_email" placeholder="spouse@example.com"><div id="ckf_spouse_0_email_msg" class="email-msg"></div></div>
+                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_spouse_0_phone" placeholder="e.g. (832) 555-0100" oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="ckf_spouse_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Fatima"></div>
                 <div class="field"><label>Middle Name</label><input type="text" id="ckf_spouse_0_middle_name" placeholder="Middle Name (Optional)"></div>
                 <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-                <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
-                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_spouse_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ckf_spouse_0_phone_msg" class="phone-msg"></div></div>
+                <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
                 <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="ckf_spouse_0_txdl" placeholder="e.g. TX7234578"></div>
                 <div class="field"><label>Gender</label><select id="ckf_spouse_0_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                 <div class="field"><label>Street Address</label><input type="text" id="ckf_spouse_0_street" placeholder="Auto-filled from primary"></div>
-                <div class="field"><label>City</label><input type="text" id="ckf_spouse_0_city" placeholder="Auto-filled from primary"></div>
+               <div style="display:flex;margin-top:-5px;">
+                  <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">State</label>
+                    <select id="ckf_spouse_0_state" disabled
+                      style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6;">
+                      <option value="TX" selected>Texas</option>
+                    </select>
+                  </div>
+
+                  <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">City</label>
+                    <select id="ckf_spouse_0_city"
+                      style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                      <option value="" disabled selected>City</option>
+                    </select>
+                  </div>
+                </div>
                 <div class="field"><label>ZIP Code</label><input type="text" id="ckf_spouse_0_zip" placeholder="Auto-filled from primary"></div>
-                <div class="field"><label>State</label><select id="ckf_spouse_0_state"><option selected>Texas</option></select></div>
               </div>
             </div>
           </div>
@@ -2185,20 +2768,84 @@
           </div>
 
           <div class="step-indicator"><div class="step-number">2</div><h3 class="form-section-title">Primary Information</h3></div>
-          <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
+           <div style="text-align:center;">
+            <div 
+              style="
+                display:inline-flex;
+                align-items:center;
+                gap:16px;
+                padding:1px 9px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:500;
+                color:#eaf7f3;
+                margin-bottom:28px;
+                cursor:pointer;
+
+                /* ✅ exact darker → lighter green feel */
+                background:linear-gradient(90deg, #0f5c45 0%, #2f8f6b 50%, #55c59a 100%);
+
+                box-shadow:0 6px 16px rgba(0,0,0,0.15);
+              "
+            >
+
+              <!-- ✅ Scan corners (rounded like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
+                style="width:34px;height:34px;">
+                <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/>
+              </svg>
+
+              <span style="letter-spacing:0.3px;">
+                Scan ID Card
+              </span>
+
+              <!-- ✅ Stars (outlined + small spark like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
+                style="width:30px;height:30px;">
+                <!-- big star -->
+                <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
+                  stroke-linejoin="round"/>
+                <!-- small sparkle -->
+                <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
+                  stroke-linejoin="round"/>
+              </svg>
+
+            </div>
+          </div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="cki_phone" placeholder="e.g. (832) 555-0100" oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="cki_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="cki_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="cki_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="cki_phone_msg" class="phone-msg"></div></div>
-            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
+            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" placeholder="123 Main Street"></div>
-            <div class="field"><label>City <span>*</span></label><input type="text" placeholder="Houston"></div>
+          
+              <div style="display: flex; gap: 16px;">
+
+                <!-- State -->
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                  <label>State <span>*</span></label>
+                  <select id="cki_state" disabled style="padding: 8px; font-size: 14px;">
+                    <option value="TX" selected>Texas</option>
+                  </select>
+                </div>
+
+                <!-- City -->
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                  <label>City <span>*</span></label>
+                  <select id="cki_city" style="padding: 8px; font-size: 14px;">
+                    <option>Loading cities...</option>
+                  </select>
+                </div>
+
+              </div>
             <div class="field"><label>ZIP Code <span>*</span></label><input type="text" id="cki_zip" placeholder="77001" onblur="validateZip(this,'cki')"><div id="cki_zip_msg" class="zip-msg"></div></div>
             <div class="field zone-field" id="cki_center_field" style="display:none;"><label>Center / Zone</label><div id="cki_center_display"></div></div>
-            <div class="field"><label>State <span>*</span></label><select id="cki_state"><option selected>Texas</option></select></div>
           </div>
 
           <div class="section-divider"></div>
@@ -2250,20 +2897,81 @@
           </div>
 
           <div class="step-indicator"><div class="step-number">2</div><h3 class="form-section-title">Primary Information</h3></div>
-          <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
+           <div style="text-align:center;">
+            <div 
+              style="
+                display:inline-flex;
+                align-items:center;
+                gap:16px;
+                padding:1px 9px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:500;
+                color:#eaf7f3;
+                margin-bottom:28px;
+                cursor:pointer;
+
+                /* ✅ exact darker → lighter green feel */
+                background:linear-gradient(90deg, #0f5c45 0%, #2f8f6b 50%, #55c59a 100%);
+
+                box-shadow:0 6px 16px rgba(0,0,0,0.15);
+              "
+            >
+
+              <!-- ✅ Scan corners (rounded like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
+                style="width:34px;height:34px;">
+                <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/>
+              </svg>
+
+              <span style="letter-spacing:0.3px;">
+                Scan ID Card
+              </span>
+
+              <!-- ✅ Stars (outlined + small spark like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
+                style="width:30px;height:30px;">
+                <!-- big star -->
+                <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
+                  stroke-linejoin="round"/>
+                <!-- small sparkle -->
+                <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
+                  stroke-linejoin="round"/>
+              </svg>
+
+            </div>
+          </div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_phone" placeholder="e.g. (832) 555-0100" oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="ltf_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="ltf_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ltf_phone_msg" class="phone-msg"></div></div>
-            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
+            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" id="ltf_street" placeholder="123 Main Street" oninput="autoFillSpouseAddresses('ltf')"></div>
-            <div class="field"><label>City <span>*</span></label><input type="text" id="ltf_city" placeholder="Houston" oninput="autoFillSpouseAddresses('ltf')"></div>
+            <div style="display:flex;margin-top:-5px;">
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">State <span style="color:#ef4444;">*</span></label>
+                <select id="ltf_state" onchange="autoFillSpouseAddresses('ltf')" disabled
+                  style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6;">
+                  <option value="TX" selected>Texas</option>
+                </select>
+              </div>
+
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">City <span style="color:#ef4444;">*</span></label>
+                <select id="ltf_city" onchange="autoFillSpouseAddresses('ltf')"
+                  style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                  <option value="" disabled selected>City</option>
+                </select>
+              </div>
+            </div>
             <div class="field"><label>ZIP Code <span>*</span></label><input type="text" id="ltf_zip" placeholder="77001" onblur="validateZip(this,'ltf')" oninput="autoFillSpouseAddresses('ltf')"><div id="ltf_zip_msg" class="zip-msg"></div></div>
             <div class="field zone-field" id="ltf_center_field" style="display:none;"><label>Center / Zone</label><div id="ltf_center_display"></div></div>
-            <div class="field"><label>State <span>*</span></label><select id="ltf_state" onchange="autoFillSpouseAddresses('ltf')"><option selected>Texas</option></select></div>
           </div>
 
           <div class="section-divider"></div>
@@ -2277,17 +2985,32 @@
               </div>
               <div class="fields-stack">
                 <div class="field"><label>Email Address</label><input type="email" id="ltf_spouse_0_email" placeholder="spouse@example.com"><div id="ltf_spouse_0_email_msg" class="email-msg"></div></div>
+                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_spouse_0_phone" placeholder="e.g. (832) 555-0100" oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="ltf_spouse_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Fatima"></div>
                 <div class="field"><label>Middle Name</label><input type="text" id="ltf_spouse_0_middle_name" placeholder="Middle Name (Optional)"></div>
                 <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-                <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
-                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_spouse_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ltf_spouse_0_phone_msg" class="phone-msg"></div></div>
+                <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
                 <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="ltf_spouse_0_txdl" placeholder="e.g. TX7234578"></div>
                 <div class="field"><label>Gender</label><select id="ltf_spouse_0_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                 <div class="field"><label>Street Address</label><input type="text" id="ltf_spouse_0_street" placeholder="Auto-filled from primary"></div>
-                <div class="field"><label>City</label><input type="text" id="ltf_spouse_0_city" placeholder="Auto-filled from primary"></div>
+               <div style="display:flex;margin-top:-5px;">
+                  <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">State</label>
+                    <select id="ltf_spouse_0_state" disabled
+                      style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6;">
+                      <option value="TX" selected>Texas</option>
+                    </select>
+                  </div>
+
+                  <div style="flex:1; display:flex; flex-direction:column;">
+                    <label style="font-size:12px; margin-left:12px;">City</label>
+                    <select id="ltf_spouse_0_city"
+                      style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                      <option value="" disabled selected>City</option>
+                    </select>
+                  </div>
+                </div>
                 <div class="field"><label>ZIP Code</label><input type="text" id="ltf_spouse_0_zip" placeholder="Auto-filled from primary"></div>
-                <div class="field"><label>State</label><select id="ltf_spouse_0_state"><option selected >Texas</option></select></div>
               </div>
             </div>
           </div>
@@ -2345,20 +3068,81 @@
           </div>
 
           <div class="step-indicator"><div class="step-number">2</div><h3 class="form-section-title">Primary Information</h3></div>
-          <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
+           <div style="text-align:center;">
+            <div 
+              style="
+                display:inline-flex;
+                align-items:center;
+                gap:16px;
+                padding:1px 9px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:500;
+                color:#eaf7f3;
+                margin-bottom:28px;
+                cursor:pointer;
+
+                /* ✅ exact darker → lighter green feel */
+                background:linear-gradient(90deg, #0f5c45 0%, #2f8f6b 50%, #55c59a 100%);
+
+                box-shadow:0 6px 16px rgba(0,0,0,0.15);
+              "
+            >
+
+              <!-- ✅ Scan corners (rounded like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
+                style="width:34px;height:34px;">
+                <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/>
+              </svg>
+
+              <span style="letter-spacing:0.3px;">
+                Scan ID Card
+              </span>
+
+              <!-- ✅ Stars (outlined + small spark like image) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
+                style="width:30px;height:30px;">
+                <!-- big star -->
+                <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
+                  stroke-linejoin="round"/>
+                <!-- small sparkle -->
+                <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
+                  stroke-linejoin="round"/>
+              </svg>
+
+            </div>
+          </div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="lti_phone" placeholder="e.g. (832) 555-0100" oninput="restrictPhoneInput(this)" onblur="validateUsPhone(this)"><div id="lti_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="lti_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="lti_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="lti_phone_msg" class="phone-msg"></div></div>
-            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
+            <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" placeholder="123 Main Street"></div>
-            <div class="field"><label>City <span>*</span></label><input type="text" placeholder="Houston"></div>
+            <div style="display:flex;margin-top:-5px;">
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">State <span style="color:#ef4444;">*</span></label>
+                <select id="lti_state" disabled
+                  style="padding:10px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6;">
+                  <option value="TX" selected>Texas</option>
+                </select>
+              </div>
+
+              <div style="flex:1; display:flex; flex-direction:column;">
+                <label style="font-size:12px; margin-left:12px;">City <span style="color:#ef4444;">*</span></label>
+                <select id="lti_city"
+                  style="padding:10px; margin-left:5px; font-size:14px; border-radius:8px; border:1px solid #d1d5db;">
+                  <option value="" disabled selected>City</option>
+                </select>
+              </div>
+            </div>
             <div class="field"><label>ZIP Code <span>*</span></label><input type="text" id="lti_zip" placeholder="77001" onblur="validateZip(this,'lti')"><div id="lti_zip_msg" class="zip-msg"></div></div>
             <div class="field zone-field" id="lti_center_field" style="display:none;"><label>Center / Zone</label><div id="lti_center_display"></div></div>
-            <div class="field"><label>State <span>*</span></label><select id="lti_state"><option selected>Texas</option></select></div>
           </div>
 
           <div class="section-divider"></div>
@@ -2519,4 +3303,4 @@ function openMobileMenu(){document.getElementById('mobileMenu').classList.remove
 function closeMobileMenu(){document.getElementById('mobileMenu').classList.add('hidden');document.body.style.overflow='';}
 </script>
 </body>
-</html>
+</html> 

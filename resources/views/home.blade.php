@@ -389,7 +389,7 @@
             <span class="star text-xl">★</span>
             <span class="star text-xl">★</span>
           </div>
-          <p class="text-gray-600" style="font-size: 16px;font-weight: bold;">Trusted by over <strong class="text-gray-800">50,000+</strong> active members across the region.</p>
+          <p class="text-gray-600" style="font-size: 16px;font-weight: bold;">Trusted by over <strong class="text-gray-800">thousands</strong> active members across the region.</p>
         </div>
 
         <div class="fade-up-5 flex items-center gap-6 flex-wrap pt-1 mt-5">
@@ -428,7 +428,7 @@
         <div class="badge-anim-2 hidden lg:block absolute p-[3px] rounded-[18px] bg-[linear-gradient(262.95deg,#FFFFFF_0.59%,#999999_99.41%)] inline-block" style="top: 456px; left: 240px;width: 360px;height: 107px;">
           <div class="rounded-[16px] p-[14px_18px] flex items-center gap-3 bg-[linear-gradient(108.46deg,rgba(31,171,118,0.28)_0%,rgba(71,191,149,0.66)_100%)] backdrop-blur-[28px] shadow-[0_10px_27px_rgba(0,0,0,0.55)]" style="width: 355px;height: 100px;">
             <img src="{{ asset('images/hands1.png') }}" alt="Handshake" style="width:89px;height:53px;object-fit:contain;flex-shrink:0;"/>
-            <p style="color:#ffffff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;line-height:1.4;margin:0;">50,000+ Members (Serving<br/>the Muslim Community)</p>
+            <p style="color:#ffffff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;line-height:1.4;margin:0;">Thousands Members (Serving<br/>the Muslim Community)</p>
           </div>
         </div>
       </div>
@@ -543,87 +543,136 @@
   </section>
 
   <!-- ===================== THREE CATEGORIES SECTION ===================== -->
-  <section class="categories-section w-full py-16 px-5 sm:px-8 container m-auto border border-[10px] border-white rounded-[30px]">
-    <div class="relative z-10 max-w-4xl mx-auto">
+<section 
+  class="relative w-full py-16 px-5 sm:px-8 container m-auto border border-[10px] border-white rounded-[30px] overflow-hidden"
+  style="
+    background: linear-gradient(135deg, #0b3d2e 0%, #0f5a3c 40%, #138a5a 75%, #1aa06d 100%);
+  "
+>
 
-      <!-- Heading -->
-      <div class="text-center mb-12">
-        <h2 class=" text-white text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
-          There are three categories for<br/>ISGH members to pick from
-        </h2>
-        <p class="text-green-200 text-base sm:text-lg">Take control of your community involvement in just a few clicks.</p>
-      </div>
+  <!-- Top-left glow -->
+  <div style="
+    position:absolute;
+    top:-120px;
+    left:-120px;
+    width:400px;
+    height:400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+    z-index:0;
+  "></div>
 
-      <!-- Category Rows -->
-      <div class="flex flex-col gap-5">
+  <!-- Soft overlay shape -->
+  <div style="
+    position:absolute;
+    top:0;
+    left:0;
+    width:500px;
+    height:500px;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.05), transparent 60%);
+    filter: blur(10px);
+    z-index:0;
+  "></div>
 
-        <!-- Row 1 — Family -->
-        <div class="category-row rounded-2xl flex flex-col sm:flex-row items-stretch gap-0 overflow-hidden shadow-md">
-          <div class="flex-shrink-0 p-3 w-full sm:w-auto" style="sm:width:220px; sm:min-width:220px;">
-            <img src="{{ asset('images/couple.jpg')}}" alt="Muslim family" class="cat-img w-full sm:w-40 sm:min-w-[160px] object-cover rounded-xl" style="min-height:150px; max-height:180px;"/>
-          </div>
-          <div class="flex-1 p-6 flex flex-col justify-center">
-            <h3 class=" text-gray-900 text-xl sm:text-2xl font-bold mb-3">Category I: Family*</h3>
-            <ul class="text-gray-600 text-sm leading-relaxed space-y-2">
-              <li class="flex gap-2"><span class="text-emerald-600 mt-0.5 flex-shrink-0">•</span><span>Family 1 year membership = $40</span></li>
-              <li class="flex gap-2"><span class="text-emerald-600 mt-0.5 flex-shrink-0">•</span><span>Checkomatic – Monthly Contribution of $10 and above (monthly contributions of the current year must equal to the family 1-year membership fee of $40, by June 30th to be eligible to vote).</span></li>
-            </ul>
-          </div>
-        </div>
+  <!-- ✅ CURLS (THIS was missing) -->
+  <svg 
+    style="
+      position:absolute;
+      top:-40px;
+      left:-40px;
+      width:380px;
+      height:380px;
+      z-index:0;
+      opacity:0.8;
+    "
+    viewBox="0 0 300 300" 
+    fill="none"
+  >
+    <!-- Curl 1 -->
+    <path 
+      d="M30 10 
+         C160 10, 160 150, 30 150 
+         C-60 150, -60 300, 120 300"
+      stroke="white" 
+      stroke-width="5"
+      stroke-linecap="round"
+    />
 
-        <!-- Row 2 — Individual -->
-        <div class="category-row rounded-2xl flex flex-col sm:flex-row items-stretch gap-0 overflow-hidden shadow-md">
-          <div class="flex-shrink-0 p-3 w-full sm:w-auto">
-            <img src="{{ asset('images/quran1.jpg')}}" alt="Muslim individual" class="cat-img w-full sm:w-40 sm:min-w-[160px] object-cover rounded-xl" style="min-height:150px; max-height:180px;"/>
-          </div>
-          <div class="flex-1 p-6 flex flex-col justify-center">
-            <h3 class=" text-gray-900 text-xl sm:text-2xl font-bold mb-3">Category II: Individual</h3>
-            <ul class="text-gray-600 text-sm leading-relaxed">
-              <li class="flex gap-2"><span class="text-emerald-600 mt-0.5 flex-shrink-0">•</span><span>Individual 1 year membership = <strong>$25</strong></span></li>
-            </ul>
-          </div>
-        </div>
+    <!-- Curl 2 -->
+    <path 
+      d="M60 40 
+         C190 40, 190 180, 60 180 
+         C-30 180, -30 330, 150 330"
+      stroke="white" 
+      stroke-width="5"
+      stroke-linecap="round"
+    />
+  </svg>
 
-        <!-- Row 3 — Lifetime -->
-        <div class="category-row rounded-2xl flex flex-col sm:flex-row items-stretch gap-0 overflow-hidden shadow-md">
-          <div class="flex-shrink-0 p-3 w-full sm:w-auto">
-            <img src="{{ asset('images/hands.jpg')}}" alt="Community hands together" class="cat-img w-full sm:w-40 sm:min-w-[160px] object-cover rounded-xl" style="min-height:150px; max-height:180px;"/>
-          </div>
-          <div class="flex-1 p-6 flex flex-col sm:flex-row gap-4 sm:gap-0 justify-center">
-            <div class="flex-1">
-              <h3 class=" text-gray-900 text-xl sm:text-2xl font-bold mb-3">Category III: Lifetime</h3>
-              <ul class="text-gray-600 text-sm leading-relaxed space-y-2">
-                <li class="flex gap-2"><span class="text-emerald-600 mt-0.5 flex-shrink-0">•</span><span>Family Lifetime Membership* = <strong>$1,500</strong></span></li>
-                <li class="flex gap-2"><span class="text-emerald-600 mt-0.5 flex-shrink-0">•</span><span>Individual Lifetime Membership = <strong>$1,000</strong></span></li>
-              </ul>
-            </div>
-            <div class="hidden sm:flex items-stretch">
-              <div class="divider-v"></div>
-            </div>
-            <div class="sm:w-56 flex items-center">
-              <p class="text-gray-500 text-xs sm:text-sm leading-relaxed">
-                <span class="text-red-500 font-bold">*</span>A qualified member can also sign up for a lifetime membership with a donation of <strong>$25,000 or more</strong> to any cause in the current calendar year.
-              </p>
-            </div>
-          </div>
-        </div>
+  <!-- CONTENT -->
+  <div class="relative z-10 max-w-4xl mx-auto">
 
-      </div>
+    <!-- Heading -->
+    <div class="text-center mb-12">
+      <h2 class="text-white text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
+        There are three categories for<br/>ISGH members to pick from
+      </h2>
+      <p class="text-green-200 text-base sm:text-lg">
+        Take control of your community involvement in just a few clicks.
+      </p>
     </div>
-  </section>
+
+    <!-- Category Rows -->
+    <div class="flex flex-col gap-5">
+
+      <!-- Row 1 -->
+      <div class="rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
+        <div class="p-3">
+          <img src="{{ asset('images/couple.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
+        </div>
+        <div class="p-6 flex flex-col justify-center">
+          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Annual</h3>
+          <p class="text-gray-600 text-sm">Yearly pricing + description. Fixed Dec 31 expiry note</p>
+        </div>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
+        <div class="p-3">
+          <img src="{{ asset('images/quran1.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
+        </div>
+        <div class="p-6 flex flex-col justify-center">
+          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Chequematic</h3>
+          <p class="text-gray-600 text-sm">Monthly contribution — min $10/month. Threshold must be reached within 4 months.</p>
+        </div>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
+        <div class="p-3">
+          <img src="{{ asset('images/hands.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
+        </div>
+        <div class="p-6 flex flex-col justify-center">
+          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Lifetime</h3>
+          <p class="text-gray-600 text-sm">Lifetime pricing. One-time payment. No expiry.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
 
   <!-- ===================== MEMBERSHIP CHANGES SECTION ===================== -->
-  <section class="w-full py-16 px-4 sm:px-8" style="background: linear-gradient(145deg, #e8ece8 0%, #dde5de 40%, #e4e9e4 100%);">
-    <div class="max-w-6xl mx-auto">
+  <!--<section class="w-full py-16 px-4 sm:px-8" style="background: linear-gradient(145deg, #e8ece8 0%, #dde5de 40%, #e4e9e4 100%);">
+    <div class="max-w-6xl mx-auto"> -->
 
       <!-- Heading -->
-      <div class="text-center mb-3">
+      <!--<div class="text-center mb-3">
         <h2 class=" text-gray-900 text-4xl sm:text-5xl font-extrabold mb-4">Membership Changes</h2>
         <p class="text-gray-400 text-base font-medium tracking-wide">2024 Vs. 2025</p>
-      </div>
+      </div> -->
 
       <!-- Table wrapper with horizontal scroll on small screens -->
-      <div class="mt-10 rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-white overflow-x-auto">
+      <!--<div class="mt-10 rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-white overflow-x-auto">
         <table class="w-full text-sm border-collapse min-w-[900px]">
           <thead>
             <tr>
@@ -635,10 +684,10 @@
               <th class="changes-th px-4 py-3 text-left text-xs font-bold text-gray-700 w-72" style="background:#c8d8e8;">Changes to members signed up prior to 2025</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody> -->
 
             <!-- ===== ANNUAL MEMBERSHIP ===== -->
-            <tr style="background:#eaf3fb;">
+            <!--<tr style="background:#eaf3fb;">
               <td class="px-4 py-2 font-bold text-gray-800 text-xs border-t border-gray-200 align-middle" rowspan="6">Annual Membership</td>
               <td class="px-4 py-2 text-center text-gray-600 text-xs border-t border-gray-200 align-middle" rowspan="2">Family</td>
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t border-gray-200">Fee</td>
@@ -673,10 +722,10 @@
             <tr style="background:#eaf3fb;">
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t border-gray-200">Includes</td>
               <td class="px-4 py-2 text-gray-600 text-xs border-t border-gray-200">Must be <strong>15+ years old</strong></td>
-            </tr>
+            </tr>-->
 
             <!-- ===== CHECKOMATIC ===== -->
-            <tr style="background:#fdf3e3;">
+           <!-- <tr style="background:#fdf3e3;">
               <td class="px-4 py-2 font-bold text-gray-800 text-xs border-t-2 border-gray-300 align-middle" rowspan="4">Checkomatic*</td>
               <td class="px-4 py-2 text-center text-gray-600 text-xs border-t-2 border-gray-300 align-middle" rowspan="2">Family</td>
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t-2 border-gray-300">Fee</td>
@@ -700,10 +749,10 @@
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t border-gray-200">Includes</td>
               <td class="px-4 py-2 text-gray-600 text-xs border-t border-gray-200">Must be 18+</td>
               <td class="px-4 py-2 text-xs border-t border-gray-200"></td>
-            </tr>
+            </tr> -->
 
             <!-- ===== 3-YEAR MEMBERSHIP ===== -->
-            <tr style="background:#eaf3fb;">
+           <!-- <tr style="background:#eaf3fb;">
               <td class="px-4 py-2 font-bold text-gray-800 text-xs border-t-2 border-gray-300 align-middle" rowspan="4">3-Year Membership</td>
               <td class="px-4 py-2 text-center text-gray-600 text-xs border-t-2 border-gray-300 align-middle" rowspan="2">Family</td>
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t-2 border-gray-300">Fee</td>
@@ -727,10 +776,10 @@
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t border-gray-200">Includes</td>
               <td class="px-4 py-2 text-gray-600 text-xs border-t border-gray-200">Must be 18+</td>
               <td class="px-4 py-2 text-xs border-t border-gray-200"></td>
-            </tr>
+            </tr> -->
 
             <!-- ===== 5-YEAR MEMBERSHIP ===== -->
-            <tr style="background:#f3ebf8;">
+            <!--<tr style="background:#f3ebf8;">
               <td class="px-4 py-2 font-bold text-gray-800 text-xs border-t-2 border-gray-300 align-middle" rowspan="4">5-Year Membership</td>
               <td class="px-4 py-2 text-center text-gray-600 text-xs border-t-2 border-gray-300 align-middle" rowspan="2">Family</td>
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t-2 border-gray-300">Fee</td>
@@ -754,10 +803,10 @@
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t border-gray-200">Includes</td>
               <td class="px-4 py-2 text-gray-600 text-xs border-t border-gray-200">Must be 18+</td>
               <td class="px-4 py-2 text-xs border-t border-gray-200"></td>
-            </tr>
+            </tr> -->
 
             <!-- ===== LIFETIME MEMBERSHIP ===== -->
-            <tr style="background:#e8f5ee;">
+            <!--<tr style="background:#e8f5ee;">
               <td class="px-4 py-2 font-bold text-gray-800 text-xs border-t-2 border-gray-300 align-middle" rowspan="4">Lifetime Membership</td>
               <td class="px-4 py-2 text-center text-gray-600 text-xs border-t-2 border-gray-300 align-middle" rowspan="2">Family</td>
               <td class="px-4 py-2 text-center text-gray-500 text-xs border-t-2 border-gray-300">Fee</td>
@@ -787,7 +836,7 @@
       </div>
 
     </div>
-  </section>
+  </section> -->
 
   <!-- ===================== FAQ SECTION ===================== -->
   <section class="w-full py-16 px-5 sm:px-8" style="background:linear-gradient(145deg,#e8ece8 0%,#dde5de 40%,#e4e9e4 100%);">

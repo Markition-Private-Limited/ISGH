@@ -781,11 +781,11 @@
         </div>
         <div class="fields-stack">
          <div class="field"><label>Email Address</label><input type="email" id="${prefix}_spouse_${idx}_email" placeholder="spouse@example.com"></div>
+         <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="${prefix}_spouse_${idx}_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="${prefix}_spouse_${idx}_phone_msg" class="phone-msg"></div></div>
           <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="First Name"></div>
           <div class="field"><label>Middle Name</label><input type="text" id="${prefix}_spouse_${idx}_middle_name" placeholder="Middle Name (Optional)"></div>
           <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Last Name"></div>
           <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
-          <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="${prefix}_spouse_${idx}_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="${prefix}_spouse_${idx}_phone_msg" class="phone-msg"></div></div>
           <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="${prefix}_spouse_${idx}_txdl" placeholder="e.g. TX7234578"></div>
           <div class="field"><label>Gender</label><select id="${prefix}_spouse_${idx}_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
           <div class="field"><label>Street Address</label><input type="text" id="${prefix}_spouse_${idx}_street" placeholder="Auto-filled from primary"></div>
@@ -843,10 +843,10 @@
         </div>
         <div class="fields-stack">
         <div class="field"><label>Email Address <span>*</span></label><input type="email" id="flat_member_${idx}_email" placeholder="member@example.com"></div>
+        <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flat_member_${idx}_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="flat_member_${idx}_phone_msg" class="phone-msg"></div></div>
           <div class="field"><label>First Name <span>*</span></label><input type="text" id="flat_member_${idx}_first_name" placeholder="Ahmad"></div>
           <div class="field"><label>Middle Name</label><input type="text" id="flat_member_${idx}_middle_name" placeholder="Middle Name (Optional)"></div>
-          <div class="field"><label>Last Name <span>*</span></label><input type="text" id="flat_member_${idx}_last_name" placeholder="Ali"></div>
-          <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flat_member_${idx}_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="flat_member_${idx}_phone_msg" class="phone-msg"></div></div>
+          <div class="field"><label>Last Name <span>*</span></label><input type="text" id="flat_member_${idx}_last_name" placeholder="Ali"></div>          
           <div class="field"><label>Date of Birth <span>*</span></label><input type="text" id="flat_member_${idx}_dob" placeholder="MM/DD/YYYY"></div>
           <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="flat_member_${idx}_txdl" placeholder="e.g. TX7234578"></div>
           
@@ -1455,7 +1455,7 @@
       </p>
       <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full py-2 px-6 mt-2 shadow-lg">
         <div class="flex items-center gap-1 text-yellow-400 text-lg">★ ★ ★ ★ ★</div>
-        <span class="text-white text-sm font-medium" style="font-family:'SF Pro regular';">Join 50,000+ active members across Greater Houston.</span>
+        <span class="text-white text-sm font-medium" style="font-family:'SF Pro regular';">Join thousands active members across Greater Houston.</span>
       </div>
     </div>
   </section>
@@ -1509,11 +1509,14 @@
             <option value="">— Select a Membership Type —</option>
             <!-- <option value="family">Family Membership (Primary and Spouse only) — $40/year</option> -->
             <!-- <option value="individual">Individual Membership — $25/year</option> -->
-            <option value="flat">Flat Membership — $20/year</option>
+            <!-- <option value="flat">Flat Membership — $20/year</option>
             <option value="checkomatic_family">Checkomatic Membership (Primary and Spouse only) — $10/month</option>
             <option value="checkomatic_individual">Checkomatic Membership Individual — $10/month</option>
             <option value="lifetime_family">Lifetime Membership (Family - Primary and Spouse) — $1500/lifetime</option>
-            <option value="lifetime_individual">Lifetime Membership (Individual) — $1000/lifetime</option>
+            <option value="lifetime_individual">Lifetime Membership (Individual) — $1000/lifetime</option> -->
+            <option value="flat">Flat Membership</option>
+            <option value="checkomatic_family">Checkomatic Membership</option>
+            <option value="lifetime_individual">Lifetime Membership</option> 
           </select>
         </div>
 
@@ -1869,11 +1872,11 @@
 
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flt_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="flt_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
              <div class="field"><label>Middle Name</label><input type="text" id="flt_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
             <div class="fields-stack">
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="flt_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="flt_phone_msg" class="phone-msg"></div></div>
             </div>
             <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
@@ -1987,10 +1990,10 @@
           <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ckf_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="ckf_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ckf_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" id="ckf_street" placeholder="123 Main Street" oninput="autoFillSpouseAddresses('ckf')"></div>
@@ -2012,11 +2015,11 @@
               </div>
               <div class="fields-stack">
                 <div class="field"><label>Email Address</label><input type="email" id="ckf_spouse_0_email" placeholder="spouse@example.com"></div>
+                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_spouse_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ckf_spouse_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Fatima"></div>
                 <div class="field"><label>Middle Name</label><input type="text" id="ckf_spouse_0_middle_name" placeholder="Middle Name (Optional)"></div>
                 <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
                 <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
-                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ckf_spouse_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ckf_spouse_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="ckf_spouse_0_txdl" placeholder="e.g. TX7234578"></div>
                 <div class="field"><label>Gender</label><select id="ckf_spouse_0_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                 <div class="field"><label>Street Address</label><input type="text" id="ckf_spouse_0_street" placeholder="Auto-filled from primary"></div>
@@ -2083,10 +2086,10 @@
           <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="cki_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="cki_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="cki_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="cki_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="cki_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" placeholder="123 Main Street"></div>
@@ -2145,10 +2148,10 @@
           <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ltf_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="ltf_middle_name" placeholder="Middle Name (Optional)"></div>
-            <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ltf_phone_msg" class="phone-msg"></div></div>
+            <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>          
             <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" id="ltf_street" placeholder="123 Main Street" oninput="autoFillSpouseAddresses('ltf')"></div>
@@ -2169,11 +2172,11 @@
               </div>
               <div class="fields-stack">
                 <div class="field"><label>Email Address</label><input type="email" id="ltf_spouse_0_email" placeholder="spouse@example.com"></div>
+                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_spouse_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ltf_spouse_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Fatima"></div>
                 <div class="field"><label>Middle Name</label><input type="text" id="ltf_spouse_0_middle_name" placeholder="Middle Name (Optional)"></div>
                 <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
                 <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
-                <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="ltf_spouse_0_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="ltf_spouse_0_phone_msg" class="phone-msg"></div></div>
                 <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="ltf_spouse_0_txdl" placeholder="e.g. TX7234578"></div>
                 <div class="field"><label>Gender</label><select id="ltf_spouse_0_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                 <div class="field"><label>Street Address</label><input type="text" id="ltf_spouse_0_street" placeholder="Auto-filled from primary"></div>
@@ -2237,10 +2240,10 @@
           <div style="text-align:center;"><div class="scan-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Scan ID Card</div></div>
           <div class="fields-stack">
             <div class="field"><label>Email Address <span>*</span></label><input type="email" placeholder="ahmad@example.com" value="{{ $verifiedEmail }}" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="lti_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="lti_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>First Name <span>*</span></label><input type="text" placeholder="Ahmad"></div>
             <div class="field"><label>Middle Name</label><input type="text" id="lti_middle_name" placeholder="Middle Name (Optional)"></div>
             <div class="field"><label>Last Name <span>*</span></label><input type="text" placeholder="Ali"></div>
-            <div class="field"><label>Phone Number <span>*</span></label><input type="text" id="lti_phone" placeholder="e.g. (832) 555-0100 or +1 713-555-0199" onblur="validateUsPhone(this)"><div id="lti_phone_msg" class="phone-msg"></div></div>
             <div class="field"><label>Date of Birth <span>*</span></label><input type="text" placeholder="MM/DD/YYYY"></div>
             <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" placeholder="e.g. TX7234578"></div>
             <div class="field"><label>Street Address <span>*</span></label><input type="text" placeholder="123 Main Street"></div>

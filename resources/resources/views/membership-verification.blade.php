@@ -343,7 +343,7 @@
       <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full py-2 px-6 mt-2 shadow-lg">
         <div class="flex items-center gap-1 text-yellow-400 text-lg">★ ★ ★ ★ ★</div>
         <span class="text-white text-sm font-medium" style="font-family:'SF Pro regular';">
-          Join 50,000+ active members across Greater Houston.
+          Join thousands active members across Greater Houston.
         </span>
       </div>
     </div>
