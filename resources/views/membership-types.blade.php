@@ -277,6 +277,20 @@
             min-height: 90px;
         }
 
+        .membership-banner.banner-checkomatic-active {
+            display: block;
+            min-height: 230px;
+        }
+
+        .banner-main-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
         .membership-banner::after {
             content: '';
             position: absolute;
@@ -327,27 +341,40 @@
             flex-shrink: 0;
         }
 
+        .membership-banner .checkomatic-amount-shell {
+            display: none;
+            position: relative;
+            z-index: 1;
+            margin-top: 1.15rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.22);
+        }
+
+        .membership-banner.banner-checkomatic-active .checkomatic-amount-shell {
+            display: block;
+        }
+
         .checkomatic-amount-label {
             display: block;
             font-family: 'SF Pro bold';
             font-size: 0.82rem;
-            color: #374151;
+            color: #fff6d8;
             margin-bottom: 0.5rem;
         }
 
         .checkomatic-amount-hint {
             font-family: 'SF Pro regular', sans-serif;
             font-size: 0.75rem;
-            color: #6b7280;
+            color: rgba(255, 247, 221, 0.85);
             margin-left: 0.25rem;
         }
 
         .checkomatic-amount-field {
             display: flex;
             align-items: center;
-            border: 1px solid #d1d5db;
+            border: 1px solid rgba(255, 255, 255, 0.22);
             border-radius: 0.55rem;
-            background: #fff;
+            background: rgba(255, 255, 255, 0.88);
             overflow: hidden;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
@@ -362,8 +389,8 @@
             font-family: 'SF Pro bold';
             font-size: 1rem;
             color: #6b7280;
-            background: #f9fafb;
-            border-right: 1px solid #e5e7eb;
+            background: rgba(255, 255, 255, 0.16);
+            border-right: 1px solid rgba(17, 24, 39, 0.08);
             user-select: none;
         }
 
@@ -385,7 +412,7 @@
         .checkomatic-amount-error {
             margin-top: 0.4rem;
             font-size: 0.78rem;
-            color: #dc2626;
+            color: #ffe1e1;
         }
 
         .checkomatic-amount-field.field-invalid {
@@ -396,7 +423,7 @@
         .checkomatic-amount-note {
             margin-top: 0.45rem;
             font-size: 0.78rem;
-            color: #374151;
+            color: #fff8e7;
             display: flex;
             align-items: center;
             gap: 0.35rem;
@@ -414,6 +441,51 @@
             background-size: 10px;
             background-repeat: no-repeat;
             background-position: center;
+        }
+
+        .checkomatic-warning {
+            display: none;
+            margin-top: -1rem;
+            margin-bottom: 1.5rem;
+            padding: 0.85rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #fca5a5;
+            background: #fef2f2;
+            color: #b91c1c;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        .checkomatic-warning p + p {
+            margin-top: 0.3rem;
+        }
+
+        .dependent-address-summary {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.9rem 1rem;
+            text-align: left;
+        }
+
+        .dependent-address-summary-label {
+            display: block;
+            font-family: 'SF Pro bold';
+            font-size: 0.72rem;
+            color: #374151;
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .dependent-address-summary-value {
+            font-size: 0.84rem;
+            color: #111827;
+            line-height: 1.5;
+        }
+
+        .dependent-address-fields {
+            display: none;
         }
 
         .banner-price .price-amount {
@@ -1447,6 +1519,8 @@
             setText('uni_banner_subtitle', cfg.bannerSubtitle);
             setText('uni_price_amount', cfg.priceAmount);
             setText('uni_price_period', cfg.pricePeriod);
+            setText('uni_checkomatic_warning_amount', cfg.priceAmount);
+            const banner = document.getElementById('uni_banner');
 
             const spouseSection = document.getElementById('uni_spouse_section');
             const addSpouseBtn = document.getElementById('uni_add_spouse_btn');
@@ -1498,7 +1572,10 @@
             const isCheckomatic = (type === 'checkomatic_family' || type === 'checkomatic_individual');
             const amountWrap  = document.getElementById('uni_checkomatic_amount_wrap');
             const amountInput = document.getElementById('uni_checkomatic_amount');
+            const warningBox = document.getElementById('uni_checkomatic_warning');
+            if (banner) banner.classList.toggle('banner-checkomatic-active', isCheckomatic);
             if (amountWrap) amountWrap.style.display = isCheckomatic ? '' : 'none';
+            if (warningBox && !isCheckomatic) warningBox.style.display = 'none';
             if (amountInput && isCheckomatic) {
                 const maxVal = parseInt(cfg.priceAmount.replace(/[^0-9]/g, ''), 10) || 10;
                 amountInput.min   = 10;
@@ -1515,6 +1592,20 @@
 
             loadCitiesFor('uni');
             if (cfg.hasSpouse && !cfg.spouseOptional) loadCitiesFor('uni_spouse_0');
+        }
+
+        function syncCheckomaticWarningVisibility() {
+            const input = document.getElementById('uni_checkomatic_amount');
+            const warningBox = document.getElementById('uni_checkomatic_warning');
+            const priceAmount = document.getElementById('uni_price_amount');
+
+            if (!input || !warningBox || !priceAmount) return;
+
+            const monthlyValue = parseFloat(input.value);
+            const bannerValue = parseFloat((priceAmount.textContent || '').replace(/[^0-9.]/g, ''));
+            const shouldHide = !isNaN(monthlyValue) && !isNaN(bannerValue) && monthlyValue === bannerValue;
+
+            warningBox.style.display = shouldHide ? 'none' : 'block';
         }
 
         function updateCheckomaticNote() {
@@ -1540,6 +1631,20 @@
                 note.textContent  = `You will be charged $${val.toFixed(2)}/month`;
                 note.style.display = '';
             }
+            syncCheckomaticWarningVisibility();
+        }
+
+        function buildDependentAddressText(street, city, state, zip) {
+            const lineOne = (street || '').trim();
+            const locality = [city, state].map(v => (v || '').trim()).filter(Boolean).join(', ');
+            const lineTwo = [locality, (zip || '').trim()].filter(Boolean).join(' ');
+            return [lineOne, lineTwo].filter(Boolean).join(', ') || 'Same as primary member address';
+        }
+
+        function setDependentAddressSummary(summaryId, street, city, state, zip) {
+            const summaryEl = document.getElementById(summaryId);
+            if (!summaryEl) return;
+            summaryEl.textContent = buildDependentAddressText(street, city, state, zip);
         }
 
         // ─── DYNAMIC SPOUSE BLOCKS ───────────────────────────────────────────────
@@ -1606,6 +1711,11 @@
           <div class="field"><label>Date of Birth <span>*</span></label><input type="text" id="uni_spouse_${idx}_dob" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
           <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="uni_spouse_${idx}_txdl" placeholder="e.g. TX7234578"></div>
           <div class="field"><label>Gender</label><select id="uni_spouse_${idx}_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
+          <div class="dependent-address-summary">
+            <span class="dependent-address-summary-label">Address</span>
+            <div class="dependent-address-summary-value" id="uni_spouse_${idx}_address_summary">Same as primary member address</div>
+          </div>
+          <div class="dependent-address-fields">
           <div class="field"><label>Street Address</label><input type="text" id="uni_spouse_${idx}_street" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
           <div style="display:flex;margin-top:-5px;">
             <div style="flex:1; display:flex; flex-direction:column;">
@@ -1622,6 +1732,7 @@
             </div>
           </div>
           <div class="field"><label>ZIP Code</label><input type="text" id="uni_spouse_${idx}_zip" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+          </div>
         </div>`;
             autoFillSpouseAddress(idx);
             loadCitiesFor('uni_spouse_' + idx, () => {
@@ -1685,6 +1796,11 @@
           <div class="field"><label>Date of Birth <span>*</span></label><input type="text" id="flat_member_${idx}_dob" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
           <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="flat_member_${idx}_txdl" placeholder="e.g. TX7234578"></div>
           <div class="field"><label>Relation <span>*</span></label><select id="flat_member_${idx}_relation"><option value="">Select Relation</option><option>Child</option><option>Sibling</option><option>Parent</option><option>Spouse</option></select></div>
+          <div class="dependent-address-summary">
+            <span class="dependent-address-summary-label">Address</span>
+            <div class="dependent-address-summary-value" id="flat_member_${idx}_address_summary">Same as primary member address</div>
+          </div>
+          <div class="dependent-address-fields">
           <div class="field"><label>Street Address</label><input type="text" id="flat_member_${idx}_street" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
           <div style="display:flex;margin-top:-5px;">
             <div style="flex:1; display:flex; flex-direction:column;">
@@ -1701,6 +1817,7 @@
             </div>
           </div>
           <div class="field"><label>ZIP Code</label><input type="text" id="flat_member_${idx}_zip" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+          </div>
         </div>`;
             container.appendChild(block);
             autoFillFlatMemberAddress(idx);
@@ -1787,10 +1904,15 @@
                 if (el) el.value = val;
             };
             const ip = 'uni_spouse_' + idx + '_';
-            set(ip + 'street', document.getElementById('uni_street')?.value || '');
-            set(ip + 'city', document.getElementById('uni_city')?.value || '');
-            set(ip + 'zip', document.getElementById('uni_zip')?.value || '');
-            set(ip + 'state', document.getElementById('uni_state')?.value || '');
+            const street = document.getElementById('uni_street')?.value || '';
+            const city = document.getElementById('uni_city')?.value || '';
+            const zip = document.getElementById('uni_zip')?.value || '';
+            const state = document.getElementById('uni_state')?.value || '';
+            set(ip + 'street', street);
+            set(ip + 'city', city);
+            set(ip + 'zip', zip);
+            set(ip + 'state', state);
+            setDependentAddressSummary(`uni_spouse_${idx}_address_summary`, street, city, state, zip);
         }
 
         function autoFillSpouseAddresses() {
@@ -1844,10 +1966,15 @@
                 const el = document.getElementById(id);
                 if (el) el.value = val;
             };
-            set('flat_member_' + idx + '_street', document.getElementById('uni_street')?.value || '');
-            set('flat_member_' + idx + '_city', document.getElementById('uni_city')?.value || '');
-            set('flat_member_' + idx + '_zip', document.getElementById('uni_zip')?.value || '');
-            set('flat_member_' + idx + '_state', document.getElementById('uni_state')?.value || '');
+            const street = document.getElementById('uni_street')?.value || '';
+            const city = document.getElementById('uni_city')?.value || '';
+            const zip = document.getElementById('uni_zip')?.value || '';
+            const state = document.getElementById('uni_state')?.value || '';
+            set('flat_member_' + idx + '_street', street);
+            set('flat_member_' + idx + '_city', city);
+            set('flat_member_' + idx + '_zip', zip);
+            set('flat_member_' + idx + '_state', state);
+            setDependentAddressSummary(`flat_member_${idx}_address_summary`, street, city, state, zip);
         }
 
         function autoFillFlatMemberAddresses() {
@@ -2700,6 +2827,22 @@
                 // stopTimer();
                 // console.log('[submitMembership] redirecting to:', data.checkout_url);
                 // window.location.href = data.checkout_url;
+                if (data.requires_action) {
+                    setOverlayStep(2, 'Additional verification required…', 'Please complete the card authentication prompt to finish your payment.');
+                    const authResult = await _stripe.confirmCardPayment(data.client_secret);
+
+                    if (authResult.error) {
+                        throw new Error(authResult.error.message || 'Card authentication was not completed.');
+                    }
+
+                    if (!authResult.paymentIntent || authResult.paymentIntent.status !== 'succeeded') {
+                        throw new Error('Card authentication did not complete successfully.');
+                    }
+
+                    setOverlayStep(2, 'Finalizing your registration…', 'We are confirming your payment and completing your membership.');
+                    await finalizeStripePayment(authResult.paymentIntent.id, csrfToken);
+                }
+
                 if(data.success){
                     setOverlayStep(2, 'Registration complete!', 'Thank you for joining ISGH. You will receive a confirmation email shortly.');
                     stopTimer();
@@ -2774,6 +2917,31 @@
                 citySelect.disabled = false;
                 if (onLoad) onLoad();
             });
+        }
+
+        async function finalizeStripePayment(paymentIntentId, csrfToken) {
+            const res = await fetch('/membership/finalize-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+            });
+
+            const rawText = await res.text();
+            let data;
+            try { data = JSON.parse(rawText); }
+            catch (parseErr) {
+                throw new Error('Server returned an unexpected finalize response (HTTP ' + res.status + '). Check Laravel logs.');
+            }
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Payment was authenticated, but finalization failed.');
+            }
+
+            return data;
         }
 
         // (city dropdowns initialized in DOMContentLoaded)
@@ -3111,6 +3279,7 @@
                             d="M8.63155 -5.81175C26.517 2.41 30.1972 13.7315 33.9435 36.9093C33.9435 36.9093 23.8466 71.8043 5.61968 81.3882C-14.405 91.9173 -43.217 96.831 -52.0625 76.0078C-59.7778 57.8448 -45.5249 41.8524 -29.0193 31.0363C-6.08354 16.0066 19.5073 25.3131 40.0966 43.4245C54.4146 56.0194 60.4147 69.5516 59.7683 85.2666C59.122 100.982 44.6732 126.268 44.6732 126.268C44.6732 126.268 30.3991 145.99 17.1464 151.096C4.63453 155.916 -17.1701 152.197 -17.1701 152.197"
                             stroke="white" stroke-width="13.0552" />
                     </svg>
+                            <div class="banner-main-row">
                             <div class="banner-left">
                                 <p class="banner-title" id="uni_banner_title"></p>
                                 <p class="banner-subtitle" id="uni_banner_subtitle"></p>
@@ -3128,12 +3297,12 @@
                                 <p class="price-amount" id="uni_price_amount"></p>
                                 <p class="price-period" id="uni_price_period"></p>
                             </div>
-                        </div>
+                            </div>
 
                         <!-- CHECKOMATIC AMOUNT INPUT -->
-                        <div id="uni_checkomatic_amount_wrap" style="display:none;margin-top:1rem;">
+                        <div id="uni_checkomatic_amount_wrap" class="checkomatic-amount-shell" style="display:none;">
                             <label class="checkomatic-amount-label">
-                                Monthly Amount <span style="color:#dc2626;">*</span>
+                                Monthly Amount <span style="color:#fff;">*</span>
                                 <span class="checkomatic-amount-hint">(minimum $10/month)</span>
                             </label>
                             <div class="checkomatic-amount-field">
@@ -3145,6 +3314,11 @@
                             <p id="uni_checkomatic_note" class="checkomatic-amount-note">
                                 You will be charged $10.00/month
                             </p>
+                        </div>
+                        </div>
+
+                        <div id="uni_checkomatic_warning" class="checkomatic-warning">
+                            <p>To qualify as a voting member for the current year, a minimum membership contribution of <span id="uni_checkomatic_warning_amount">$40</span> must be completed by {{ now()->addMonthsNoOverflow(4)->format('F Y') }}.</p>
                         </div>
 
                         <!-- STEP 2: Primary Information -->
@@ -3327,6 +3501,11 @@
                                                 <option value="Male">Male</option>
                                                 <option value="Female">Female</option>
                                             </select></div>
+                                        <div class="dependent-address-summary">
+                                            <span class="dependent-address-summary-label">Address</span>
+                                            <div class="dependent-address-summary-value" id="uni_spouse_0_address_summary">Same as primary member address</div>
+                                        </div>
+                                        <div class="dependent-address-fields">
                                         <div class="field"><label>Street Address</label><input type="text"
                                                 id="uni_spouse_0_street" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
                                         <div style="display:flex;margin-top:-5px;">
@@ -3347,6 +3526,7 @@
                                         </div>
                                         <div class="field"><label>ZIP Code</label><input type="text"
                                                 id="uni_spouse_0_zip" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
