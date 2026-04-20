@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\OtpMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 
@@ -32,7 +33,12 @@ class OtpController extends Controller
         Session::put('otp_expires_at', now()->addMinutes(10)->timestamp);
 
         // Send the OTP email
+        if(app()->environment('production')) {
         Mail::to($request->email)->send(new OtpMail($otp, $request->email));
+        } else {
+            // In non-production, log the OTP instead of sending an email
+            Log::info("OTP for {$request->email}: {$otp}");
+        }
         return redirect()->route('otp.verify.form')
                          ->with('success', 'OTP sent! Please check your inbox.');
         } catch (\Exception $e) {

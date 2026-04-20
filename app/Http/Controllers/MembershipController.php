@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Member;
+use App\Models\MemberDependent;
+use App\Models\Payment;
 use App\Models\PendingRegistration;
+use App\Services\StripeService;
+use Carbon\Carbon;
 use App\Services\WildApricotService;
 use App\Services\ZipCenterService;
 use Illuminate\Http\Request;
@@ -10,10 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Stripe\Checkout\Session as CheckoutSession;
 use Stripe\Exception\SignatureVerificationException;
-use Stripe\Stripe;
-use Stripe\Webhook;
 use Throwable;
 
 class MembershipController extends Controller
@@ -31,9 +33,8 @@ class MembershipController extends Controller
     public function __construct(
         private WildApricotService $wa,
         private ZipCenterService   $zipCenter,
-    ) {
-        Stripe::setApiKey(config('services.stripe.secret'));
-    }
+        private StripeService      $stripe,
+    ) {}
 
     // ─────────────────────────────────────────────────────────────────────
     //  MEMBERSHIP VERIFICATION  (AJAX — called from verification page)
@@ -227,6 +228,76 @@ class MembershipController extends Controller
         $ref = Str::uuid()->toString();
 
         try {
+
+            $parseDob = fn (?string $raw): ?string =>
+                $raw ? Carbon::createFromFormat('m/d/Y', $raw)->format('Y-m-d') : null;
+
+            // ── Create Member record (payment_status = pending until Stripe confirms) ──
+            $member = Member::create([
+                'membership_type'          => $type,
+                'status'                   => 'pending',
+                'first_name'               => $request->input('primary.first_name'),
+                'middle_name'              => $request->input('primary.middle_name'),
+                'last_name'                => $request->input('primary.last_name'),
+                'email'                    => $request->input('primary.email'),
+                'phone'                    => $request->input('primary.phone'),
+                'dob'                      => $parseDob($request->input('primary.dob')),
+                'tx_dl'                    => $request->input('primary.tx_dl'),
+                'street'                   => $request->input('primary.street'),
+                'city'                     => $request->input('primary.city'),
+                'state'                    => $request->input('primary.state'),
+                'zip'                      => $request->input('primary.zip'),
+                'zone'                     => $request->input('zone'),
+                'amount_cents'             => $fee['cents'],
+                'checkomatic_monthly_cents'=> in_array($type, ['checkomatic_family', 'checkomatic_individual'])
+                    ? (int) round((float) $request->input('checkomatic_amount', 10) * 100)
+                    : null,
+                'terms_agreed'             => true,
+                'auto_renewal'             => (bool) $request->input('terms.auto_renewal', false),
+                'terms_agreed_at'          => now(),
+                'payment_status'           => 'pending',
+            ]);
+
+            // ── Spouse dependents ─────────────────────────────────────────────
+            foreach ($request->input('spouses', []) as $spouse) {
+                if (empty($spouse['first_name'])) continue;
+                $member->dependents()->create([
+                    'type'        => 'spouse',
+                    'first_name'  => $spouse['first_name'],
+                    'middle_name' => $spouse['middle_name']  ?? null,
+                    'last_name'   => $spouse['last_name']    ?? '',
+                    'email'       => $spouse['email']        ?? null,
+                    'phone'       => $spouse['phone']        ?? null,
+                    'dob'         => $parseDob($spouse['dob'] ?? null),
+                    'tx_dl'       => $spouse['tx_dl']        ?? null,
+                    'gender'      => $spouse['gender']       ?? null,
+                    'street'      => $spouse['street']       ?? null,
+                    'city'        => $spouse['city']         ?? null,
+                    'state'       => $spouse['state']        ?? null,
+                    'zip'         => $spouse['zip']          ?? null,
+                ]);
+            }
+
+            // ── Flat family member dependents ─────────────────────────────────
+            foreach ($request->input('flat_members', []) as $flat) {
+                if (empty($flat['first_name'])) continue;
+                $member->dependents()->create([
+                    'type'        => 'flat_member',
+                    'first_name'  => $flat['first_name'],
+                    'middle_name' => $flat['middle_name'] ?? null,
+                    'last_name'   => $flat['last_name']   ?? '',
+                    'email'       => $flat['email']       ?? null,
+                    'phone'       => $flat['phone']       ?? null,
+                    'dob'         => $parseDob($flat['dob'] ?? null),
+                    'tx_dl'       => $flat['tx_dl']       ?? null,
+                    'relation'    => $flat['relation']    ?? null,
+                    'street'      => $flat['street']      ?? null,
+                    'city'        => $flat['city']        ?? null,
+                    'state'       => $flat['state']       ?? null,
+                    'zip'         => $flat['zip']         ?? null,
+                ]);
+            }
+
             // Save form data now, keyed by our internal ref
             PendingRegistration::create([
                 'stripe_intent_id' => $ref,
@@ -242,49 +313,159 @@ class MembershipController extends Controller
                 'processed' => false,
             ]);
 
-            $productName = ucwords(str_replace('_', ' ', $type)) . ' Membership — ISGH';
+            $productName  = ucwords(str_replace('_', ' ', $type)) . ' Membership — ISGH';
+            $paymentMethodId = $request->input('payment_method_id');
+            $isAnnual   = in_array($type, ['family', 'individual', 'flat']);
+            $isLifetime = str_starts_with($type, 'lifetime');
 
-            // Create Stripe Checkout Session
-            $session = CheckoutSession::create([
-                'mode'                => 'payment',
-                'customer_email'      => $request->input('primary.email'),
-                'client_reference_id' => $ref,
-                'line_items'          => [[
-                    'price_data' => [
-                        'currency'     => 'usd',
-                        'unit_amount'  => $fee['cents'],
-                        'product_data' => [
-                            'name'        => $productName,
-                            'description' => 'Islamic Society of Greater Houston',
-                        ],
+            // ── Create a Payment record in pending state ───────────────────────
+            $paymentRecord = Payment::create([
+                'member_id'               => $member->id,
+                'ref'                     => $ref,
+                'membership_type'         => $type,
+                'stripe_payment_method_id'=> $paymentMethodId,
+                'amount_cents'            => $fee['cents'],
+                'currency'                => 'usd',
+                'status'                  => 'pending',
+                'description'             => $productName,
+                'receipt_email'           => $request->input('primary.email'),
+            ]);
+
+            // ── Step 1: Create Stripe Customer ────────────────────────────────
+            try {
+                $customer = $this->stripe->createCustomer([
+                    'name'  => $request->input('primary.first_name') . ' ' . $request->input('primary.last_name'),
+                    'email' => $request->input('primary.email'),
+                    'phone' => $request->input('primary.phone'),
+                ]);
+
+                $paymentRecord->update([
+                    'stripe_customer_id'  => $customer->id,
+                    'customer_response'   => $customer->toArray(),
+                ]);
+
+                Log::info('Stripe Customer created', ['customer_id' => $customer->id, 'ref' => $ref]);
+            } catch (Throwable $e) {
+                $paymentRecord->update(['status' => 'failed'] + $this->stripeErrorFields($e));
+                $member->update(['payment_status' => 'failed']);
+                Log::error('Stripe Customer creation failed', ['error' => $e->getMessage(), 'ref' => $ref]);
+                return response()->json(['success' => false, 'message' => 'Could not create payment profile: ' . $e->getMessage()], 500);
+            }
+
+            // ── Step 2: Attach Payment Method ─────────────────────────────────
+            try {
+                $pm = $this->stripe->addPaymentMethodToCustomer($paymentMethodId, $customer->id);
+
+                $card = $pm->card ?? null;
+                $paymentRecord->update([
+                    'payment_method_type' => $pm->type,
+                    'card_brand'          => $card?->brand,
+                    'card_last4'          => $card?->last4,
+                    'card_exp_month'      => $card ? (string) $card->exp_month : null,
+                    'card_exp_year'       => $card ? (string) $card->exp_year  : null,
+                ]);
+            } catch (Throwable $e) {
+                $paymentRecord->update(['status' => 'failed'] + $this->stripeErrorFields($e));
+                $member->update(['payment_status' => 'failed']);
+                Log::error('Stripe PaymentMethod attach failed', ['error' => $e->getMessage(), 'ref' => $ref]);
+                return response()->json(['success' => false, 'message' => 'Could not attach payment method: ' . $e->getMessage()], 500);
+            }
+
+            // ── Step 3: Create Payment Intent ─────────────────────────────────
+            try {
+                $intent = $this->stripe->createPaymentIntent([
+                    'amount_cents' => $fee['cents'],
+                    'currency'     => 'usd',
+                    'customer_id'  => $customer->id,
+                    'description'  => $productName,
+                    'metadata'     => [
+                        'membership_type' => $type,
+                        'member_id'       => $member->id,
+                        'pending_ref'     => $ref,
                     ],
-                    'quantity' => 1,
-                ]],
-                'success_url' => route('membership.success') . '?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url'  => route('membership-types') . '?cancelled=1',
-                'metadata'    => [
-                    'membership_type' => $type,
-                    'member_name'     => $request->input('primary.first_name') . ' ' . $request->input('primary.last_name'),
-                    'pending_ref'     => $ref,
-                ],
-            ]);
+                ]);
 
-            Log::info('Stripe Checkout Session created', [
-                'session_id' => $session->id,
-                'ref'        => $ref,
-                'type'       => $type,
-            ]);
+                $paymentRecord->update([
+                    'stripe_payment_intent_id' => $intent->id,
+                    'payment_intent_response'  => $intent->toArray(),
+                ]);
 
-            return response()->json([
-                'success'      => true,
-                'checkout_url' => $session->url,
-            ]);
+                Log::info('Stripe PaymentIntent created', ['intent_id' => $intent->id, 'ref' => $ref]);
+            } catch (Throwable $e) {
+                $paymentRecord->update(['status' => 'failed'] + $this->stripeErrorFields($e));
+                $member->update(['payment_status' => 'failed']);
+                Log::error('Stripe PaymentIntent creation failed', ['error' => $e->getMessage(), 'ref' => $ref]);
+                return response()->json(['success' => false, 'message' => 'Could not create payment intent: ' . $e->getMessage()], 500);
+            }
+
+            // ── Step 4: Confirm / Charge ──────────────────────────────────────
+            try {
+                $confirmed = $this->stripe->processPayment($intent->id, $paymentMethodId);
+
+                $chargeId = $confirmed->latest_charge ?? null;
+                $succeeded = $confirmed->status === 'succeeded';
+
+                $paymentRecord->update([
+                    'status'                  => $succeeded ? 'succeeded' : $confirmed->status,
+                    'stripe_charge_id'        => $chargeId,
+                    'payment_confirm_response'=> $confirmed->toArray(),
+                    'paid_at'                 => $succeeded ? now() : null,
+                ]);
+
+                $member->update([
+                    'stripe_customer_id'       => $customer->id,
+                    'stripe_payment_method_id' => $paymentMethodId,
+                    'stripe_payment_intent_id' => $intent->id,
+                    'payment_status'           => $succeeded ? 'paid' : 'pending',
+                    'status'                   => $succeeded ? 'active' : 'pending',
+                    'membership_start_date'    => now()->toDateString(),
+                    'membership_end_date'      => $isLifetime ? null
+                        : ($isAnnual ? now()->endOfYear()->toDateString()
+                        : now()->addMonth()->toDateString()),
+                ]);
+
+                Log::info('Stripe payment confirmed', [
+                    'intent_id' => $intent->id,
+                    'status'    => $confirmed->status,
+                    'ref'       => $ref,
+                ]);
+
+                if (! $succeeded) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Payment requires additional action. Status: ' . $confirmed->status,
+                    ], 402);
+                }
+            } catch (Throwable $e) {
+                $errFields = $this->stripeErrorFields($e);
+                $paymentRecord->update(['status' => 'failed'] + $errFields);
+                $member->update(['payment_status' => 'failed']);
+
+                Log::error('Stripe payment confirmation failed', [
+                    'error'        => $e->getMessage(),
+                    'decline_code' => $errFields['error_decline_code'],
+                    'ref'          => $ref,
+                ]);
+
+                $userMessage = match ($errFields['error_decline_code']) {
+                    'insufficient_funds'      => 'Your card has insufficient funds.',
+                    'card_declined'           => 'Your card was declined. Please try a different card.',
+                    'expired_card'            => 'Your card has expired.',
+                    'incorrect_cvc'           => 'The card security code is incorrect.',
+                    'lost_card', 'stolen_card'=> 'This card cannot be used. Please contact your bank.',
+                    default                   => 'Payment failed: ' . $e->getMessage(),
+                };
+
+                return response()->json(['success' => false, 'message' => $userMessage], 402);
+            }
+
+            return response()->json(['success' => true]);
 
         } catch (Throwable $e) {
-            Log::error('Checkout Session create failed', ['error' => $e->getMessage()]);
+            Log::error('createCheckoutSession unexpected error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Payment setup failed: ' . $e->getMessage(),
+                'message' => 'An unexpected error occurred. Please try again.',
             ], 500);
         }
     }
@@ -307,7 +488,7 @@ class MembershipController extends Controller
         }
 
         try {
-            $session = CheckoutSession::retrieve($sessionId);
+            $session = $this->stripe->retrieveCheckoutSession($sessionId);
         } catch (Throwable $e) {
             Log::error('Could not retrieve Checkout Session', ['session_id' => $sessionId, 'error' => $e->getMessage()]);
             return redirect()->route('home')->with('error', 'Could not verify your payment. Please contact support.');
@@ -356,10 +537,9 @@ class MembershipController extends Controller
     {
         $payload   = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
-        $secret    = config('services.stripe.webhook_secret');
 
         try {
-            $event = Webhook::constructEvent($payload, $sigHeader, $secret);
+            $event = $this->stripe->constructWebhookEvent($payload, $sigHeader);
         } catch (SignatureVerificationException $e) {
             Log::warning('Stripe webhook signature invalid');
             return response('Invalid signature', 400);
@@ -407,6 +587,23 @@ class MembershipController extends Controller
     public function retryWildApricot(PendingRegistration $pending, string $chargeId, float $amountPaid): array
     {
         return $this->processWildApricot($pending, $chargeId, $amountPaid);
+    }
+
+    /** Extract Stripe error fields from any Throwable safely. */
+    private function stripeErrorFields(Throwable $e): array
+    {
+        if (! ($e instanceof \Stripe\Exception\ApiErrorException)) {
+            return ['error_type' => 'api_error', 'error_code' => null, 'error_decline_code' => null, 'error_message' => $e->getMessage()];
+        }
+
+        $err = $e->getError();
+
+        return [
+            'error_type'         => $err->type         ?? 'api_error',
+            'error_code'         => $err->code         ?? null,
+            'error_decline_code' => $err->decline_code ?? null,
+            'error_message'      => $e->getMessage(),
+        ];
     }
 
     private function processWildApricot(PendingRegistration $pending, string $chargeId, float $amountPaid): array
