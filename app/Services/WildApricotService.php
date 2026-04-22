@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -186,10 +187,11 @@ class WildApricotService
             'RenewalDue'        => $this->calcRenewalDate($data['membership_type']),
             'MembershipLevel'   => ['Id' => $levelId],
             'FieldValues'       => $this->buildFieldValues($data),
+            'RecreateInvoice' => $data['auto_renewal'] ?? false, // If true, WA will auto-renew next year and generate an invoice (which we won't pay via Stripe, but it keeps the contact in good standing and sends renewal reminders).
         ];
 
         $r = $this->apiPost("/accounts/{$accountId}/contacts", $payload);
-        Log::info('WA createActiveMember response', ['status' => $r->status(), 'body' => $r->body()]);
+        Log::info('WA createActiveMember response', ['status' => $r->status(), 'body' => $r->json()]);
 
         if (! $r->successful()) {
             Log::error('WA createActiveMember failed', ['status' => $r->status(), 'body' => $r->body()]);
@@ -269,27 +271,22 @@ class WildApricotService
     }
 
     // ─── STEP 3 — RECORD PAYMENT ─────────────────────────────────────────────
-    // Creates the payment using Allocations in the POST body (invoice-first order).
-    // Using ONLY the Allocations array (no top-level Invoice field) with the
-    // Stripe Tender is the most explicit way to request allocation at creation.
+    // Two-step approach per the WildApricot API spec:
+    //   1. POST /payments              — create the payment record
+    //   2. POST /payments/{id}/allocations — AllocateInvoice to mark invoice paid
 
-    public function recordPayment(int $contactId, int $invoiceId, float $amount, string $stripeChargeId): array
+    public function recordPayment(int $contactId, int $invoiceId, float $amount, string $stripeChargeId, string $stripePaymentMethodId = ''): array
     {
         $accountId = $this->getAccountId();
         $tenderId  = $this->getCreditCardTenderId();
 
-        // ── Create payment with Allocations referencing the invoice ──────────
-        // No top-level Invoice field (conflicts with Allocations in some WA
-        // versions). Tender:{Id} ensures the payment is a real transaction.
+        // ── Step 3a: Create the payment record ───────────────────────────────
         $payload = [
-            'Contact'     => ['Id' => $contactId],
-            'Value'       => $amount,
-            'PaymentType' => 'CreditCard',
-            'Comment'     => 'Stripe charge ID: ' . $stripeChargeId,
-            'Allocations' => [[
-                'Invoice' => ['Id' => $invoiceId],
-                'Value'   => $amount,
-            ]],
+            'Contact'         => ['Id' => $contactId],
+            'Value'           => $amount,
+            'PaymentType'     => 'CreditCard',
+            'Comment'         => 'Stripe charge ID: ' . $stripeChargeId,
+            'PaymentMethodID' => $stripePaymentMethodId,
         ];
         if ($tenderId) {
             $payload['Tender'] = ['Id' => $tenderId];
@@ -310,25 +307,61 @@ class WildApricotService
             throw new \RuntimeException('WA record payment: no payment ID in response');
         }
 
+        // ── Step 3b: AllocateInvoice — POST /payments/{paymentId}/allocations ─
+        // $allocation = $this->allocateInvoice($accountId, $paymentId, $invoiceId, $amount);
+
         // Verify settlement
         $ir    = $this->apiGet("/accounts/{$accountId}/invoices/{$invoiceId}");
         $final = $ir->successful() ? $ir->json() : [];
         Log::info('WA invoice settlement check', [
-            'invoice_id'     => $invoiceId,
-            'payment_id'     => $paymentId,
-            'allocated_value'=> $payment['AllocatedValue'] ?? 0,
-            'is_paid'        => $final['IsPaid']     ?? 'unknown',
-            'paid_amount'    => $final['PaidAmount'] ?? 'unknown',
+            'invoice_id'  => $invoiceId,
+            'payment_id'  => $paymentId,
+            // 'allocated'   => $allocation['Value'] ?? $amount,
+            'is_paid'     => $final['IsPaid']     ?? 'unknown',
+            'paid_amount' => $final['PaidAmount'] ?? 'unknown',
         ]);
 
         return $payment;
+    }
+
+    /**
+     * AllocateInvoice — POST /accounts/{accountId}/payments/{paymentId}/allocations
+     * Marks the invoice as paid by allocating a payment to it.
+     */
+    private function allocateInvoice(string $accountId, int $paymentId, int $invoiceId, float $amount): array
+    {
+        $r = $this->apiPost(
+            "/accounts/{$accountId}/payments/{$paymentId}/AllocateInvoice",
+            [
+                'Invoice' => ['Id' => $invoiceId],
+                'Value'   => $amount,
+            ]
+        );
+
+        Log::info('WA allocateInvoice response', [
+            'payment_id' => $paymentId,
+            'invoice_id' => $invoiceId,
+            'status'     => $r->status(),
+            'body'       => $r->body(),
+        ]);
+
+        if (! $r->successful()) {
+            Log::error('WA allocateInvoice failed', [
+                'payment_id' => $paymentId,
+                'invoice_id' => $invoiceId,
+                'body'       => $r->body(),
+            ]);
+            throw new \RuntimeException("WA allocateInvoice failed for payment {$paymentId} / invoice {$invoiceId}: " . $r->body());
+        }
+
+        return is_array($r->json()) ? $r->json() : [];
     }
 
     // ─── MEMBERSHIP VERIFICATION — SEARCH CONTACT ───────────────────────────
     // Searches WA contacts by email (primary) or first+last name (fallback).
     // Returns the first matching contact array, or null if none found.
 
-    public function searchContact(string $email, string $firstName, string $lastName, string $phone): ?array
+    public function searchContact(string $email, string $firstName, string $lastName, string $phone, string $dateOfBirth = ''): ?array
     {
         $accountId = $this->getAccountId();
 
@@ -348,8 +381,21 @@ class WildApricotService
             return $body['Contacts'] ?? (is_array($body) ? array_filter($body, 'is_array') : []);
         };
 
+        $fetchFullContact = function (array $contact) use ($accountId): array {
+            $contactId = $contact['Id'] ?? null;
+            if (! $contactId) {
+                return $contact;
+            }
+
+            Log::debug('WA searchContact: fetching full contact to validate candidate', ['contact_id' => $contactId]);
+            $r = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+            Log::debug('WA full contact response', ['status' => $r->status(), 'body' => substr($r->body(), 0, 2000)]);
+
+            return $r->successful() ? $r->json() : $contact;
+        };
+
         // Helper: check that a candidate contact matches ALL provided fields
-        $matchesAll = function (array $c) use ($email, $firstName, $lastName, $phone): bool {
+        $matchesAll = function (array $c) use ($email, $firstName, $lastName, $phone, $dateOfBirth): bool {
             // Email must match (case-insensitive)
             if ($email !== '') {
                 $waEmail = strtolower(trim($c['Email'] ?? ''));
@@ -386,6 +432,19 @@ class WildApricotService
                     return false;
                 }
             }
+            if ($dateOfBirth !== '') {
+                $expectedDob = $this->normalizeDateOfBirth($dateOfBirth);
+                $waDob = $this->normalizeDateOfBirth(
+                    $this->extractFieldValue($c, 'Date of Birth') ?: $this->extractFieldValue($c, 'custom-10694881')
+                );
+                if (! $expectedDob || ! $waDob || $waDob !== $expectedDob) {
+                    Log::debug('WA searchContact: date of birth mismatch', [
+                        'expected' => $expectedDob ?: $dateOfBirth,
+                        'got' => $waDob,
+                    ]);
+                    return false;
+                }
+            }
             return true;
         };
 
@@ -396,7 +455,8 @@ class WildApricotService
             $safe     = str_replace("'", "''", $email); // OData single-quote escape
             $contacts = $query("Email eq '{$safe}'");
             foreach ($contacts as $c) {
-                if ($matchesAll($c)) { $contact = $c; break; }
+                $fullContact = $fetchFullContact($c);
+                if ($matchesAll($fullContact)) { $contact = $fullContact; break; }
             }
         }
 
@@ -406,7 +466,8 @@ class WildApricotService
             $ln       = str_replace("'", "''", $lastName);
             $contacts = $query("FirstName eq '{$fn}' AND LastName eq '{$ln}'");
             foreach ($contacts as $c) {
-                if ($matchesAll($c)) { $contact = $c; break; }
+                $fullContact = $fetchFullContact($c);
+                if ($matchesAll($fullContact)) { $contact = $fullContact; break; }
             }
         }
 
@@ -414,17 +475,28 @@ class WildApricotService
 
         // Always fetch the full contact by ID — the list endpoint returns a subset of fields
         // and does not guarantee MemberSince, RenewalDue, or FieldValues are present.
-        $contactId = $contact['Id'] ?? null;
-        if ($contactId) {
-            Log::debug('WA searchContact: fetching full contact to get MemberSince, RenewalDue, FieldValues', ['contact_id' => $contactId]);
-            $r = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
-            Log::debug('WA full contact response', ['status' => $r->status(), 'body' => substr($r->body(), 0, 2000)]);
-            if ($r->successful()) {
-                $contact = $r->json();
+        return $contact;
+    }
+
+    private function normalizeDateOfBirth(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        foreach (['m/d/Y', 'Y-m-d', DATE_ATOM] as $format) {
+            try {
+                return Carbon::createFromFormat($format, $value)->format('Y-m-d');
+            } catch (\Throwable) {
             }
         }
 
-        return $contact;
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -440,6 +512,69 @@ class WildApricotService
             }
         }
         return '';
+    }
+
+    // ─── UPDATE MEMBER ───────────────────────────────────────────────────────
+    // PUT /accounts/{accountId}/contacts/{contactId}
+    // Updates an existing contact's profile and membership fields.
+    // Only fields included in $data are changed; omitted keys are left as-is
+    // because we merge over the current contact fetched from WA first.
+
+    public function updateMember(int $contactId, array $data): array
+    {
+        $accountId = $this->getAccountId();
+
+        // Fetch current contact so we preserve fields we are not updating
+        $current = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+        if (! $current->successful()) {
+            throw new \RuntimeException("WA updateMember: could not fetch contact {$contactId}: " . $current->body());
+        }
+        $existing = $current->json();
+
+        $payload = ['Id' => $contactId];
+
+        // Membership level — only change if a new type is provided
+        if (! empty($data['membership_type'])) {
+            $levelId = $this->resolveLevelId($data['membership_type']);
+            $payload['MembershipLevel'] = ['Id' => $levelId];
+            $payload['RenewalDue']      = $this->calcRenewalDate($data['membership_type']);
+        } else {
+            // Preserve existing level and renewal date
+            if (! empty($existing['MembershipLevel'])) {
+                $payload['MembershipLevel'] = $existing['MembershipLevel'];
+            }
+            if (! empty($existing['RenewalDue'])) {
+                $payload['RenewalDue'] = $existing['RenewalDue'];
+            }
+        }
+
+        // Status — default to keeping the existing value
+        $payload['Status']            = $data['status']            ?? ($existing['Status']            ?? 'Active');
+        $payload['MembershipEnabled'] = $data['membership_enabled'] ?? ($existing['MembershipEnabled'] ?? true);
+
+        // Build updated FieldValues, merging new values over existing ones
+        $existingFVMap = [];
+        foreach ($existing['FieldValues'] ?? [] as $fv) {
+            $key = $fv['SystemCode'] ?? $fv['FieldName'] ?? null;
+            if ($key) $existingFVMap[$key] = $fv;
+        }
+
+        foreach ($this->buildFieldValues($data) as $newFv) {
+            $key = $newFv['SystemCode'] ?? $newFv['FieldName'] ?? null;
+            if ($key) $existingFVMap[$key] = $newFv;
+        }
+
+        $payload['FieldValues'] = array_values($existingFVMap);
+
+        $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
+        Log::info('WA updateMember response', ['contact_id' => $contactId, 'status' => $r->status(), 'body' => $r->body()]);
+
+        if (! $r->successful()) {
+            Log::error('WA updateMember failed', ['contact_id' => $contactId, 'status' => $r->status(), 'body' => $r->body()]);
+            throw new \RuntimeException("WA update member failed for contact {$contactId}: " . $r->body());
+        }
+
+        return $r->json() ?? [];
     }
 
     // ─── STEP 4 — ADD RELATED CONTACT (spouse / flat family member) ──────────
@@ -486,6 +621,77 @@ class WildApricotService
         }
 
         return $r->json();
+    }
+
+    // ─── TARGETED FIELD PATCHES ──────────────────────────────────────────────
+
+    /**
+     * Stamps the WA Invoice# field on the contact after the invoice is created.
+     * SystemCode: custom-17858555
+     */
+    public function setInvoiceNumberOnContact(int $contactId, int $invoiceId): void
+    {
+        $this->patchContactField($contactId, 'custom-17858555', 'Invoice#', (string) $invoiceId);
+    }
+
+    /**
+     * Marks Payment Processed = true and records the Stripe charge ID as Proof Of Payment.
+     * Both fields are written in a single PUT call.
+     * SystemCodes: custom-10357567 (Payment Processed), custom-17207638 (Proof Of Payment)
+     */
+    public function setPaymentProcessedOnContact(int $contactId, string $chargeId = ''): void
+    {
+        $this->patchContactFields($contactId, [
+            ['FieldName' => 'Payment Processed', 'SystemCode' => 'custom-10357567', 'Value' => true],
+            ['FieldName' => 'Proof Of Payment',  'SystemCode' => 'custom-17207638', 'Value' => $chargeId],
+        ]);
+    }
+
+    /**
+     * Fetches the contact, replaces one FieldValue by SystemCode, then PUTs it back.
+     */
+    private function patchContactField(int $contactId, string $systemCode, string $fieldName, mixed $value): void
+    {
+        $this->patchContactFields($contactId, [
+            ['FieldName' => $fieldName, 'SystemCode' => $systemCode, 'Value' => $value],
+        ]);
+    }
+
+    /**
+     * Fetches the contact, merges one or more FieldValues by SystemCode, then PUTs it back.
+     * $fields: array of ['FieldName' => ..., 'SystemCode' => ..., 'Value' => ...]
+     */
+    private function patchContactFields(int $contactId, array $fields): void
+    {
+        $accountId = $this->getAccountId();
+
+        $r = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+        if (! $r->successful()) {
+            throw new \RuntimeException("WA patchContactFields: fetch failed for contact {$contactId}: " . $r->body());
+        }
+        $contact = $r->json();
+
+        $fvMap = [];
+        foreach ($contact['FieldValues'] ?? [] as $fv) {
+            $key = $fv['SystemCode'] ?? $fv['FieldName'] ?? null;
+            if ($key) $fvMap[$key] = $fv;
+        }
+        foreach ($fields as $field) {
+            $fvMap[$field['SystemCode']] = $field;
+        }
+
+        $payload = array_merge($contact, ['FieldValues' => array_values($fvMap)]);
+
+        $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
+        $names = implode(', ', array_column($fields, 'FieldName'));
+        Log::info("WA patchContactFields [{$names}]", [
+            'contact_id' => $contactId,
+            'status'     => $r->status(),
+        ]);
+
+        if (! $r->successful()) {
+            throw new \RuntimeException("WA patchContactFields [{$names}] failed: " . $r->body());
+        }
     }
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────
@@ -612,15 +818,17 @@ class WildApricotService
             }
         }
 
+        $fields[] = ['FieldName' => 'Renewal due', 'SystemCode' => 'RenewalDue', 'Value' => $this->calcRenewalDate($data['membership_type'])];
+
         return $fields;
     }
 
     private function calcRenewalDate(string $type): string
     {
         return match(true) {
-            str_contains($type, 'lifetime')    => now()->addYears(100)->toIso8601String(),
+            str_contains($type, 'lifetime')    => 'Never',
             str_contains($type, 'checkomatic') => now()->addMonth()->toIso8601String(),
-            default                            => now()->addYear()->toIso8601String(),
+            default                            => now()->endOfYear()->toIso8601String(),
         };
     }
 

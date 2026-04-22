@@ -119,6 +119,95 @@
       font-size: 0.92rem;
       color: #111827;
     }
+    .dependent-section {
+      margin-top: 1.5rem;
+      text-align: left;
+    }
+    .dependent-section-title {
+      font-family: 'SF Pro bold';
+      font-size: 0.95rem;
+      color: #111827;
+      margin-bottom: 0.9rem;
+    }
+    .dependent-table-wrap {
+      overflow-x: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.9rem;
+      background: #fff;
+    }
+    .dependent-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 620px;
+    }
+    .dependent-table th,
+    .dependent-table td {
+      padding: 0.8rem 0.9rem;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      vertical-align: top;
+    }
+    .dependent-table th {
+      background: #f9fafb;
+      font-size: 0.72rem;
+      color: #6b7280;
+      font-family: 'SF Pro bold';
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .dependent-table td {
+      font-size: 0.88rem;
+      color: #111827;
+    }
+    .dependent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .dependent-item {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.9rem;
+      padding: 1rem 1.05rem;
+    }
+    .dependent-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+    }
+    .dependent-item-name {
+      font-family: 'SF Pro bold';
+      font-size: 0.95rem;
+      color: #111827;
+    }
+    .dependent-item-type {
+      display: inline-block;
+      padding: 0.18rem 0.6rem;
+      border-radius: 999px;
+      background: #e6f4ee;
+      color: #0d7a55;
+      font-size: 0.74rem;
+      font-family: 'SF Pro bold';
+      white-space: nowrap;
+    }
+    .dependent-item-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.55rem 1rem;
+    }
+    .dependent-meta-label {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      margin-bottom: 0.15rem;
+    }
+    .dependent-meta-value {
+      font-family: 'SF Pro bold';
+      font-size: 0.88rem;
+      color: #111827;
+      line-height: 1.4;
+    }
     .status-badge {
       display: inline-block;
       padding: 0.2rem 0.65rem;
@@ -196,6 +285,24 @@
   <!-- ══════════ MAIN ══════════ -->
   <div class="success-container">
     <div class="success-card">
+      @php
+        $spouseList = $spouses ?? [];
+        $flatMemberList = $flat_members ?? [];
+        $hasFlatMembers = $has_flat_members ?? !empty($flatMemberList);
+        $hasSpouseOnly = $has_spouse_only ?? (!$hasFlatMembers && !empty($spouseList));
+        $dependents = [];
+        foreach ($spouseList as $spouse) {
+          if (!empty($spouse['first_name']) || !empty($spouse['last_name'])) {
+            $dependents[] = array_merge($spouse, ['_kind' => 'Spouse']);
+          }
+        }
+        foreach ($flatMemberList as $member) {
+          if (!empty($member['first_name']) || !empty($member['last_name'])) {
+            $dependents[] = array_merge($member, ['_kind' => $member['relation'] ?? 'Family Member']);
+          }
+        }
+        $dependentCount = count($dependents);
+      @endphp
 
       <div class="check-circle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
@@ -238,6 +345,56 @@
         </div>
         @endif
       </div>
+
+      @if($dependentCount > 1)
+        <div class="dependent-section">
+          <h3 class="dependent-section-title">Spouse and Family Members</h3>
+          <div class="dependent-table-wrap">
+            <table class="dependent-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Date of Birth</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach($dependents as $dependent)
+                  <tr>
+                    <td>{{ trim(($dependent['first_name'] ?? '').' '.($dependent['last_name'] ?? '')) ?: '—' }}</td>
+                    <td>{{ $dependent['_kind'] ?? 'Family Member' }}</td>
+                    <td>{{ $dependent['email'] ?? '—' }}</td>
+                    <td>{{ $dependent['phone'] ?? '—' }}</td>
+                    <td>{{ $dependent['dob'] ?? '—' }}</td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        </div>
+      @elseif($dependentCount === 1)
+        @php $dependent = $dependents[0]; @endphp
+        <div class="info-grid" style="margin-top:0;">
+          <div>
+            <p class="info-label">{{ $dependent['_kind'] ?? 'Dependent' }} Name</p>
+            <p class="info-value">{{ trim(($dependent['first_name'] ?? '').' '.($dependent['last_name'] ?? '')) ?: '—' }}</p>
+          </div>
+          <div>
+            <p class="info-label">{{ $dependent['_kind'] ?? 'Dependent' }} Email</p>
+            <p class="info-value">{{ $dependent['email'] ?? '—' }}</p>
+          </div>
+          <div>
+            <p class="info-label">{{ $dependent['_kind'] ?? 'Dependent' }} Phone</p>
+            <p class="info-value">{{ $dependent['phone'] ?? '—' }}</p>
+          </div>
+          <div>
+            <p class="info-label">{{ $dependent['_kind'] ?? 'Dependent' }} Date of Birth</p>
+            <p class="info-value">{{ $dependent['dob'] ?? '—' }}</p>
+          </div>
+        </div>
+      @endif
 
       <a href="{{ route('home') }}" class="btn-home">Return to Home</a>
     </div>

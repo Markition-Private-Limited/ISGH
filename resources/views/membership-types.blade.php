@@ -411,7 +411,7 @@
 
         .checkomatic-amount-error {
             margin-top: 0.4rem;
-            font-size: 0.78rem;
+            font-size: 0.92rem;
             color: #ffe1e1;
         }
 
@@ -612,6 +612,41 @@
             margin-bottom: 1.4rem;
         }
 
+        .dependent-card-header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .dependent-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .dependent-card-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .dependent-scan-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 1px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #eaf7f3;
+            cursor: pointer;
+            background: linear-gradient(90deg,#0f5c45 0%,#2f8f6b 50%,#55c59a 100%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            justify-self: center;
+        }
+
         .member-tag {
             background: #fff4e5;
             color: #d97706;
@@ -650,9 +685,9 @@
         .btn-add-member {
             width: 100%;
             padding: 0.8rem;
-            border: 2px dashed #e5e7eb;
+            border: 2px dashed #059669;
             border-radius: 0.9rem;
-            color: #b0b8c8;
+            color: #ffffff;
             font-family: 'SF Pro bold';
             font-size: 0.82rem;
             display: flex;
@@ -662,13 +697,13 @@
             cursor: pointer;
             transition: 0.2s;
             margin-top: 1.25rem;
-            background: none;
+            background: #059669;
         }
 
         .btn-add-member:hover {
-            border-color: #10b981;
-            color: #10b981;
-            background: #f0fdf4;
+            border-color: #047857;
+            color: #ffffff;
+            background: #047857;
         }
 
         /* ─── ORDER SUMMARY ───────────────────────────── */
@@ -948,6 +983,17 @@
             transition: background 0.15s;
         }
         .confirm-btn-yes:hover { background: #033020; }
+        .checkomatic-spouse-note {
+            font-size: 0.88rem;
+            line-height: 1.55;
+            color: #374151;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.9rem;
+            padding: 0.95rem 1rem;
+            text-align: left;
+            margin-top: 0.9rem;
+        }
 
         .secure-note {
             font-size: 0.66rem;
@@ -970,6 +1016,9 @@
             gap: 0.4rem;
         }
         .stripe-card-label svg { color: #10b981; flex-shrink: 0; }
+        .stripe-card-name-field {
+            margin-bottom: 0.85rem;
+        }
         #stripe-card-element {
             border: 1px solid #e2e8f0;
             border-radius: 0.65rem;
@@ -1201,9 +1250,6 @@
         }
 
         .spouse-block-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
             margin-bottom: 0.75rem;
         }
 
@@ -1211,16 +1257,42 @@
             background: none;
             border: none;
             color: #ef4444;
-            font-size: 0.78rem;
             cursor: pointer;
             font-family: 'DM Sans', sans-serif;
-            padding: 0.2rem 0.5rem;
-            border-radius: 0.4rem;
-            transition: background 0.15s;
+            width: 2.6rem;
+            height: 2.6rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.35rem;
+            border-radius: 999px;
+            transition: background 0.15s, transform 0.15s;
+            justify-self: end;
         }
 
         .btn-remove-block:hover {
             background: #fee2e2;
+            transform: translateY(-1px);
+        }
+
+        .btn-remove-block svg {
+            width: 1.15rem;
+            height: 1.15rem;
+        }
+
+        @media (max-width: 640px) {
+            .dependent-card-header {
+                grid-template-columns: 1fr;
+                justify-items: stretch;
+            }
+
+            .dependent-scan-btn {
+                width: 100%;
+            }
+
+            .dependent-card-actions {
+                justify-content: flex-end;
+            }
         }
 
         /* Submission overlay */
@@ -1391,7 +1463,7 @@
                 orderFee: '$40.00',
                 orderTotal: '$40.00',
                 billingNote: '',
-                submitLabel: 'Complete Registration &amp; Pay $40.00',
+                submitLabel: 'Complete Registration &amp; Pay',
             },
             individual: {
                 bannerTitle: 'Individual Membership',
@@ -1405,7 +1477,7 @@
                 orderFee: '$25.00',
                 orderTotal: '$25.00',
                 billingNote: '',
-                submitLabel: 'Complete Registration &amp; Pay $25.00',
+                submitLabel: 'Complete Registration &amp; Pay',
             },
             flat: {
                 bannerTitle: 'Annual Membership',
@@ -1419,13 +1491,13 @@
                 orderFee: '$20.00',
                 orderTotal: '$20.00',
                 billingNote: '',
-                submitLabel: 'Complete Registration &amp; Pay $20.00',
+                submitLabel: 'Complete Registration &amp; Pay',
             },
             checkomatic_family: {
                 bannerTitle: 'Checkomatic Membership',
-                bannerSubtitle: 'Includes both primary member and spouse',
+                bannerSubtitle: 'Bundle (up to 2 members). This fund only apply for all the funds except Zakat & Sadaqah for needy.',
                 priceAmount: '$40',
-                pricePeriod: 'Per Month',
+                pricePeriod: 'Per Person/mo',
                 hasSpouse: true,
                 spouseOptional: true,
                 downgradeTo: 'checkomatic_individual',
@@ -1434,13 +1506,13 @@
                 orderFee: '$40.00 / month',
                 orderTotal: '$40.00',
                 billingNote: '',
-                submitLabel: 'Complete Registration &amp; Pay $10.00/mo',
+                submitLabel: 'Complete Registration &amp; Pay',
             },
             checkomatic_individual: {
-                bannerTitle: 'Checkomatic Membership (Individual)',
-                bannerSubtitle: 'Individual membership only',
+                bannerTitle: 'Checkomatic Membership',
+                bannerSubtitle: 'Bundle (up to 2 members). This fund only apply for all the funds except Zakat & Sadaqah for needy.',
                 priceAmount: '$20',
-                pricePeriod: 'Per Month',
+                pricePeriod: 'Per Person/mo',
                 hasSpouse: false,
                 spouseOptional: true,
                 upgradesTo: 'checkomatic_family',
@@ -1449,7 +1521,7 @@
                 orderFee: '$20.00 / month',
                 orderTotal: '$20.00',
                 billingNote: 'Monthly billing — cancel anytime',
-                submitLabel: 'Complete Registration &amp; Pay $10.00/mo',
+                submitLabel: 'Complete Registration &amp; Pay',
             },
             lifetime_family: {
                 bannerTitle: 'Lifetime Membership',
@@ -1464,7 +1536,7 @@
                 orderFee: '$1,500.00 / Lifetime',
                 orderTotal: '$1,500.00',
                 billingNote: '',
-                submitLabel: 'Complete Registration &amp; Pay $1,500.00',
+                submitLabel: 'Complete Registration &amp; Pay',
             },
             lifetime_individual: {
                 bannerTitle: 'Lifetime Membership (Individual)',
@@ -1479,7 +1551,7 @@
                 orderFee: '$1,000.00 / Lifetime',
                 orderTotal: '$1,000.00',
                 billingNote: '',
-                submitLabel: 'Complete Registration &amp; Pay $1,000.00',
+                submitLabel: 'Complete Registration &amp; Pay',
             },
         };
 
@@ -1500,9 +1572,15 @@
             currentMembershipType = val;
             const unified = document.getElementById('unifiedMembershipSection');
             unified.style.display = 'block';
+            // Reset confirm/continue state when membership type changes
+            document.getElementById('uni_confirm_wrap').style.display = 'block';
+            document.getElementById('uni_rest_of_form').style.display = 'none';
+            document.getElementById('uni_duplicate_error').style.display = 'none';
+            updateConfirmBtn();
             updateUnifiedForm(val);
             attachFieldFeedback(unified);
             attachReadinessListeners();
+            attachConfirmWatchers();
             checkFormReadiness();
             initStripeCardElement();
         }
@@ -1513,6 +1591,10 @@
 
             const setText = (id, text) => {
                 const el = document.getElementById(id);
+                if (el) el.textContent = text;
+            };
+            const setFeeLabel = (text) => {
+                const el = document.getElementById('uni_order_fee_label');
                 if (el) el.textContent = text;
             };
             setText('uni_banner_title', cfg.bannerTitle);
@@ -1548,6 +1630,7 @@
 
             setText('uni_order_type', cfg.orderType);
             setText('uni_order_fee', cfg.orderFee);
+            setFeeLabel((type === 'checkomatic_family' || type === 'checkomatic_individual') ? 'Donation Fee' : 'Membership Fee');
             if (cfg.hasFlatMembers) {
                 updateFlatTotal();
             } else {
@@ -1573,15 +1656,25 @@
             const amountWrap  = document.getElementById('uni_checkomatic_amount_wrap');
             const amountInput = document.getElementById('uni_checkomatic_amount');
             const warningBox = document.getElementById('uni_checkomatic_warning');
+            const donationTypeField = document.getElementById('uni_donation_type_field');
             if (banner) banner.classList.toggle('banner-checkomatic-active', isCheckomatic);
             if (amountWrap) amountWrap.style.display = isCheckomatic ? '' : 'none';
+            if (donationTypeField) donationTypeField.style.display = isCheckomatic ? '' : 'none';
             if (warningBox && !isCheckomatic) warningBox.style.display = 'none';
             if (amountInput && isCheckomatic) {
-                const maxVal = parseInt(cfg.priceAmount.replace(/[^0-9]/g, ''), 10) || 10;
-                amountInput.min   = 10;
-                amountInput.max   = maxVal;
-                amountInput.value = Math.min(Math.max(parseInt(amountInput.value) || 10, 10), maxVal);
+                const minVal = getCheckomaticMinimum(type);
+                amountInput.min = minVal;
+                amountInput.removeAttribute('max');
+                amountInput.value = Math.max(parseInt(amountInput.value, 10) || minVal, minVal);
+                setText('uni_checkomatic_warning_amount', '$' + minVal);
+                setText('uni_checkomatic_amount_hint', `(minimum $${minVal}/month)`);
+                setText('uni_price_amount', '$' + amountInput.value);
                 updateCheckomaticNote();
+            } else if (!cfg.hasFlatMembers) {
+                const feeAmount = parseFloat(String(cfg.orderTotal).replace(/[^0-9.]/g, '')) || 0;
+                const feeSuffix = cfg.pricePeriod === 'Per Month' ? ' / month' : '';
+                setText('uni_order_fee', formatUsd(feeAmount) + feeSuffix);
+                setText('uni_order_total', formatUsd(feeAmount));
             }
 
             const submitLabel = document.getElementById('uni_submit_label');
@@ -1594,18 +1687,29 @@
             if (cfg.hasSpouse && !cfg.spouseOptional) loadCitiesFor('uni_spouse_0');
         }
 
+        function getCheckomaticMinimum(type = currentMembershipType) {
+            return 10;
+        }
+
+        function formatUsd(amount) {
+            return '$' + Number(amount || 0).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function syncCheckomaticOrderSummary(amount) {
+            const feeEl = document.getElementById('uni_order_fee');
+            const totalEl = document.getElementById('uni_order_total');
+            const formatted = formatUsd(amount);
+            if (feeEl) feeEl.textContent = `${formatted} / month`;
+            if (totalEl) totalEl.textContent = formatted;
+        }
+
         function syncCheckomaticWarningVisibility() {
-            const input = document.getElementById('uni_checkomatic_amount');
             const warningBox = document.getElementById('uni_checkomatic_warning');
-            const priceAmount = document.getElementById('uni_price_amount');
-
-            if (!input || !warningBox || !priceAmount) return;
-
-            const monthlyValue = parseFloat(input.value);
-            const bannerValue = parseFloat((priceAmount.textContent || '').replace(/[^0-9.]/g, ''));
-            const shouldHide = !isNaN(monthlyValue) && !isNaN(bannerValue) && monthlyValue === bannerValue;
-
-            warningBox.style.display = shouldHide ? 'none' : 'block';
+            if (!warningBox) return;
+            warningBox.style.display = 'block';
         }
 
         function updateCheckomaticNote() {
@@ -1616,20 +1720,20 @@
             if (!input || !note) return;
             const val = parseFloat(input.value);
             const min = parseFloat(input.min) || 10;
-            const max = parseFloat(input.max) || min;
+            const priceEl = document.getElementById('uni_price_amount');
             if (isNaN(val) || val < min) {
                 if (errEl) { errEl.textContent = `Minimum monthly amount is $${min.toFixed(2)}.`; errEl.style.display = ''; }
                 if (field)  field.classList.add('field-invalid');
                 note.style.display = 'none';
-            } else if (val > max) {
-                if (errEl) { errEl.textContent = `Maximum monthly amount is $${max.toFixed(2)}.`; errEl.style.display = ''; }
-                if (field)  field.classList.add('field-invalid');
-                note.style.display = 'none';
+                if (priceEl) priceEl.textContent = '$' + Math.round(min);
+                syncCheckomaticOrderSummary(min);
             } else {
                 if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
                 if (field)  field.classList.remove('field-invalid');
                 note.textContent  = `You will be charged $${val.toFixed(2)}/month`;
                 note.style.display = '';
+                if (priceEl) priceEl.textContent = '$' + Math.round(val);
+                syncCheckomaticOrderSummary(val);
             }
             syncCheckomaticWarningVisibility();
         }
@@ -1657,6 +1761,43 @@
         }
 
         function showSpouseForm() {
+            const cfg = MEMBERSHIP_CONFIG[currentMembershipType];
+            if (currentMembershipType === 'checkomatic_family' || currentMembershipType === 'checkomatic_individual') {
+                openCheckomaticSpouseDisclaimer();
+                return;
+            }
+            if (cfg?.upgradesTo) {
+                currentMembershipType = cfg.upgradesTo;
+            }
+            updateUnifiedForm(currentMembershipType);
+            const btn  = document.getElementById('uni_add_spouse_btn');
+            const wrap = document.getElementById('uni_spouse_form_wrap');
+            if (btn)  btn.style.display  = 'none';
+            if (wrap) wrap.style.display = '';
+            loadCitiesFor('uni_spouse_0', () => {
+                autoFillSpouseAddresses();
+                document.getElementById('uni_spouse_0_city')?.setAttribute('disabled', 'disabled');
+            });
+            autoFillSpouseAddresses();
+            attachFieldFeedback(wrap);
+            attachReadinessListeners();
+            checkFormReadiness();
+        }
+
+        function openCheckomaticSpouseDisclaimer() {
+            const modal = document.getElementById('checkomaticSpouseModal');
+            if (modal) modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCheckomaticSpouseDisclaimer() {
+            const modal = document.getElementById('checkomaticSpouseModal');
+            if (modal) modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function confirmCheckomaticSpouseDisclaimer() {
+            closeCheckomaticSpouseDisclaimer();
             const cfg = MEMBERSHIP_CONFIG[currentMembershipType];
             if (cfg?.upgradesTo) {
                 currentMembershipType = cfg.upgradesTo;
@@ -1695,12 +1836,23 @@
             block.className = 'spouse-block';
             block.id = 'uni_spouse_block_' + idx;
             block.innerHTML = `
-        <div class="spouse-block-header">
-          <div class="member-tag">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Spouse ${idx + 1}
+        <div class="spouse-block-header dependent-card-header">
+          <div class="dependent-card-meta">
+            <div class="member-tag">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Spouse ${idx + 1}
+            </div>
           </div>
-          <button type="button" class="btn-remove-block" onclick="removeBlock('uni_spouse_block_${idx}')">✕ Remove</button>
+          <div class="dependent-scan-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
+            <span style="letter-spacing:0.3px;">Scan Your ID</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="dependent-card-actions">
+            <button type="button" class="btn-remove-block" onclick="removeBlock('uni_spouse_block_${idx}')" title="Remove Spouse">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
         </div>
         <div class="fields-stack">
           <div class="field"><label>Email Address</label><input type="email" id="uni_spouse_${idx}_email" placeholder="spouse@example.com"><div id="uni_spouse_${idx}_email_msg" class="email-msg"></div></div>
@@ -1710,7 +1862,6 @@
           <div class="field"><label>Last Name <span>*</span></label><input type="text" id="uni_spouse_${idx}_last_name" placeholder="Last Name"></div>
           <div class="field"><label>Date of Birth <span>*</span></label><input type="text" id="uni_spouse_${idx}_dob" placeholder="MM/DD/YYYY"><div class="dob-msg"></div></div>
           <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input type="text" id="uni_spouse_${idx}_txdl" placeholder="e.g. TX7234578"></div>
-          <div class="field"><label>Gender</label><select id="uni_spouse_${idx}_gender"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
           <div class="dependent-address-summary">
             <span class="dependent-address-summary-label">Address</span>
             <div class="dependent-address-summary-value" id="uni_spouse_${idx}_address_summary">Same as primary member address</div>
@@ -1780,12 +1931,23 @@
             block.className = 'member-card';
             block.id = 'flat_member_block_' + idx;
             block.innerHTML = `
-        <div class="member-header">
-          <div class="member-tag">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Member ${displayNum}
+        <div class="member-header dependent-card-header">
+          <div class="dependent-card-meta">
+            <div class="member-tag">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Member ${displayNum}
+            </div>
           </div>
-          <button type="button" class="btn-remove-block" onclick="removeFlatBlock('flat_member_block_${idx}')">✕ Remove</button>
+          <div class="dependent-scan-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
+            <span style="letter-spacing:0.3px;">Scan Your ID</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="dependent-card-actions">
+            <button type="button" class="btn-remove-block" onclick="removeFlatBlock('flat_member_block_${idx}')" title="Remove Member">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
         </div>
         <div class="fields-stack">
           <div class="field"><label>Email Address <span>*</span></label><input type="email" id="flat_member_${idx}_email" placeholder="member@example.com"><div id="flat_member_${idx}_email_msg" class="email-msg"></div></div>
@@ -2030,6 +2192,10 @@
             const terms = document.getElementById('uni_terms');
             if (!terms?.checked) { btn.disabled = true; return; }
 
+            // Card details
+            const cardholderName = document.getElementById('uni_cardholder_name');
+            if (!cardholderName || !cardholderName.value.trim()) { btn.disabled = true; return; }
+
             // Spouse fields — only when the form is actually visible
             const spouseFormWrap = document.getElementById('uni_spouse_form_wrap');
             const spouseFormVisible = spouseFormWrap && spouseFormWrap.style.display !== 'none';
@@ -2100,6 +2266,10 @@
         // Close on overlay backdrop click
         document.getElementById('confirmOverlay')?.addEventListener('click', function(e) {
             if (e.target === this) closeConfirmPopup();
+        });
+
+        document.getElementById('primaryReviewOverlay')?.addEventListener('click', function(e) {
+            if (e.target === this) closePrimaryReview();
         });
 
         // ─── TIMER ───────────────────────────────────────────────────────────────
@@ -2515,6 +2685,12 @@
             });
         }
 
+        document.addEventListener('input', function(e) {
+            if (e.target?.id === 'uni_cardholder_name') {
+                if (e.target.value.trim()) e.target.classList.remove('field-invalid');
+            }
+        });
+
         // ─── ZIP VALIDATION ──────────────────────────────────────────────────────
         const _zipState = {}; // prefix → { valid: bool, zone: string }
 
@@ -2550,19 +2726,23 @@
                 });
                 const data = await res.json();
 
-                if (!data.success) {
-                    if (msgEl) {
-                        msgEl.textContent = data.message;
-                        msgEl.className = 'zip-msg error';
-                    }
-                    return;
-                }
-
-                const centers = data.centers;
+                const centers = Array.isArray(data.centers) ? data.centers : [];
                 _zipState[prefix] = {
                     valid: true,
                     zone: ''
                 };
+
+                if (!data.success || centers.length === 0) {
+                    if (cdEl) cdEl.innerHTML = '';
+                    if (cfEl) cfEl.style.display = 'none';
+                    if (msgEl) {
+                        msgEl.textContent = 'No ISGH center is assigned for this ZIP. You can continue without selecting a center.';
+                        msgEl.className = 'zip-msg success';
+                    }
+                    checkFormReadiness();
+                    if (prefix === 'uni') updateConfirmBtn();
+                    return;
+                }
 
                 if (centers.length === 1) {
                     _zipState[prefix].zone = centers[0];
@@ -2589,6 +2769,7 @@
                 }
             }
             checkFormReadiness();
+            if (prefix === 'uni') updateConfirmBtn();
         }
 
         // ─── SUBMISSION ──────────────────────────────────────────────────────────
@@ -2637,6 +2818,14 @@
 
             if (!primary.first_name || !primary.last_name || !primary.email) {
                 _submitAbort('Please fill in your First Name, Last Name, and Email Address.');
+                return;
+            }
+
+            const cardholderInput = document.getElementById('uni_cardholder_name');
+            const cardholderName = cardholderInput?.value.trim() || '';
+            if (!cardholderName) {
+                cardholderInput?.classList.add('field-invalid');
+                _submitAbort('Please enter the name on card.', cardholderInput);
                 return;
             }
 
@@ -2693,10 +2882,6 @@
                 return;
             }
             const zone = _zipState['uni']?.zone || '';
-            if (!zone) {
-                _submitAbort('Please select your ISGH center.', document.getElementById('uni_center_field'));
-                return;
-            }
 
             // Member email duplicate check
             if (sectionEl) {
@@ -2761,7 +2946,7 @@
                 type: 'card',
                 card: _cardElement,
                 billing_details: {
-                    name: `${primary.first_name} ${primary.last_name}`.trim(),
+                    name: cardholderName,
                     email: primary.email,
                     phone: primary.phone,
                     address: {
@@ -2798,7 +2983,7 @@
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ membership_type: type, primary, spouses, flat_members: flatMembers, terms, zone, payment_method_id: paymentMethodId, checkomatic_amount: (type === 'checkomatic_family' || type === 'checkomatic_individual') ? (parseInt(document.getElementById('uni_checkomatic_amount')?.value) || 10) : null }),
+                    body: JSON.stringify({ membership_type: type, primary, spouses, flat_members: flatMembers, terms, zone, payment_method_id: paymentMethodId, checkomatic_amount: (type === 'checkomatic_family' || type === 'checkomatic_individual') ? (parseInt(document.getElementById('uni_checkomatic_amount')?.value, 10) || getCheckomaticMinimum(type)) : null }),
                 });
 
                 console.log('[submitMembership] response status:', res.status);
@@ -2848,7 +3033,7 @@
                     stopTimer();
                     window.setTimeout(() => {
                         if (overlay) overlay.classList.remove('visible');
-                        window.location.reload();
+                        window.location.href = '/membership/success/' + data.pending_id;
                     }, 4000);
                 }
 
@@ -2867,7 +3052,61 @@
             return new Promise((resolve) => {
                 setTimeout(() => {
                     const data = {
-                        TX: ["Houston", "Dallas", "Austin", "San Antonio"]
+                        TX: [
+                            "Alvin",
+                            "Angleton",
+                            "Atascocita",
+                            "Bacliff",
+                            "Baytown",
+                            "Bellaire",
+                            "Brookshire",
+                            "Channelview",
+                            "Cinco Ranch",
+                            "Conroe",
+                            "Cypress",
+                            "Deer Park",
+                            "Dickinson",
+                            "Fresno",
+                            "Friendswood",
+                            "Fulshear",
+                            "Galveston",
+                            "Hempstead",
+                            "Hockley",
+                            "Houston",
+                            "Humble",
+                            "Jersey Village",
+                            "Katy",
+                            "Kemah",
+                            "Kingwood",
+                            "La Marque",
+                            "La Porte",
+                            "Lake Jackson",
+                            "League City",
+                            "Magnolia",
+                            "Manvel",
+                            "Meadows Place",
+                            "Missouri City",
+                            "Montgomery",
+                            "Needville",
+                            "Pasadena",
+                            "Pearland",
+                            "Porter",
+                            "Richmond",
+                            "Rosharon",
+                            "Rosenberg",
+                            "Seabrook",
+                            "Sienna",
+                            "Simonton",
+                            "Spring",
+                            "Stafford",
+                            "Sugar Land",
+                            "Texas City",
+                            "The Woodlands",
+                            "Tomball",
+                            "Waller",
+                            "Webster",
+                            "West University Place"
+                        ]
                     };
                     resolve(data[stateCode] || []);
                 }, 300);
@@ -2900,6 +3139,7 @@
             if (!stateSelect || !citySelect) return;
 
             const state = stateSelect.value;
+            const selectedCity = citySelect.value;
 
             citySelect.innerHTML = `<option>Loading cities...</option>`;
             citySelect.disabled = true;
@@ -2913,6 +3153,10 @@
                     opt.textContent = city;
                     citySelect.appendChild(opt);
                 });
+
+                if (selectedCity && cities.includes(selectedCity)) {
+                    citySelect.value = selectedCity;
+                }
 
                 citySelect.disabled = false;
                 if (onLoad) onLoad();
@@ -2967,6 +3211,149 @@
 
             input.value = formatted;
         }
+
+        // ─── CONFIRM & CONTINUE ───────────────────────────────────────────────────
+        const PRIMARY_REQUIRED_IDS = [
+            'uni_email', 'uni_phone', 'uni_first_name', 'uni_last_name',
+            'uni_dob', 'uni_txdl', 'uni_street', 'uni_city', 'uni_zip'
+        ];
+
+        function isPrimaryValid() {
+            for (const id of PRIMARY_REQUIRED_IDS) {
+                const el = document.getElementById(id);
+                if (!el) continue;
+                const val = (el.tagName === 'SELECT' ? el.value : el.value.trim());
+                if (!val || val === '') return false;
+                // Phone: need 10 digits
+                if (id === 'uni_phone' && el.value.replace(/\D/g, '').length < 10) return false;
+                // DOB: MM/DD/YYYY format
+                if (id === 'uni_dob' && !/^\d{2}\/\d{2}\/\d{4}$/.test(el.value.trim())) return false;
+            }
+            // ZIP must have resolved to a valid ISGH service area
+            if (!_zipState['uni']?.valid) return false;
+            return true;
+        }
+
+        function updateConfirmBtn() {
+            const btn = document.getElementById('uni_confirm_btn');
+            if (!btn) return;
+            if (isPrimaryValid()) {
+                btn.disabled = false;
+                btn.style.background = 'linear-gradient(135deg, #0d7a55 0%, #10b981 100%)';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.background = '#d1d5db';
+                btn.style.color = '#9ca3af';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+
+        function attachConfirmWatchers() {
+            PRIMARY_REQUIRED_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el || el._confirmWatchAttached) return;
+                el._confirmWatchAttached = true;
+                el.addEventListener('input', updateConfirmBtn);
+                el.addEventListener('change', updateConfirmBtn);
+                el.addEventListener('blur', updateConfirmBtn);
+            });
+        }
+
+        function confirmAndContinue() {
+            if (!isPrimaryValid()) return;
+
+            // Populate the review popup with current field values
+            const v = id => document.getElementById(id)?.value.trim() ?? '';
+            document.getElementById('prc_name').textContent  = `${v('uni_first_name')} ${v('uni_last_name')}`;
+            document.getElementById('prc_email').textContent = v('uni_email');
+            document.getElementById('prc_phone').textContent = v('uni_phone');
+            document.getElementById('prc_dob').textContent   = v('uni_dob');
+            document.getElementById('prc_txdl').textContent  = v('uni_txdl');
+            document.getElementById('prc_addr').textContent  =
+                `${v('uni_street')}, ${document.getElementById('uni_city')?.value ?? ''}, ${document.getElementById('uni_state')?.value ?? ''} ${v('uni_zip')}`;
+
+            document.getElementById('primaryReviewOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePrimaryReview() {
+            document.getElementById('primaryReviewOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function proceedPrimaryCheck() {
+            closePrimaryReview();
+
+            const btn   = document.getElementById('uni_confirm_btn');
+            const errEl = document.getElementById('uni_duplicate_error');
+            errEl.style.display = 'none';
+
+            const origLabel = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'Checking…';
+            btn.style.cursor = 'not-allowed';
+
+            const email     = document.getElementById('uni_email').value.trim();
+            const firstName = document.getElementById('uni_first_name').value.trim();
+            const lastName  = document.getElementById('uni_last_name').value.trim();
+            const phone     = document.getElementById('uni_phone').value.trim();
+            const dateOfBirth = document.getElementById('uni_dob').value.trim();
+
+            fetch('{{ route("membership.verify") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ first_name: firstName, last_name: lastName, date_of_birth: dateOfBirth }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // Duplicate found — show error, disable rest of form
+                    errEl.style.display = 'block';
+                    const restOfForm = document.getElementById('uni_rest_of_form');
+                    if (restOfForm) {
+                        restOfForm.style.display = 'none';
+                        restOfForm.querySelectorAll('input, select, textarea, button').forEach(el => {
+                            el.disabled = true;
+                            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                                el.style.background = '#f3f4f6';
+                                el.style.cursor = 'not-allowed';
+                            }
+                        });
+                    }
+                    btn.disabled = false;
+                    btn.innerHTML = origLabel;
+                    btn.style.background = 'linear-gradient(135deg, #0d7a55 0%, #10b981 100%)';
+                    btn.style.color = '#fff';
+                    btn.style.cursor = 'pointer';
+                } else {
+                    // Not found — hide confirm wrap, reveal rest of form
+                    document.getElementById('uni_confirm_wrap').style.display = 'none';
+                    const restOfForm = document.getElementById('uni_rest_of_form');
+                    if (restOfForm) {
+                        restOfForm.style.display = 'block';
+                        restOfForm.querySelectorAll('input, select, textarea, button').forEach(el => {
+                            el.disabled = false;
+                            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                                el.style.background = '';
+                                el.style.cursor = '';
+                            }
+                        });
+                    }
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = origLabel;
+                btn.style.background = 'linear-gradient(135deg, #0d7a55 0%, #10b981 100%)';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+            });
+        }
     </script>
 </head>
 
@@ -2982,6 +3369,25 @@
             <div class="overlay-steps-track">
                 <div class="overlay-dot active" id="odot1"></div>
                 <div class="overlay-dot" id="odot2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkomatic Spouse Disclaimer -->
+    <div id="checkomaticSpouseModal" class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="checkomaticSpouseTitle" onclick="if (event.target === this) closeCheckomaticSpouseDisclaimer()">
+        <div class="confirm-box">
+            <div class="confirm-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 8v4"/><path d="M12 16h.01"/><path d="M10.29 3.86l-8.43 14.5A2 2 0 0 0 3.58 21h16.84a2 2 0 0 0 1.72-2.64l-8.43-14.5a2 2 0 0 0-3.44 0z"/>
+                </svg>
+            </div>
+            <p class="confirm-title" id="checkomaticSpouseTitle">Checkomatic Reminder</p>
+            <p class="confirm-body" style="margin-bottom:0.9rem;">Before adding a spouse, please review the payment reminder below.</p>
+            <div class="checkomatic-spouse-note">
+                Checkomatic dues totaling $20 per member must be paid by June 30th.
+            </div>
+            <div class="confirm-actions" style="margin-top:1.25rem;">
+                <button class="confirm-btn-yes" onclick="confirmCheckomaticSpouseDisclaimer()">Got It</button>
             </div>
         </div>
     </div>
@@ -3260,7 +3666,7 @@
             <option value="checkomatic_individual">Checkomatic Membership Individual — $10/month</option>
             <option value="lifetime_family">Lifetime Membership (Family - Primary and Spouse) — $1500/lifetime</option>
             <option value="lifetime_individual">Lifetime Membership (Individual) — $1000/lifetime</option> -->
-                            <option value="flat">Annual Membership</option>
+                            <option value="flat">Individual Membership</option>
                             <option value="checkomatic_individual">Checkomatic Membership</option>
                             <option value="lifetime_individual">Lifetime Membership</option>
                         </select>
@@ -3284,7 +3690,6 @@
                                 <p class="banner-title" id="uni_banner_title"></p>
                                 <p class="banner-subtitle" id="uni_banner_subtitle"></p>
                                 <div class="banner-badges">
-                                    <span class="banner-badge">✔ Voting Privileges</span>
                                     <span class="banner-badge">✔ Member Discounts</span>
                                     <span class="banner-badge">✔ Prayer Facilities</span>
                                     <span class="banner-badge">✔ Community Events</span>
@@ -3303,11 +3708,11 @@
                         <div id="uni_checkomatic_amount_wrap" class="checkomatic-amount-shell" style="display:none;">
                             <label class="checkomatic-amount-label">
                                 Monthly Amount <span style="color:#fff;">*</span>
-                                <span class="checkomatic-amount-hint">(minimum $10/month)</span>
+                                <span class="checkomatic-amount-hint" id="uni_checkomatic_amount_hint">(minimum $10/month)</span>
                             </label>
                             <div class="checkomatic-amount-field">
                                 <span class="checkomatic-amount-prefix">$</span>
-                                <input type="number" id="uni_checkomatic_amount" min="10" max="10" value="10" step="1"
+                                <input type="number" id="uni_checkomatic_amount" min="10" value="10" step="1"
                                     class="checkomatic-amount-input" oninput="updateCheckomaticNote()">
                             </div>
                             <p id="uni_checkomatic_error" class="checkomatic-amount-error" style="display:none;"></p>
@@ -3318,7 +3723,7 @@
                         </div>
 
                         <div id="uni_checkomatic_warning" class="checkomatic-warning">
-                            <p>To qualify as a voting member for the current year, a minimum membership contribution of <span id="uni_checkomatic_warning_amount">$40</span> must be completed by {{ now()->addMonthsNoOverflow(4)->format('F Y') }}.</p>
+                            <p>To qualify as a voting member for the current year, a minimum membership contribution of $20/person must be completed by June 30.</p>
                         </div>
 
                         <!-- STEP 2: Primary Information -->
@@ -3442,7 +3847,32 @@
                                 <label>Center / Zone</label>
                                 <div id="uni_center_display"></div>
                             </div>
+                            <div class="field" id="uni_donation_type_field" style="display:none;">
+                                <label for="uni_donation_type">Donation Type <span style="color:red;">*</span></label>
+                                <select id="uni_donation_type" name="donation_type">
+                                    <option value="">— Select Donation Type —</option>
+                                    <option value="general_expense">General Expense</option>
+                                    <option value="masjid_expense">Masjid Expense</option>
+                                    <option value="construction">Construction</option>
+                                    <option value="sunday_school">Sunday School</option>
+                                </select>
+                            </div>
                         </div>
+
+                        <!-- CONFIRM & CONTINUE BUTTON -->
+                        <div id="uni_confirm_wrap" style="margin-top:1.25rem;">
+                            <div id="uni_duplicate_error" style="display:none;background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;border-radius:0.6rem;padding:0.7rem 1rem;font-size:0.85rem;margin-bottom:0.75rem;font-weight:600;">
+                                ⚠ Duplicate record found. A membership already exists for this email/name. Please contact ISGH support if you believe this is an error.
+                            </div>
+                            <button id="uni_confirm_btn" type="button" onclick="confirmAndContinue()"
+                                disabled
+                                style="width:100%;padding:0.85rem 1.5rem;border:none;border-radius:0.85rem;font-size:0.92rem;font-weight:700;font-family:inherit;cursor:not-allowed;transition:all 0.2s;background:#d1d5db;color:#9ca3af;">
+                                Confirm &amp; Continue
+                            </button>
+                        </div>
+
+                        <!-- REST OF FORM (hidden until primary is confirmed) -->
+                        <div id="uni_rest_of_form" style="display:none;">
 
                         <div class="section-divider"></div>
 
@@ -3453,22 +3883,29 @@
                                 <h3 class="form-section-title">Spouse Information</h3>
                             </div>
                             <button type="button" id="uni_add_spouse_btn" onclick="showSpouseForm()"
-                                style="display:none;margin-bottom:1rem;padding:0.6rem 1.2rem;border:1.5px dashed #10b981;border-radius:0.6rem;background:#f6fdfb;color:#059669;font-size:0.82rem;font-weight:600;cursor:pointer;width:100%;text-align:center;">
+                                class="btn-add-member" style="display:none;">
                                 + Add Your Spouse
                             </button>
                             <div id="uni_spouse_form_wrap" style="display:none;">
                             <div id="uni_spouses_container">
                                 <div class="spouse-block" id="uni_spouse_block_0">
-                                    <div class="spouse-block-header">
-                                        <div class="member-tag">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2">
-                                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                                <circle cx="12" cy="7" r="4" />
-                                            </svg>
-                                            Spouse 1
+                                    <div class="spouse-block-header dependent-card-header">
+                                        <div class="dependent-card-meta">
+                                            <div class="member-tag">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                                Spouse 1
+                                            </div>
                                         </div>
-                                        <button type="button" class="btn-remove-block" onclick="removeSpouseForm()">✕ Remove Spouse</button>
+                                        <div class="dependent-scan-btn">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
+                                            <span style="letter-spacing:0.3px;">Scan Your ID</span>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
+                                        </div>
+                                        <div class="dependent-card-actions">
+                                            <button type="button" class="btn-remove-block" onclick="removeSpouseForm()" title="Remove Spouse">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="fields-stack">
                                         <div class="field"><label>Email Address</label><input type="email"
@@ -3496,11 +3933,6 @@
                                         <div class="field"><label>TX DL # or ID Card # <span>*</span></label><input
                                                 type="text" id="uni_spouse_0_txdl" placeholder="e.g. TX7234578">
                                         </div>
-                                        <div class="field"><label>Gender</label><select id="uni_spouse_0_gender">
-                                                <option value="">Select Gender</option>
-                                                <option value="Male">Male</option>
-                                                <option value="Female">Female</option>
-                                            </select></div>
                                         <div class="dependent-address-summary">
                                             <span class="dependent-address-summary-label">Address</span>
                                             <div class="dependent-address-summary-value" id="uni_spouse_0_address_summary">Same as primary member address</div>
@@ -3530,7 +3962,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="section-divider"></div>
+                            
                             </div>{{-- /uni_spouse_form_wrap --}}
                         </div>
 
@@ -3556,18 +3988,21 @@
                                     +</div>
                                 Add Another Family Member (Optional)
                             </button>
-                            <div class="section-divider"></div>
                         </div>
-
+                        <div class="section-divider"></div>
                         <!-- STRIPE CARD ELEMENT -->
-                        <div class="stripe-card-section">
-                            <p class="stripe-card-label">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                                Card Details
-                            </p>
-                            <div id="stripe-card-element"></div>
-                            <div id="stripe-card-error" role="alert"></div>
-                        </div>
+        <div class="stripe-card-section">
+            <p class="stripe-card-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Card Details
+            </p>
+            <div class="field stripe-card-name-field" style="margin-top:1.5rem">
+                <label for="uni_cardholder_name">Name on Card <span>*</span></label>
+                <input type="text" id="uni_cardholder_name" placeholder="Enter the name shown on your card" autocomplete="cc-name">
+            </div>
+            <div id="stripe-card-element"></div>
+            <div id="stripe-card-error" role="alert"></div>
+        </div>
 
                         <!-- ORDER SUMMARY (dynamic) -->
                         <div class="order-summary">
@@ -3582,7 +4017,7 @@
                             <p class="order-summary-inner-title" style="position:relative;z-index:1;">Order Summary
                             </p>
                             <div class="order-row"><span>Membership Type</span><span id="uni_order_type"></span></div>
-                            <div class="order-row" id="uni_order_fee_row"><span>Membership Fee</span><span
+                            <div class="order-row" id="uni_order_fee_row"><span id="uni_order_fee_label">Membership Fee</span><span
                                     id="uni_order_fee"></span></div>
                             <div class="order-row" id="uni_flat_count_row" style="display:none;"><span
                                     id="flat_member_count">Family Members (1)</span><span
@@ -3631,6 +4066,8 @@
                             <span id="uni_submit_label">Complete Registration</span>
                         </button>
                         <p class="secure-note">🔒 Your payment information is secured with Stripe.</p>
+                        </div>
+                        <!-- /uni_rest_of_form -->
                     </div>
                     <!-- /unifiedMembershipSection -->
 
@@ -3831,6 +4268,32 @@
             document.body.style.overflow = '';
         }
     </script>
+
+    <!-- ─── PRIMARY MEMBER REVIEW POPUP ────────────────────────────────── -->
+    <div id="primaryReviewOverlay" class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="prcTitle">
+        <div class="confirm-box" style="max-width:420px;">
+            <div class="confirm-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </div>
+            <p class="confirm-title" id="prcTitle">Confirm Your Details</p>
+            <p class="confirm-body" style="margin-bottom:1rem;">Please verify your primary member information before we check for an existing membership.</p>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.65rem;padding:0.9rem 1rem;text-align:left;font-size:0.82rem;line-height:1.9;color:#374151;">
+                <div><span style="font-weight:700;color:#0d7a55;min-width:70px;display:inline-block;">Name</span> <span id="prc_name"></span></div>
+                <div><span style="font-weight:700;color:#0d7a55;min-width:70px;display:inline-block;">Email</span> <span id="prc_email"></span></div>
+                <div><span style="font-weight:700;color:#0d7a55;min-width:70px;display:inline-block;">Phone</span> <span id="prc_phone"></span></div>
+                <div><span style="font-weight:700;color:#0d7a55;min-width:70px;display:inline-block;">D.O.B</span> <span id="prc_dob"></span></div>
+                <div><span style="font-weight:700;color:#0d7a55;min-width:70px;display:inline-block;">TX DL</span> <span id="prc_txdl"></span></div>
+                <div><span style="font-weight:700;color:#0d7a55;min-width:70px;display:inline-block;">Address</span> <span id="prc_addr"></span></div>
+            </div>
+            <div class="confirm-actions" style="margin-top:1.25rem;">
+                <button class="confirm-btn-no" onclick="closePrimaryReview()">Edit Details</button>
+                <button class="confirm-btn-yes" onclick="proceedPrimaryCheck()">Yes, Confirm</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ─── CONFIRM SUBMISSION POPUP ────────────────────────────────────── -->
     <div id="confirmOverlay" class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">

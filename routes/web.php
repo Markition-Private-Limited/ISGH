@@ -23,7 +23,7 @@ Route::controller(OtpController::class)->group(function () {
 Route::controller(MembershipController::class)->group(function () {
     Route::post('/membership/checkout',   'createCheckoutSession')->name('membership.checkout');
     Route::post('/membership/finalize-payment', 'finalizePayment')->name('membership.finalize-payment');
-    Route::get( '/membership/success',    'success'             )->name('membership.success');
+    Route::get( '/membership/success/{id}',    'success'             )->name('membership.success');
     Route::post('/membership/zip-lookup',   'zipLookup'           )->name('membership.zip-lookup');
     Route::post('/membership/verify',      'verifyMembership'    )->name('membership.verify');
     Route::post('/membership/check-email', 'checkEmail'          )->name('membership.check-email');

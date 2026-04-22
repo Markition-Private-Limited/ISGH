@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('member_dependents', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('member_id')->constrained('members')->cascadeOnDelete();
+            $table->foreignId('member_id')->references('id')->on('members')->onDelete('cascade');
 
             // spouse | flat_member
             $table->enum('type', ['spouse', 'flat_member']);

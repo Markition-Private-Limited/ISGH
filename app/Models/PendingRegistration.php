@@ -8,10 +8,14 @@ class PendingRegistration extends Model
 {
     protected $fillable = [
         'stripe_intent_id',
+        'member_id',
+        'stripe_payment_method_id',
         'data',
         'processed',
         'wa_contact_id',
         'wa_invoice_id',
+        'invoice_data',
+        'payment_data',
         'processed_at',
         'wa_step',
         'wa_error',
@@ -22,6 +26,8 @@ class PendingRegistration extends Model
 
     protected $casts = [
         'data'         => 'array',
+        'invoice_data' => 'array',
+        'payment_data' => 'array',
         'processed'    => 'boolean',
         'stripe_paid'  => 'boolean',
         'processed_at' => 'datetime',

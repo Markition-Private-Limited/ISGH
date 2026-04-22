@@ -224,7 +224,7 @@
       border-color: var(--green);
       box-shadow: 0 0 0 3px var(--green-ring);
     }
-    .left-card .field label { background: transparent; }
+    .left-card .field label { background: transparent; top: -0.9rem; }
     .left-card .field input { background: #fff; }
 
     .btn-otp {
@@ -355,7 +355,7 @@
 
         <form action="{{route('otp.send')}}" method="POST" id="joinForm">
           @csrf
-          <div class="field mt-4">
+          <div class="field" style="margin-top:1.4rem;">
             <label>Email <span>*</span></label>
             <input type="email" name="email" id="joinEmail" placeholder="ali44@gmail.com" required autocomplete="email" />
             @error('email')

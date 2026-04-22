@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessWildApricotRegistration;
 use App\Models\Member;
 use App\Models\Payment;
 use App\Models\PendingRegistration;
@@ -66,23 +67,24 @@ class MembershipController extends Controller
         $lastName = trim((string) $request->input('last_name', ''));
         $email = strtolower(trim((string) $request->input('email', '')));
         $phone = trim((string) $request->input('phone', ''));
+        $dateOfBirth = trim((string) $request->input('date_of_birth', $request->input('dob', '')));
 
-        if ($firstName === '' || $lastName === '' || $email === '' || $phone === '') {
+        if ($firstName === '' && $lastName === '' && $email === '' && $phone === '' && $dateOfBirth === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'First name, last name, email, and phone are all required.',
+                'message' => 'First name, last name, email, phone, and date of birth are all required.',
             ], 422);
         }
 
-        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please enter a valid email address.',
-            ], 422);
-        }
+        // if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Please enter a valid email address.',
+        //     ], 422);
+        // }
 
         try {
-            $contact = $this->wa->searchContact($email, $firstName, $lastName, $phone);
+            $contact = $this->wa->searchContact($email, $firstName, $lastName, $phone, $dateOfBirth);
         } catch (Throwable $e) {
             Log::error('WA membership verification failed', ['error' => $e->getMessage()]);
 
@@ -147,8 +149,8 @@ class MembershipController extends Controller
 
         if (empty($centers)) {
             return response()->json([
-                'success' => false,
-                'message' => 'ISGH community services are not available in your area.',
+                'success' => true,
+                'centers' => [],
             ]);
         }
 
@@ -226,6 +228,11 @@ class MembershipController extends Controller
         if ($type === 'flat') {
             // 1 primary member + additional flat family members
             $memberCount = 1 + count($request->input('flat_members', []));
+
+            $type='individual'; // Process as individual for WA, we'll add dependents separately
+            // if($memberCount >1){
+            // }
+
             $totalCents = $memberCount * 2000;
             $fee = [
                 'cents' => $totalCents,
@@ -278,6 +285,17 @@ class MembershipController extends Controller
                 if (empty($spouse['first_name'])) {
                     continue;
                 }
+
+                $spouseEmail=$this->wa->searchContact($spouse['email'],'','','','');
+                if($spouseEmail){
+                    return response()->json(['success' => false, 'message' => 'Spouse email '.$spouse['email'].' is already in use.']);
+                }
+
+                $spouseData=$this->wa->searchContact('',$spouse['first_name'],$spouse['last_name'],'',$spouse['dob']);
+                if($spouseData){
+                    return response()->json(['success' => false, 'message' => 'The spouse information you entered matches an existing member. Please verify the details or contact ISGH support.']);
+                }
+
                 $spouse_data[] = [
                     'type' => 'spouse',
                     'first_name' => $spouse['first_name'],
@@ -301,10 +319,23 @@ class MembershipController extends Controller
             // ── Flat family member dependents ─────────────────────────────────
 
             $flat_members = [];
+            $index=0;
             foreach ($request->input('flat_members', []) as $flat) {
+                $index++;
                 if (empty($flat['first_name'])) {
                     continue;
                 }
+
+                $flatEmail=$this->wa->searchContact($flat['email'],'','','','');
+                if($flatEmail){
+                    return response()->json(['success' => false, 'message' => 'Family member email '.$flat['email'].' is already in use.']);
+                }
+
+                $flatData=$this->wa->searchContact('',$flat['first_name'],$flat['last_name'],'',$flat['dob']);
+                if($flatData){
+                    return response()->json(['success' => false, 'message' => 'The family member#'.$index.' information you entered matches an existing member. Please verify the details or contact ISGH support.']);
+                }
+
                 $flat_members[] = [
                     'type' => 'flat_member',
                     'first_name' => $flat['first_name'],
@@ -412,13 +443,18 @@ class MembershipController extends Controller
                 return response()->json(['success' => false, 'message' => 'Could not create payment intent: '.$e->getMessage()], 500);
             }
 
+            $primary = $request->input('primary');
+            $primary['auto_renewal'] = $request->input('terms.auto_renewal', false);
+
             // ── Step 4: Confirm / Charge ──────────────────────────────────────
-            PendingRegistration::updateOrCreate(
+            $pending=PendingRegistration::updateOrCreate(
                 ['stripe_intent_id' => $ref],
                 [
+                    'member_id' => $member->id,
+                    'stripe_payment_method_id' => $paymentMethodId ?? '',
                     'data' => [
                         'type' => $type,
-                        'primary' => $request->input('primary'),
+                        'primary' => $primary,
                         'spouses' => $spouse_data,
                         'flat_members' => $flat_members,
                         'zone' => $request->input('zone', ''),
@@ -498,7 +534,13 @@ class MembershipController extends Controller
                 return response()->json(['success' => false, 'message' => $userMessage], 402);
             }
 
-            return response()->json(['success' => true]);
+            ProcessWildApricotRegistration::dispatch(
+                $pending,
+                $chargeId ?? $intent->id,
+                $fee['cents'] / 100
+            );
+
+            return response()->json(['success' => true,'pending_id' => $pending->id ?? null]);
 
         } catch (Throwable $e) {
             Log::error('createCheckoutSession unexpected error', ['error' => $e->getMessage()]);
@@ -582,58 +624,33 @@ class MembershipController extends Controller
         ]);
 
         $pending = PendingRegistration::where('stripe_intent_id', $paymentRecord->ref)->first();
-        if ($pending && !$pending->processed) {
-            $this->processWildApricot($pending, $chargeId ?? $intent->id, $paymentRecord->amount_cents / 100);
+        if ($pending && ! $pending->processed) {
+            ProcessWildApricotRegistration::dispatch($pending, $chargeId ?? $intent->id, $paymentRecord->amount_cents / 100);
         }
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true,'pending_id' => $pending->id ?? null]);
     }
 
-    public function success(Request $request)
+    public function success(Request $request, $id)
     {
-        $sessionId = $request->query('session_id');
+        $pending = PendingRegistration::findOrFail($id);
+        $spouses = $pending->data['spouses'] ?? [];
+        $flatMembers = $pending->data['flat_members'] ?? [];
 
-        if (! $sessionId) {
-            return redirect()->route('home');
-        }
-
-        try {
-            $session = $this->stripe->retrieveCheckoutSession($sessionId);
-        } catch (Throwable $e) {
-            Log::error('Could not retrieve Checkout Session', ['session_id' => $sessionId, 'error' => $e->getMessage()]);
-
-            return redirect()->route('home')->with('error', 'Could not verify your payment. Please contact support.');
-        }
-
-        if ($session->payment_status !== 'paid') {
-            return redirect()->route('membership-types')->with('error', 'Payment was not completed. Please try again.');
-        }
-
-        $ref = $session->client_reference_id;
-        $pending = PendingRegistration::where('stripe_intent_id', $ref)->first();
-
-        if (! $pending) {
-            Log::error('No pending registration found for ref', ['ref' => $ref, 'session_id' => $sessionId]);
-
-            return redirect()->route('home')->with('error', 'Registration not found. Please contact support.');
-        }
-
-        // Process Wild Apricot only once (browser may load this page multiple times)
-        if (! $pending->processed) {
-            $chargeId = $session->payment_intent ?? $sessionId;
-            $amountPaid = $session->amount_total / 100;
-            $this->processWildApricot($pending, $chargeId, $amountPaid);
-        }
-
-        // Reload to get updated wa_contact_id
-        $pending->refresh();
+        // dd($pending->data);
+        $hasFlatMembers = ! empty($flatMembers);
+        $hasSpouseOnly = ! $hasFlatMembers && ! empty($spouses);
 
         return view('membership.success', [
-            'member_name' => $pending->data['primary']['first_name'].' '.$pending->data['primary']['last_name'],
+            'member_name' => trim(($pending->data['primary']['first_name'] ?? '').' '.($pending->data['primary']['last_name'] ?? '')),
             'member_email' => $pending->data['primary']['email'],
             'membership_type' => $pending->data['type'],
             'amount_label' => $pending->data['amount_label'],
             'wa_contact_id' => $pending->wa_contact_id,
+            'spouses' => $spouses,
+            'flat_members' => $flatMembers,
+            'hasFlatMembers' => $hasFlatMembers,
+            'hasSpouseOnly' => $hasSpouseOnly,
         ]);
     }
 
@@ -685,7 +702,7 @@ class MembershipController extends Controller
 
         Log::info('Webhook fallback: processing unhandled checkout', ['ref' => $ref]);
 
-        $this->processWildApricot(
+        ProcessWildApricotRegistration::dispatch(
             $pending,
             $session->payment_intent ?? $session->id,
             $session->amount_total / 100
@@ -698,10 +715,16 @@ class MembershipController extends Controller
     //  SHARED: CREATE EVERYTHING IN WILD APRICOT
     // ─────────────────────────────────────────────────────────────────────
 
-    /** Public entry-point for admin retry — delegates to the same pipeline. */
+    /** Public entry-point for admin retry — runs the job synchronously so the caller gets immediate feedback. */
     public function retryWildApricot(PendingRegistration $pending, string $chargeId, float $amountPaid): array
     {
-        return $this->processWildApricot($pending, $chargeId, $amountPaid);
+        try {
+            ProcessWildApricotRegistration::dispatchSync($pending, $chargeId, $amountPaid);
+
+            return ['success' => true];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
     }
 
     /** Extract Stripe error fields from any Throwable safely. */
@@ -719,179 +742,5 @@ class MembershipController extends Controller
             'error_decline_code' => $err->decline_code ?? null,
             'error_message' => $e->getMessage(),
         ];
-    }
-
-    private function processWildApricot(PendingRegistration $pending, string $chargeId, float $amountPaid): array
-    {
-        $data = $pending->data;
-        $type = $data['type'];
-
-        $isFamilyType = in_array($type, ['family', 'checkomatic_family', 'lifetime_family']);
-        $primaryRole = match (true) {
-            $type === 'flat' => 'Owner',
-            $isFamilyType => 'Head of Household',
-            default => 'Individual',
-        };
-
-        // Mark stripe_paid so admin knows money was collected even if WA fails
-        $pending->update(['stripe_paid' => true]);
-
-        // Helper: record a failed step and re-throw
-        $fail = function (string $step, Throwable $e) use ($pending): never {
-            $pending->update([
-                'wa_step' => $step,
-                'wa_error' => $e->getMessage(),
-                'wa_error_at' => now(),
-                'retry_count' => $pending->retry_count + 1,
-            ]);
-            Log::error("processWildApricot failed at step [{$step}]", [
-                'error' => $e->getMessage(),
-                'ref' => $pending->stripe_intent_id,
-            ]);
-            throw $e;
-        };
-
-        try {
-            // ── Resume state: skip steps already completed on a previous attempt ──
-            $contactId = (int) ($pending->wa_contact_id ?? 0);
-            $invoiceId = (int) ($pending->wa_invoice_id ?? 0);
-            $paymentDone = in_array($pending->wa_step, ['spouses', 'done']);
-
-            // ── Step 1: Create Active WA contact (skip if contact already created) ──
-            // bundleId / levelId — needed to link spouses as proper bundle members
-            $bundleId = (int) ($data['wa_bundle_id'] ?? 0);
-            $levelId = (int) ($data['wa_level_id'] ?? 0);
-
-            $termsAgreedAt = now()->toIso8601String();
-
-            if (! $contactId) {
-                $pending->update(['wa_step' => 'contact']);
-                $primaryData = array_merge($data['primary'], [
-                    'membership_type' => $type,
-                    'role' => $primaryRole,
-                    'zone' => $data['zone'] ?? '',
-                    'terms_agreed_at' => $termsAgreedAt,
-                ]);
-                try {
-                    $contact = $this->wa->createActiveMember($primaryData);
-                    $contactId = (int) $contact['Id'];
-                    // Extract BundleId and LevelId — needed to link spouses as bundle members
-                    $bundleId = (int) $this->wa->extractFieldValue($contact, 'BundleId');
-                    $levelId = (int) ($contact['MembershipLevel']['Id'] ?? $this->wa->resolveLevelId($type));
-                    // Persist so retry can skip this step and still have both IDs
-                    $newData = array_merge($data, ['wa_bundle_id' => $bundleId, 'wa_level_id' => $levelId]);
-                    $pending->update(['wa_contact_id' => $contactId, 'data' => $newData]);
-                    $data = $newData;
-                } catch (Throwable $e) {
-                    $fail('contact', $e);
-                }
-            } else {
-                Log::info('processWildApricot: skipping contact step (already created)', [
-                    'contact_id' => $contactId, 'bundle_id' => $bundleId, 'ref' => $pending->stripe_intent_id,
-                ]);
-            }
-
-            // ── Step 2: Create WA invoice (skip if already created) ─────────
-            if (! $invoiceId) {
-                $pending->update(['wa_step' => 'invoice']);
-                try {
-                    $invoice = $this->wa->createMembershipInvoice($contactId, $amountPaid, $type);
-                    $invoiceId = (int) $invoice['Id'];
-                    $pending->update(['wa_invoice_id' => $invoiceId]);
-                } catch (Throwable $e) {
-                    $fail('invoice', $e);
-                }
-            } else {
-                Log::info('processWildApricot: skipping invoice step (already created)', [
-                    'invoice_id' => $invoiceId, 'ref' => $pending->stripe_intent_id,
-                ]);
-            }
-
-            // ── Step 3: Record Stripe payment (skip if already recorded) ──────
-            if (! $paymentDone) {
-                $pending->update(['wa_step' => 'payment']);
-                try {
-                    $this->wa->recordPayment($contactId, $invoiceId, $amountPaid, $chargeId);
-                } catch (Throwable $e) {
-                    $fail('payment', $e);
-                }
-            } else {
-                Log::info('processWildApricot: skipping payment step (already recorded)', [
-                    'ref' => $pending->stripe_intent_id,
-                ]);
-            }
-
-            // ── Step 4: Add spouses / flat members ───────────────────────────
-            $pending->update(['wa_step' => 'spouses']);
-            if ($isFamilyType) {
-                foreach ($data['spouses'] ?? [] as $spouse) {
-                    if (empty($spouse['first_name'])) {
-                        continue;
-                    }
-                    try {
-                        $this->wa->addRelatedContact($contactId, $bundleId, $levelId, array_merge($spouse, [
-                            'role' => 'Spouse',
-                            'zone' => $data['zone'] ?? '',
-                            'terms_agreed_at' => $termsAgreedAt,
-                            'invoice_number' => $invoiceId,
-                        ]));
-                    } catch (Throwable $e) {
-                        Log::error('WA spouse add failed', ['error' => $e->getMessage()]);
-                    }
-                }
-            }
-            if ($type === 'flat') {
-                foreach ($data['flat_members'] ?? [] as $member) {
-                    if (empty($member['first_name'])) {
-                        continue;
-                    }
-                    try {
-                        $this->wa->addRelatedContact($contactId, $bundleId, $levelId, [
-                            'first_name' => $member['first_name'] ?? '',
-                            'last_name' => $member['last_name'] ?? '',
-                            'middle_name' => $member['middle_name'] ?? '',
-                            'email' => $member['email'] ?? '',
-                            'dob' => $member['dob'] ?? '',
-                            'phone' => $member['phone'] ?? '',
-                            'tx_dl' => $member['tx_dl'] ?? '',
-                            'role' => $member['relation'] ?? 'Family Member',
-                            'zone' => $data['zone'] ?? '',
-                            'street' => $member['street'] ?: ($data['primary']['street'] ?? ''),
-                            'city' => $member['city'] ?: ($data['primary']['city'] ?? ''),
-                            'state' => $member['state'] ?: ($data['primary']['state'] ?? ''),
-                            'zip' => $member['zip'] ?: ($data['primary']['zip'] ?? ''),
-                            'terms_agreed_at' => $termsAgreedAt,
-                            'member_identifier' => $contactId,
-                            'invoice_number' => $invoiceId,
-                        ]);
-                    } catch (Throwable $e) {
-                        Log::error('WA flat member add failed', ['error' => $e->getMessage()]);
-                    }
-                }
-            }
-
-            // ── Step 5: Mark fully processed ────────────────────────────────
-            $pending->update([
-                'processed' => true,
-                'wa_step' => 'done',
-                'wa_error' => null,
-                'wa_error_at' => null,
-                'wa_contact_id' => $contactId,
-                'wa_invoice_id' => $invoiceId,
-                'processed_at' => now(),
-            ]);
-
-            Log::info('WA membership fully created', [
-                'contact_id' => $contactId,
-                'invoice_id' => $invoiceId,
-                'type' => $type,
-                'charge_id' => $chargeId,
-            ]);
-
-            return ['success' => true];
-
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
     }
 }
