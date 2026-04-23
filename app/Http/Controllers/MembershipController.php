@@ -41,6 +41,23 @@ class MembershipController extends Controller
     //  MEMBERSHIP VERIFICATION  (AJAX — called from verification page)
     // ─────────────────────────────────────────────────────────────────────
 
+    public function checkPhone(Request $request)
+    {
+        $phone = trim((string) $request->input('phone', ''));
+
+        if (preg_replace('/\D/', '', $phone) === '') {
+            return response()->json(['exists' => false]);
+        }
+
+        try {
+            $exists = $this->wa->checkPhoneExists($phone);
+            return response()->json(['exists' => $exists]);
+        } catch (Throwable $e) {
+            Log::error('WA phone check failed', ['error' => $e->getMessage()]);
+            return response()->json(['exists' => false]);
+        }
+    }
+
     public function checkEmail(Request $request)
     {
         $email = strtolower(trim((string) $request->input('email', '')));
@@ -269,6 +286,7 @@ class MembershipController extends Controller
                 'state' => $request->input('primary.state'),
                 'zip' => $request->input('primary.zip'),
                 'zone' => $request->input('zone'),
+                'donation_type' => $request->input('donation_type') ?: null,
                 'amount_cents' => $fee['cents'],
                 'checkomatic_monthly_cents' => in_array($type, ['checkomatic_family', 'checkomatic_individual'])
                     ? (int) round((float) $request->input('checkomatic_amount', 10) * 100)
@@ -289,6 +307,11 @@ class MembershipController extends Controller
                 $spouseEmail=$this->wa->searchContact($spouse['email'],'','','','');
                 if($spouseEmail){
                     return response()->json(['success' => false, 'message' => 'Spouse email '.$spouse['email'].' is already in use.']);
+                }
+
+                $spousePhone=$this->wa->checkPhoneExists($spouse['phone']);
+                if($spousePhone){
+                    return response()->json(['success' => false, 'message' => 'Spouse phone '.$spouse['phone'].' is already in use.']);
                 }
 
                 $spouseData=$this->wa->searchContact('',$spouse['first_name'],$spouse['last_name'],'',$spouse['dob']);
@@ -329,6 +352,11 @@ class MembershipController extends Controller
                 $flatEmail=$this->wa->searchContact($flat['email'],'','','','');
                 if($flatEmail){
                     return response()->json(['success' => false, 'message' => 'Family member email '.$flat['email'].' is already in use.']);
+                }
+
+                $flatPhone=$this->wa->checkPhoneExists($flat['phone']);
+                if($flatPhone){
+                    return response()->json(['success' => false, 'message' => 'Family member phone '.$flat['phone'].' is already in use.']);
                 }
 
                 $flatData=$this->wa->searchContact('',$flat['first_name'],$flat['last_name'],'',$flat['dob']);

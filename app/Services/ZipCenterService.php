@@ -11,7 +11,7 @@ class ZipCenterService
 
     public function __construct()
     {
-        $this->xlsxPath = public_path('zip_to_center_mapping.xlsx');
+        $this->xlsxPath = public_path('updated_zip_to_center_mapping.xlsx');
     }
 
     /**
@@ -20,7 +20,7 @@ class ZipCenterService
      */
     public function getMap(): array
     {
-        return Cache::remember('zip_center_map', 86400, function () {
+        return Cache::remember('zip_center_map_v2', 86400, function () {
             $spreadsheet = IOFactory::load($this->xlsxPath);
             $sheet       = $spreadsheet->getActiveSheet();
             $map         = [];
@@ -32,23 +32,26 @@ class ZipCenterService
                 $cols = [];
                 foreach ($cells as $cell) {
                     $cols[] = trim((string) $cell->getValue());
-                    if (count($cols) >= 2) break;
+                    if (count($cols) >= 3) break;
                 }
 
                 $zip    = $cols[0] ?? '';
                 $center = $cols[1] ?? '';
+                $donation_types = $cols[2] ?? '';
 
                 if ($zip === '' || $center === '') continue;
 
                 // Normalise ZIP to 5 digits
                 $zip = str_pad(preg_replace('/\D/', '', $zip), 5, '0', STR_PAD_LEFT);
 
-                $map[$zip][] = $center;
+                $map[$zip]['centers'][] = $center;
+                $map[$zip]['donation_types'][] = $donation_types;
             }
 
-            // Deduplicate centers per ZIP
-            foreach ($map as $zip => $centers) {
-                $map[$zip] = array_values(array_unique($centers));
+            // Deduplicate centers and donation types per ZIP
+            foreach ($map as $zip => $data) {
+                $map[$zip]['centers'] = array_values(array_unique($data['centers']));
+                $map[$zip]['donation_types'] = array_values(array_unique($data['donation_types']));
             }
 
             return $map;
@@ -68,6 +71,6 @@ class ZipCenterService
     /** Clear the cache (call after uploading a new XLSX). */
     public function clearCache(): void
     {
-        Cache::forget('zip_center_map');
+        Cache::forget('zip_center_map_v2');
     }
 }

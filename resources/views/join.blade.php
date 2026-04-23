@@ -271,6 +271,9 @@
       mix-blend-mode: luminosity;
       display: block;
     }
+    .mobile-join-visual {
+      display: none;
+    }
     .ring {
       position: absolute;
       border-radius: 50%;
@@ -293,14 +296,68 @@
       .header { padding: 0.8rem 1rem; }
       .nav-pill { display: none; }
       .mob-nav  { display: flex; }
-      .main { padding: 1.2rem 1rem 2rem; }
-      .left-card { padding: 1.8rem 1.4rem; }
-      .join-box h1 { font-size: 1.6rem; }
-      .right-card { min-height: 240px; }
+      .main { padding: 1rem 0.85rem 1.6rem; align-items: flex-start; }
+      .cards-wrapper { max-width: 100%; }
+      .left-card {
+        padding: 1rem 0.9rem 1.1rem;
+        border-width: 8px;
+        border-radius: 1.2rem;
+      }
+      .join-box {
+        margin-bottom: 1rem;
+        padding: 0.95rem 1rem 0.8rem;
+      }
+      .join-box h1 { font-size: 1.55rem; }
+      .join-box p { font-size: 0.78rem; }
+      .form-title { font-size: 1.05rem; margin-bottom: 0.2rem; }
+      .form-sub { font-size: 0.78rem; margin-bottom: 1.05rem; }
+      .divider { margin-bottom: 1rem; }
+      .field { margin-bottom: 0.9rem; }
+      .field label { font-size: 0.62rem; top: -0.42rem; }
+      .field input { padding: 0.72rem 0.9rem; font-size: 0.88rem; border-radius: 0.55rem; }
+      .btn-otp {
+        padding: 0.82rem 1rem;
+        font-size: 0.92rem;
+        margin-bottom: 0.2rem;
+        border-width: 4px;
+      }
+      .right-card { display: none; }
+      .mobile-join-visual {
+        display: block;
+        margin-top: 0.25rem;
+        margin-bottom: 1rem;
+        border-radius: 0.95rem;
+        overflow: hidden;
+        border: 1px solid rgba(224,231,227,0.95);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        background: linear-gradient(135deg, #0c7b52 0%, #0b5f40 100%);
+        padding: 0.35rem;
+      }
+      .mobile-join-visual .join-visual-frame {
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.8rem;
+        min-height: 245px;
+        background: #0c7b52;
+      }
+      .mobile-join-visual img {
+        width: 100%;
+        height: 245px;
+        object-fit: cover;
+        object-position: center top;
+        filter: grayscale(100%);
+        display: block;
+      }
     }
     @media (max-width: 380px) {
-      .left-card { padding: 1.4rem 1rem; }
-      .join-box h1 { font-size: 1.4rem; }
+      .main { padding-left: 0.65rem; padding-right: 0.65rem; }
+      .left-card { padding: 0.9rem 0.75rem 1rem; }
+      .join-box h1 { font-size: 1.35rem; }
+      .join-box p { font-size: 0.72rem; }
+      .form-title { font-size: 0.98rem; }
+      .form-sub { font-size: 0.72rem; }
+      .mobile-join-visual img,
+      .mobile-join-visual .join-visual-frame { height: 220px; min-height: 220px; }
     }
     .navbar-glass {
       background: rgba(10, 10, 10, 0.88);
@@ -312,33 +369,45 @@
 </head>
 <body class="min-h-screen flex flex-col">
 <div class="" style="border: 10px solid #ffff;border-radius: 40px; background: rgba(248, 248, 248, 1);">
-  <header class="w-full pt-8 relative z-50 flex items-center justify-between px-4 sm:px-8 md:px-16 lg:px-24">
-    <div class="flex-shrink-0">
-      <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
-          <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
+  <header class="w-full pt-6 sm:pt-8 relative z-50 px-4 sm:px-8 md:px-16 lg:px-24">
+    <div class="flex items-center gap-3">
+      <a href="{{ route('home') }}" class="hidden lg:block shrink-0" aria-label="ISGH Home">
+        <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
+            <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
+        </div>
+      </a>
+
+      <nav class="hidden lg:flex navbar-glass rounded-full pl-8 pr-2 py-2 items-center gap-8 ml-auto">
+        <div class="flex items-center gap-7">
+          <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
+          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
+          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
+          <a href="{{ route('join') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
+          <a href="{{ route('membership-verification') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <a href="https://isgh.wildapricot.org/Sys/Login" target="_blank" rel="noopener noreferrer" class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
+          <a href="{{ route('join') }}" style="background: #00d084;" class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Join Now</a>
+        </div>
+      </nav>
+
+      <div class="w-full lg:hidden">
+        <div class="flex w-full items-center justify-between rounded-full border-[8px] border-white bg-[#1c1c1c] px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] min-h-[72px]">
+          <a href="{{ route('home') }}" class="shrink-0" aria-label="ISGH Home">
+            <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="h-11 w-11 sm:h-12 sm:w-12 object-contain">
+          </a>
+
+          <button onclick="openMobileMenu()" aria-label="Open menu" class="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/5">
+            <span class="flex flex-col items-center justify-center gap-1.5">
+              <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+              <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+              <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+            </span>
+          </button>
+        </div>
       </div>
     </div>
-
-    <nav class="navbar-glass rounded-full pl-8 pr-2 py-2 flex items-center gap-8 ml-auto">
-      <div class="hidden lg:flex items-center gap-7">
-        <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
-        <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
-        <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
-        <a href="{{ route('join') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
-        <a href="{{ route('membership-verification') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
-      </div>
-
-      <div class="hidden lg:flex items-center gap-3">
-        <a href="https://isgh.wildapricot.org/Sys/Login" target="_blank" rel="noopener noreferrer" class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
-        <a href="{{ route('join') }}" style="background: #00d084;" class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Join Now</a>
-      </div>
-
-      <button onclick="openMobileMenu()" class="lg:hidden ml-2 pr-2 text-white/70 hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-    </nav>
   </header>
 
   <main class="main">
@@ -347,6 +416,16 @@
         <div class="join-box">
           <h1>Join ISGH</h1>
           <p>Become part of our community</p>
+        </div>
+
+        <div class="mobile-join-visual">
+          <div class="join-visual-frame">
+            <img
+              src="{{ asset('images/happy.png') }}"
+              alt="Family together"
+              loading="lazy"
+            />
+          </div>
         </div>
 
         <p class="form-title">Get Started</p>

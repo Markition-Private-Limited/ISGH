@@ -1295,6 +1295,131 @@
             }
         }
 
+        /* ─── MOBILE (≤ 768px) ────────────────────────── */
+        /* ─── MOBILE HORIZONTAL SCROLL SECTION ───────── */
+        .mobile-side-scroll {
+            display: none; /* hidden on desktop */
+        }
+
+        .mobile-scroll-item {
+            flex: 0 0 155px;
+            text-align: center;
+            background: white;
+            border-radius: 1rem;
+            padding: 1rem 0.75rem 1.1rem;
+            box-shadow: 0 2px 14px rgba(0,0,0,0.07);
+            border: 1px solid #f1f5f9;
+            scroll-snap-align: start;
+        }
+
+        .mobile-scroll-item img {
+            width: 100%;
+            height: 90px;
+            object-fit: contain;
+            margin-bottom: 0.55rem;
+        }
+
+        .mobile-scroll-item h3 {
+            font-family: 'SF Pro bold';
+            font-size: 0.78rem;
+            color: #0d7a55;
+            margin-bottom: 0.25rem;
+        }
+
+        .mobile-scroll-item p {
+            font-size: 0.63rem;
+            color: #6b7280;
+            line-height: 1.45;
+        }
+
+        @media (max-width: 768px) {
+            /* Remove outer white frame/border on mobile */
+            .page-outer-wrapper {
+                border: none !important;
+                border-radius: 0 !important;
+            }
+
+            /* Reduce hero upward shift so "Join ISGH" clears the navbar */
+            .hero-bg {
+                top: -25px !important;
+            }
+
+            /* Single-column grid, center card only — both side columns hidden */
+            .membership-grid {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .membership-grid > .membership-card-side {
+                display: none;
+            }
+
+            /* Main container on mobile */
+            .main-container {
+                margin-top: -2rem;
+                padding: 0 0.75rem 2rem;
+            }
+
+            /* Show the mobile horizontal scroll section */
+            .mobile-side-scroll {
+                display: flex;
+                overflow-x: auto;
+                gap: 0.85rem;
+                padding: 1.5rem 0.75rem 1.75rem;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                scroll-snap-type: x mandatory;
+            }
+
+            .mobile-side-scroll::-webkit-scrollbar {
+                display: none;
+            }
+
+            /* Center card: proper radius and padding */
+            .center-card {
+                border-radius: 1.25rem;
+                padding: 1.5rem 1rem 2rem;
+            }
+
+            /* Membership banner: stack price below title on very small screens */
+            .membership-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+                min-height: auto;
+                padding: 1rem 1.1rem;
+            }
+
+            .banner-main-row {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .banner-price {
+                text-align: left;
+            }
+
+            .banner-price .price-amount {
+                font-size: 1.3rem;
+            }
+
+            /* Form step indicator */
+            .step-number {
+                width: 42px;
+                height: 42px;
+                font-size: 1rem;
+            }
+
+            .form-section-title {
+                font-size: 1.2rem;
+            }
+
+            /* Make locked steps bar full width */
+            .locked-steps {
+                gap: 0.35rem;
+            }
+        }
+
         /* Submission overlay */
         .submit-overlay {
             position: fixed;
@@ -1630,7 +1755,7 @@
 
             setText('uni_order_type', cfg.orderType);
             setText('uni_order_fee', cfg.orderFee);
-            setFeeLabel((type === 'checkomatic_family' || type === 'checkomatic_individual') ? 'Donation Fee' : 'Membership Fee');
+            setFeeLabel((type === 'checkomatic_family' || type === 'checkomatic_individual') ? 'Donation Amount' : 'Membership Fee');
             if (cfg.hasFlatMembers) {
                 updateFlatTotal();
             } else {
@@ -1660,6 +1785,15 @@
             if (banner) banner.classList.toggle('banner-checkomatic-active', isCheckomatic);
             if (amountWrap) amountWrap.style.display = isCheckomatic ? '' : 'none';
             if (donationTypeField) donationTypeField.style.display = isCheckomatic ? '' : 'none';
+            const _donationSelect = document.getElementById('uni_donation_type');
+            if (!isCheckomatic) {
+                // Reset to empty when leaving checkomatic
+                if (_donationSelect) _donationSelect.value = '';
+            } else {
+                // Re-apply cached donation types from the last ZIP lookup (if any)
+                const _cachedTypes = _zipState['uni']?.donationTypes;
+                if (_cachedTypes && _cachedTypes.length > 0) _populateDonationTypes(_cachedTypes);
+            }
             if (warningBox && !isCheckomatic) warningBox.style.display = 'none';
             if (amountInput && isCheckomatic) {
                 const minVal = getCheckomaticMinimum(type);
@@ -2229,6 +2363,15 @@
                 }
             }
 
+            // Block if any field currently has an active validation error (email/phone checks)
+            const _valSection = document.getElementById('unifiedMembershipSection');
+            if (_valSection) {
+                const _valInputs = _valSection.querySelectorAll('input:not([readonly])');
+                for (const _inp of _valInputs) {
+                    if (_inp._hasValidationError === true) { btn.disabled = true; return; }
+                }
+            }
+
             btn.disabled = false;
         }
 
@@ -2484,6 +2627,9 @@
                     msgEl.className = "phone-msg error";
                 }
                 input.style.borderColor = "#dc2626";
+                input._hasValidationError = true;
+                checkFormReadiness();
+                updateConfirmBtn();
                 return false;
             }
 
@@ -2494,7 +2640,31 @@
                     msgEl.className = "phone-msg error";
                 }
                 input.style.borderColor = "#dc2626";
+                input._hasValidationError = true;
+                checkFormReadiness();
+                updateConfirmBtn();
                 return false;
+            }
+
+            // ── Cross-form uniqueness: check against all other phone fields ──
+            const _phoneSec = document.getElementById('unifiedMembershipSection');
+            if (_phoneSec) {
+                const _pSiblings = [..._phoneSec.querySelectorAll('input[id$="_phone"]')];
+                const _pDup = _pSiblings.some(o => o !== input && o.value.trim().replace(/\D/g, '') === digits);
+                if (_pDup) {
+                    if (msgEl) { msgEl.textContent = 'This phone is already used by another member in this form.'; msgEl.className = 'phone-msg error'; }
+                    input.style.borderColor = '#dc2626';
+                    input._hasValidationError = true;
+                    checkFormReadiness();
+                    updateConfirmBtn();
+                    return false;
+                }
+                // This field is now unique — re-validate siblings that showed a duplicate warning
+                _pSiblings.forEach(o => {
+                    if (o !== input && o.value.trim() && o.style.borderColor === 'rgb(220, 38, 38)') {
+                        validateUsPhone(o);
+                    }
+                });
             }
 
             // ✅ Valid
@@ -2504,7 +2674,58 @@
             }
 
             input.style.borderColor = "#10b981";
+            input._hasValidationError = false;
+            updateConfirmBtn();
+            // Kick off async WA phone-existence check (non-blocking)
+            checkMemberPhone(input);
             return true;
+        }
+
+        // ─── WA PHONE CHECK (real-time, fires after format + uniqueness pass) ──────
+        async function checkMemberPhone(input) {
+            const phone = input.value.trim();
+            const msgEl = document.getElementById(input.id + '_msg');
+
+            input._waPhoneExists = false;
+
+            if (!phone || phone.replace(/\D/g, '').length < 10) return;
+
+            if (msgEl) { msgEl.textContent = 'Checking…'; msgEl.className = 'phone-msg'; }
+            input._hasValidationError = true;
+            checkFormReadiness();
+            updateConfirmBtn();
+
+            try {
+                const res = await fetch('{{ route('membership.check-phone') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ phone }),
+                });
+                const data = await res.json();
+                if (data.exists) {
+                    input._waPhoneExists = true;
+                    input._hasValidationError = true;
+                    input.style.borderColor = '#dc2626';
+                    if (msgEl) { msgEl.textContent = 'This phone is already registered as an ISGH member.'; msgEl.className = 'phone-msg error'; }
+                } else {
+                    input._waPhoneExists = false;
+                    input._hasValidationError = false;
+                    input.style.borderColor = '#10b981';
+                    if (msgEl) { msgEl.textContent = '✓ Phone is available'; msgEl.className = 'phone-msg success'; }
+                }
+                checkFormReadiness();
+                updateConfirmBtn();
+            } catch (e) {
+                // On network error don't block — leave the green "valid" state
+                input._waPhoneExists = false;
+                input._hasValidationError = false;
+                checkFormReadiness();
+                updateConfirmBtn();
+            }
         }
 
         // ─── WA EMAIL CHECK (spouse / flat members only — real-time with debounce) ──
@@ -2516,13 +2737,14 @@
 
             // Reset state immediately when field changes
             input._waEmailExists = false;
+            input._hasValidationError = false;
             input.style.borderColor = '';
             if (msgEl) {
                 msgEl.textContent = '';
                 msgEl.className = 'email-msg';
             }
 
-            if (!email) return;
+            if (!email) { checkFormReadiness(); return; }
 
             // Show "checking…" while waiting for a valid format
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -2530,13 +2752,35 @@
                     msgEl.textContent = 'Enter a valid email address.';
                     msgEl.className = 'email-msg error';
                 }
+                input._hasValidationError = true;
+                checkFormReadiness();
                 return;
+            }
+
+            // ── Cross-form uniqueness: check against ALL email fields including readonly primary ──
+            const _sectionEl = document.getElementById('unifiedMembershipSection');
+            if (_sectionEl) {
+                const _allEmails = [..._sectionEl.querySelectorAll('input[type="email"]')];
+                const _isDup = _allEmails.some(o => o !== input && o.value.trim().toLowerCase() === email.toLowerCase());
+                if (_isDup) {
+                    input._waEmailExists = undefined; // block submit
+                    input._hasValidationError = true;
+                    input.style.borderColor = '#dc2626';
+                    if (msgEl) { msgEl.textContent = 'This email is already used by another member in this form.'; msgEl.className = 'email-msg error'; }
+                    checkFormReadiness();
+                    return;
+                }
+                // Re-check only editable siblings that still show a cross-form duplicate warning
+                _allEmails.filter(o => !o.readOnly && o !== input && o.value.trim() && o._waEmailExists === undefined)
+                          .forEach(o => checkMemberEmail(o));
             }
 
             if (msgEl) {
                 msgEl.textContent = 'Checking…';
                 msgEl.className = 'email-msg';
             }
+            input._hasValidationError = true;
+            checkFormReadiness();
 
             try {
                 const res = await fetch('{{ route('membership.check-email') }}', {
@@ -2553,6 +2797,7 @@
                 const data = await res.json();
                 if (data.exists) {
                     input._waEmailExists = true;
+                    input._hasValidationError = true;
                     input.style.borderColor = '#dc2626';
                     if (msgEl) {
                         msgEl.textContent = 'This email is already taken — already registered as an ISGH member.';
@@ -2560,18 +2805,22 @@
                     }
                 } else {
                     input._waEmailExists = false;
+                    input._hasValidationError = false;
                     input.style.borderColor = '#10b981';
                     if (msgEl) {
                         msgEl.textContent = '✓ Email is available';
                         msgEl.className = 'email-msg success';
                     }
                 }
+                checkFormReadiness();
             } catch (e) {
                 input._waEmailExists = false;
+                input._hasValidationError = false;
                 if (msgEl) {
                     msgEl.textContent = '';
                     msgEl.className = 'email-msg';
                 }
+                checkFormReadiness();
             }
         }
 
@@ -2694,16 +2943,38 @@
         // ─── ZIP VALIDATION ──────────────────────────────────────────────────────
         const _zipState = {}; // prefix → { valid: bool, zone: string }
 
+        function _populateDonationTypes(types) {
+            const selectEl = document.getElementById('uni_donation_type');
+            if (!selectEl) return;
+            selectEl.innerHTML = '<option value="">— Select Donation Type —</option>';
+            types.forEach(type => {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.textContent = type;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function _onCenterChange(prefix, selectEl) {
+            const centerName = selectEl.value;
+            _zipState[prefix].zone = centerName;
+            if (prefix !== 'uni' || !centerName) return;
+            const _selType = document.getElementById('membershipSelector')?.value ?? '';
+            const _isChk = _selType === 'checkomatic_family' || _selType === 'checkomatic_individual';
+            if (!_isChk) return;
+            const idx = (_zipState[prefix].centers ?? []).indexOf(centerName);
+            const types = (_zipState[prefix].donationTypesByCenter ?? [])[idx] ?? [];
+            _zipState[prefix].donationTypes = types;
+            _populateDonationTypes(types);
+        }
+
         async function validateZip(input, prefix) {
             const zip = input.value.trim();
             const msgEl = document.getElementById(prefix + '_zip_msg');
             const cfEl = document.getElementById(prefix + '_center_field');
             const cdEl = document.getElementById(prefix + '_center_display');
 
-            _zipState[prefix] = {
-                valid: false,
-                zone: ''
-            };
+            _zipState[prefix] = { valid: false, zone: '', centers: [], donationTypesByCenter: [], donationTypes: [] };
             if (msgEl) {
                 msgEl.textContent = '';
                 msgEl.className = 'zip-msg';
@@ -2720,16 +2991,23 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        zip
-                    }),
+                    body: JSON.stringify({ zip }),
                 });
                 const data = await res.json();
+                const centers = Array.isArray(data.centers.centers) ? data.centers.centers : [];
+                const rawDonationTypes = Array.isArray(data.centers.donation_types) ? data.centers.donation_types : [];
 
-                const centers = Array.isArray(data.centers) ? data.centers : [];
+                // Each rawDonationTypes[i] is a comma-separated string for centers[i]
+                const donationTypesByCenter = rawDonationTypes.map(s =>
+                    s.split(',').map(t => t.trim()).filter(Boolean)
+                );
+
                 _zipState[prefix] = {
                     valid: true,
-                    zone: ''
+                    zone: '',
+                    centers,
+                    donationTypesByCenter,
+                    donationTypes: [],
                 };
 
                 if (!data.success || centers.length === 0) {
@@ -2744,18 +3022,25 @@
                     return;
                 }
 
+                const _selType = document.getElementById('membershipSelector')?.value ?? '';
+                const _isChk = _selType === 'checkomatic_family' || _selType === 'checkomatic_individual';
+
                 if (centers.length === 1) {
                     _zipState[prefix].zone = centers[0];
+                    _zipState[prefix].donationTypes = donationTypesByCenter[0] ?? [];
                     if (cdEl) cdEl.innerHTML = `<span class="zone-text">📍 ${centers[0]}</span>`;
                     if (cfEl) cfEl.style.display = '';
                     if (msgEl) {
                         msgEl.textContent = '✓ Center assigned';
                         msgEl.className = 'zip-msg success';
                     }
+                    if (prefix === 'uni' && _isChk) _populateDonationTypes(_zipState[prefix].donationTypes);
                 } else {
+                    // Multiple centers — donation types update when the user picks a center
+                    if (prefix === 'uni' && _isChk) _populateDonationTypes([]); // reset until center is chosen
                     const opts = centers.map(c => `<option value="${c}">${c}</option>`).join('');
                     if (cdEl) cdEl.innerHTML =
-                        `<select onchange="_zipState['${prefix}'].zone=this.value"><option value="">Select your center…</option>${opts}</select>`;
+                        `<select onchange="_onCenterChange('${prefix}', this)"><option value="">Select your center…</option>${opts}</select>`;
                     if (cfEl) cfEl.style.display = '';
                     if (msgEl) {
                         msgEl.textContent = '✓ Multiple centers found — please select one';
@@ -2766,6 +3051,7 @@
                 if (msgEl) {
                     msgEl.textContent = 'ZIP lookup failed. Please try again.';
                     msgEl.className = 'zip-msg error';
+                    console.error('ZIP lookup error:', e);
                 }
             }
             checkFormReadiness();
@@ -2883,7 +3169,39 @@
             }
             const zone = _zipState['uni']?.zone || '';
 
-            // Member email duplicate check
+            // Cross-member uniqueness: each email must be unique within this form
+            if (sectionEl) {
+                const _allEmails = [...sectionEl.querySelectorAll('input[type="email"]:not([readonly])')];
+                const _emailVals = _allEmails.map(i => i.value.trim().toLowerCase());
+                for (let _i = 0; _i < _emailVals.length; _i++) {
+                    if (!_emailVals[_i]) continue;
+                    if (_emailVals.indexOf(_emailVals[_i]) !== _i) {
+                        _allEmails[_i].classList.add('field-invalid');
+                        const _msgEl = document.getElementById(_allEmails[_i].id + '_msg');
+                        if (_msgEl) { _msgEl.textContent = 'This email is already used by another member in this form.'; _msgEl.className = 'email-msg error'; }
+                        _submitAbort('Each member must have a unique email address.', _allEmails[_i]);
+                        return;
+                    }
+                }
+            }
+
+            // Cross-member uniqueness: each phone must be unique within this form
+            if (sectionEl) {
+                const _allPhones = [...sectionEl.querySelectorAll('input[id$="_phone"]')];
+                const _phoneVals = _allPhones.map(i => i.value.trim().replace(/\D/g, ''));
+                for (let _i = 0; _i < _phoneVals.length; _i++) {
+                    if (!_phoneVals[_i]) continue;
+                    if (_phoneVals.indexOf(_phoneVals[_i]) !== _i) {
+                        _allPhones[_i].classList.add('field-invalid');
+                        const _msgEl = document.getElementById(_allPhones[_i].id + '_msg');
+                        if (_msgEl) { _msgEl.textContent = 'This phone is already used by another member in this form.'; _msgEl.className = 'phone-msg error'; }
+                        _submitAbort('Each member must have a unique phone number.', _allPhones[_i]);
+                        return;
+                    }
+                }
+            }
+
+            // Member email duplicate check (against existing WA records)
             if (sectionEl) {
                 for (const emailInput of [...sectionEl.querySelectorAll('input[type="email"]:not([readonly])')]) {
                     if (emailInput._waEmailExists) {
@@ -2983,7 +3301,7 @@
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ membership_type: type, primary, spouses, flat_members: flatMembers, terms, zone, payment_method_id: paymentMethodId, checkomatic_amount: (type === 'checkomatic_family' || type === 'checkomatic_individual') ? (parseInt(document.getElementById('uni_checkomatic_amount')?.value, 10) || getCheckomaticMinimum(type)) : null }),
+                    body: JSON.stringify({ membership_type: type, primary, spouses, flat_members: flatMembers, terms, zone, donation_type: document.getElementById('uni_donation_type')?.value || null, payment_method_id: paymentMethodId, checkomatic_amount: (type === 'checkomatic_family' || type === 'checkomatic_individual') ? (parseInt(document.getElementById('uni_checkomatic_amount')?.value, 10) || getCheckomaticMinimum(type)) : null }),
                 });
 
                 console.log('[submitMembership] response status:', res.status);
@@ -3231,6 +3549,9 @@
             }
             // ZIP must have resolved to a valid ISGH service area
             if (!_zipState['uni']?.valid) return false;
+            // Block if the primary phone has an active validation error (duplicate / WA-registered / pending check)
+            const _pEl = document.getElementById('uni_phone');
+            if (_pEl && _pEl._hasValidationError === true) return false;
             return true;
         }
 
@@ -3540,17 +3861,18 @@
         </div>
     </div>
 
-    <div style="border:10px solid #fff; border-radius:40px; background:rgba(248,248,248,1);">
+    <div class="page-outer-wrapper" style="background:rgba(248,248,248,1);">
 
         <!-- ══════════ HEADER (UNCHANGED) ══════════ -->
-        <header class="w-full pt-8 relative z-50 flex items-center justify-between px-4 sm:px-8 md:px-16 lg:px-24">
-            <div class="flex-shrink-0">
+        <header class="w-full pt-2 sm:pt-4 relative z-50 px-3 sm:px-8 md:px-16 lg:px-24">
+            <div class="flex items-center gap-3">
+            <div class="hidden lg:block flex-shrink-0">
                 <div
                     class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
                     <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
                 </div>
             </div>
-            <nav class="navbar-glass rounded-full pl-8 pr-2 py-2 flex items-center gap-8 ml-auto">
+            <nav class="hidden lg:flex navbar-glass rounded-full pl-8 pr-2 py-2 items-center gap-8 ml-auto">
                 <div class="hidden lg:flex items-center gap-7">
                     <a href="{{ route('home') }}"
                         class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
@@ -3573,21 +3895,32 @@
                         class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Join
                         Now</a>
                 </div>
-                <button class="lg:hidden ml-2 pr-2 text-white/70 hover:text-white transition-colors"
-                    onclick="openMobileMenu()">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
             </nav>
+
+            <div class="w-full lg:hidden">
+                <div class="flex w-full items-center justify-between rounded-full border-[8px] border-white bg-[#1c1c1c] px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] min-h-[72px]">
+                    <a href="{{ route('home') }}" class="shrink-0" aria-label="ISGH Home">
+                        <div class="w-12 h-12 rounded-full border-2 border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
+                            <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-8 h-8 object-contain">
+                        </div>
+                    </a>
+                    <button class="flex h-11 w-11 items-center justify-center rounded-full"
+                        onclick="openMobileMenu()" aria-label="Open menu">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            </div>
         </header>
 
         <!-- ══════════ HERO (UNCHANGED) ══════════ -->
         <section
-            class="hero-bg min-h-[260px] sm:min-h-[420px] flex items-center justify-center pt-4 sm:pt-8 pb-16 px-4"
+            class="hero-bg min-h-[260px] sm:min-h-[420px] flex items-center justify-center pt-4 sm:pt-8 pb-14 sm:pb-16 px-4"
             style="border-bottom-left-radius:50px;border-bottom-right-radius:50px;position:relative;top:-86px;">
-            <div class="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto gap-6 mt-16">
+            <div class="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto gap-4 sm:gap-6 mt-6 sm:mt-16">
                 <h1
                     class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-md tracking-tight">
                     Join ISGH</h1>
@@ -3597,9 +3930,9 @@
                     service.
                 </p>
                 <div
-                    class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full py-2 px-6 mt-2 shadow-lg">
-                    <div class="flex items-center gap-1 text-yellow-400 text-lg">★ ★ ★ ★ ★</div>
-                    <span class="text-white text-sm font-medium" style="font-family:'SF Pro regular';">Join thousands
+                    class="inline-flex flex-col sm:flex-row items-center gap-1 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl sm:rounded-full py-2 px-5 sm:px-6 shadow-lg">
+                    <div class="flex items-center gap-1 text-yellow-400 text-base sm:text-lg">★ ★ ★ ★ ★</div>
+                    <span class="text-white text-xs sm:text-sm font-medium" style="font-family:'SF Pro regular';">Join thousands
                         active members across Greater Houston.</span>
                 </div>
             </div>
@@ -3851,10 +4184,6 @@
                                 <label for="uni_donation_type">Donation Type <span style="color:red;">*</span></label>
                                 <select id="uni_donation_type" name="donation_type">
                                     <option value="">— Select Donation Type —</option>
-                                    <option value="general_expense">General Expense</option>
-                                    <option value="masjid_expense">Masjid Expense</option>
-                                    <option value="construction">Construction</option>
-                                    <option value="sunday_school">Sunday School</option>
                                 </select>
                             </div>
                         </div>
@@ -4146,6 +4475,62 @@
 
             </div>
             <!-- /membership-grid -->
+
+            <!-- ── MOBILE HORIZONTAL SCROLL (all side items, shown only on mobile) ── -->
+            <div class="mobile-side-scroll">
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/truck.png') }}" alt="Humanitarian Aid">
+                    <h3>Humanitarian Aid</h3>
+                    <p>Immediate relief for those affected by natural disasters and poverty.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/molvi.png') }}" alt="Chaplaincy">
+                    <h3>Chaplaincy</h3>
+                    <p>Endorsement, education & training, and leadership for Muslim chaplains.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/education_forum.png') }}" alt="Education Forum">
+                    <h3>Education Forum</h3>
+                    <p>Training & resources for students to realize their full potential.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/molvi.png') }}" alt="Youth Programs">
+                    <h3>Youth Programs</h3>
+                    <p>Programming, leadership & support for ISGH youth and community.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/kronic_Academy.png') }}" alt="Quran Academy">
+                    <h3>Quran Academy</h3>
+                    <p>Expert Islamic instruction for the Holy Quran and religious education.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/sadaqah.png') }}" alt="Sadaqah Jariyah">
+                    <h3>Sadaqah Jariyah</h3>
+                    <p>Long-term projects like schools, water wells and educational resources.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/latter.png') }}" alt="Zakat">
+                    <h3>Zakat</h3>
+                    <p>Distribute your Zakat to those truly in need through ISGH's trusted channels.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/mosque2.png') }}" alt="Masjid Maintenance">
+                    <h3>Masjid Maintenance</h3>
+                    <p>Support daily operations and beautification of our masjid facilities.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/takecare.png') }}" alt="Ongoing Charity">
+                    <h3>Ongoing Charity</h3>
+                    <p>Sustain charitable programs from Ramadan initiatives to emergency aid.</p>
+                </div>
+                <div class="mobile-scroll-item">
+                    <img src="{{ asset('images/matrimonial_services.png') }}" alt="Matrimonial Services">
+                    <h3>Matrimonial Services</h3>
+                    <p>Guidance toward a blessed, community-centered marriage journey.</p>
+                </div>
+            </div>
+            <!-- /mobile-side-scroll -->
+
         </div>
         <!-- /main-container -->
 

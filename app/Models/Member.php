@@ -28,6 +28,7 @@ class Member extends Model
         'state',
         'zip',
         'zone',
+        'donation_type',
 
         'stripe_customer_id',
         'stripe_payment_method_id',

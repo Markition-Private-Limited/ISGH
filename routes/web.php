@@ -27,6 +27,7 @@ Route::controller(MembershipController::class)->group(function () {
     Route::post('/membership/zip-lookup',   'zipLookup'           )->name('membership.zip-lookup');
     Route::post('/membership/verify',      'verifyMembership'    )->name('membership.verify');
     Route::post('/membership/check-email', 'checkEmail'          )->name('membership.check-email');
+    Route::post('/membership/check-phone', 'checkPhone'          )->name('membership.check-phone');
 });
 
 // Stripe webhook — CSRF exempt (handled in bootstrap/app.php)

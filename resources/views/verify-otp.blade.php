@@ -256,6 +256,9 @@
       mix-blend-mode: luminosity;
       display: block;
     }
+    .mobile-otp-visual {
+      display: none;
+    }
     .ring {
       position: absolute;
       border-radius: 50%;
@@ -278,14 +281,81 @@
       .header { padding: 0.8rem 1rem; }
       .nav-pill { display: none; }
       .mob-nav  { display: flex; }
-      .main { padding: 1.2rem 1rem 2rem; }
-      .left-card { padding: 1.8rem 1.4rem; }
-      .join-box h1 { font-size: 1.6rem; }
-      .right-card { min-height: 240px; }
+      .main { padding: 0.95rem 0.85rem 1.6rem; align-items: flex-start; }
+      .cards-wrapper { max-width: 100%; }
+      .left-card {
+        padding: 0.95rem 0.85rem 1rem;
+        border-radius: 1.4rem;
+        border: 8px solid rgba(247,247,247,1);
+        box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+      }
+      .join-box {
+        margin-bottom: 0.95rem;
+        padding: 0.9rem 1rem 0.78rem;
+        border-radius: 0.9rem;
+      }
+      .join-box h1 { font-size: 1.65rem; }
+      .join-box p { font-size: 0.78rem; }
+      .mobile-otp-visual {
+        display: block;
+        margin: 0.1rem 0 1rem;
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 1px solid rgba(224,231,227,0.95);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        background: linear-gradient(135deg, #0c7b52 0%, #0b5f40 100%);
+        padding: 0.3rem;
+      }
+      .mobile-otp-visual .join-visual-frame {
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.85rem;
+        min-height: 240px;
+        background: #0c7b52;
+      }
+      .mobile-otp-visual img {
+        width: 100%;
+        height: 240px;
+        object-fit: cover;
+        object-position: center 18%;
+        filter: grayscale(100%);
+        display: block;
+      }
+      .form-title { font-size: 1.08rem; margin-bottom: 0.18rem; }
+      .form-sub { font-size: 0.76rem; margin-bottom: 0.95rem; }
+      .otp-grid {
+        gap: 0.3rem;
+        margin-bottom: 1.15rem;
+        flex-wrap: nowrap;
+      }
+      .otp-input {
+        width: 39px !important;
+        height: 39px !important;
+        font-size: 0.95rem !important;
+      }
+      .right-card { display: none; }
+      .btn-otp { padding: 0.82rem 1rem; font-size: 0.92rem; border-width: 4px; }
+      .btn-change {
+        padding: 0.85rem 1rem !important;
+        font-size: 0.88rem !important;
+        border-width: 4px !important;
+      }
     }
     @media (max-width: 380px) {
-      .left-card { padding: 1.4rem 1rem; }
-      .join-box h1 { font-size: 1.4rem; }
+      .main { padding-left: 0.65rem; padding-right: 0.65rem; }
+      .left-card { padding: 0.85rem 0.7rem 0.95rem; }
+      .join-box h1 { font-size: 1.45rem; }
+      .join-box p { font-size: 0.72rem; }
+      .form-title { font-size: 1rem; }
+      .form-sub { font-size: 0.71rem; }
+      .mobile-otp-visual img,
+      .mobile-otp-visual .join-visual-frame { height: 214px; min-height: 214px; }
+      .otp-grid { gap: 0.25rem; }
+      .otp-input {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 0.9rem !important;
+      }
     }
     .navbar-glass {
       background: rgba(10, 10, 10, 0.88);
@@ -306,33 +376,45 @@
 </head>
 <body class="min-h-screen flex flex-col">
 <div class="" style="border: 10px solid #ffff;border-radius: 40px; background: rgba(248, 248, 248, 1);">
-  <header class="w-full pt-8 relative z-50 flex items-center justify-between px-4 sm:px-8 md:px-16 lg:px-24">
-    <div class="flex-shrink-0">
-      <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
+  <header class="w-full pt-6 sm:pt-8 relative z-50 px-4 sm:px-8 md:px-16 lg:px-24">
+    <div class="flex items-center gap-3">
+      <a href="{{ route('home') }}" class="hidden lg:block shrink-0" aria-label="ISGH Home">
+        <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
           <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
+        </div>
+      </a>
+
+      <nav class="hidden lg:flex navbar-glass rounded-full pl-8 pr-2 py-2 items-center gap-8 ml-auto">
+        <div class="flex items-center gap-7">
+          <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
+          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
+          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
+          <a href="{{ route('join') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
+          <a href="{{ route('membership-verification') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <a href="#" class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
+          <a href="{{ route('verify-otp') }}" style="background: #00d084;" class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Verify Now</a>
+        </div>
+      </nav>
+
+      <div class="w-full lg:hidden">
+        <div class="flex w-full items-center justify-between rounded-full border-[8px] border-white bg-[#1c1c1c] px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] min-h-[72px]">
+          <a href="{{ route('home') }}" class="shrink-0" aria-label="ISGH Home">
+            <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="h-11 w-11 sm:h-12 sm:w-12 object-contain">
+          </a>
+
+          <button onclick="openMobileMenu()" aria-label="Open menu" class="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/5">
+            <span class="flex flex-col items-center justify-center gap-1.5">
+              <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+              <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+              <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+            </span>
+          </button>
+        </div>
       </div>
     </div>
-
-    <nav class="navbar-glass rounded-full pl-8 pr-2 py-2 flex items-center gap-8 ml-auto">
-      <div class="hidden lg:flex items-center gap-7">
-        <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
-        <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
-        <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
-        <a href="{{ route('join') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
-        <a href="{{ route('membership-verification') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <a href="#" class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
-        <a href="{{ route('verify-otp') }}" style="background: #00d084;" class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Verify Now</a>
-      </div>
-
-      <button onclick="openMobileMenu()" class="lg:hidden ml-2 pr-2 text-white/70 hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-    </nav>
   </header>
 
   <main class="main">
@@ -341,6 +423,16 @@
         <div class="join-box">
           <h1>Join ISGH</h1>
           <p>Become part of our community</p>
+        </div>
+
+        <div class="mobile-otp-visual">
+          <div class="join-visual-frame">
+            <img
+              src="{{ asset('images/couple.jpg') }}"
+              alt="Family together"
+              loading="lazy"
+            />
+          </div>
         </div>
 
         <div style="margin-top: 2rem;">

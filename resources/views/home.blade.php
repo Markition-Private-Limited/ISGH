@@ -138,6 +138,57 @@
     .badge-anim-1 { animation: fadeUp 0.6s ease both 0.8s; }
     .badge-anim-2 { animation: fadeUp 0.6s ease both 1.0s; }
 
+    .benefits-carousel {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      scroll-behavior: smooth;
+    }
+    .benefits-carousel::-webkit-scrollbar {
+      display: none;
+    }
+    .benefit-slide {
+      scroll-snap-align: center;
+    }
+    .benefit-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: #d1d5db;
+      transition: all 0.25s ease;
+    }
+    .benefit-dot.active {
+      width: 16px;
+      background: #0f8a5a;
+    }
+
+    .category-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      transition: all 0.25s ease;
+    }
+    .category-dot.active {
+      width: 16px;
+      background: #f3f4f6;
+    }
+
+    .manage-actions {
+      display: flex;
+    }
+
+    .category-carousel-track {
+      display: grid;
+    }
+
+    .category-carousel-viewport {
+      overflow: hidden;
+    }
+
+    .category-slide {
+      width: 100%;
+    }
+
     .benefit-card {
       background: #ffffff;
       box-shadow: 0 4px 24px rgba(0,0,0,0.07);
@@ -310,10 +361,50 @@
       .badge-anim-1, .badge-anim-2 { display: none !important; }
     }
     @media (max-width: 768px) {
+      .hero-grid { gap: 1.5rem; margin-top: 2.5rem; }
+      .hero-copy { gap: 1.15rem; }
+      .hero-copy h1 { max-width: 22rem; margin: 0 auto; }
+      .hero-copy h1 span:first-child { font-size: 34px !important; line-height: 1.05; }
+      .hero-copy h1 span:last-child { font-size: 30px !important; line-height: 1.08; }
+      .hero-copy p { font-size: 13px !important; line-height: 1.25; max-width: 340px; }
+      .hero-copy .cta-btn { font-size: 13px; padding: 0.65rem 1.15rem; border-width: 4px; }
+      .hero-copy .star { font-size: 18px; }
+      .hero-copy .partner-logo img { height: 32px; width: auto; }
+      .hero-visual { margin-top: 0.5rem; }
+      .hero-visual .image-card { height: clamp(420px, 98vw, 622px) !important; border-width: 6px !important; border-radius: 34px !important; }
+      .hero-badges-mobile { display: block !important; }
+      .benefits-title { font-size: 28px !important; line-height: 1.1 !important; }
+      .benefits-subtitle { font-size: 13px !important; line-height: 1.35 !important; max-width: 340px; margin-left: auto; margin-right: auto; }
+      .benefits-arrows { display: flex !important; }
+      .benefits-track { display: flex !important; overflow-x: auto; padding-bottom: 0.5rem; margin-left: -1.25rem; margin-right: -1.25rem; padding-left: 1.25rem; padding-right: 1.25rem; scroll-snap-type: x mandatory; }
+      .benefit-slide { flex: 0 0 86%; max-width: 86%; }
+      .benefits-dots { display: flex !important; }
+      .manage-section { padding-top: 3rem; padding-bottom: 3rem; }
+      .manage-section .manage-divider { display: none; }
+      .manage-section h2 { font-size: 28px !important; line-height: 1.1 !important; max-width: 14ch; margin-left: auto; margin-right: auto; }
+      .manage-section p { font-size: 13px !important; line-height: 1.35 !important; max-width: 340px; margin-left: auto; margin-right: auto; }
+      .manage-actions { flex-direction: column !important; gap: 0.9rem !important; align-items: center !important; width: 100% !important; margin-bottom: 1.25rem !important; }
+      .manage-tab-btn { width: min(100%, 320px); min-height: 52px; height: auto; white-space: normal; padding: 14px 18px !important; }
+      .manage-tab-btn.active { font-size: 17px; }
+      .manage-tab-btn:not(.active) { font-size: 14px; }
+      .category-section-title { font-size: 28px !important; line-height: 1.1 !important; max-width: 15ch; margin-left: auto; margin-right: auto; }
+      .category-section-subtitle { font-size: 13px !important; line-height: 1.35 !important; max-width: 330px; margin-left: auto; margin-right: auto; }
+      .category-carousel-shell { padding-top: 2rem; padding-bottom: 2rem; border-width: 8px !important; border-radius: 28px !important; }
+      .category-carousel-controls { display: flex !important; }
+      .category-carousel-dots { display: flex !important; }
+      .category-carousel-viewport { margin-left: -1rem; margin-right: -1rem; padding-left: 1rem; padding-right: 1rem; }
+      .category-carousel-track { display: flex !important; flex-direction: row !important; flex-wrap: nowrap; gap: 0; transition: none; will-change: auto; }
+      .category-slide { flex: 0 0 100%; min-width: 100%; max-width: 100%; display: flex !important; flex-direction: column !important; }
+      .category-slide .p-3 { padding: 0.75rem 0.75rem 0 0.75rem; width: 100%; }
+      .category-slide .p-6 { padding: 1rem 1rem 1.1rem 1rem; width: 100%; }
+      .category-slide img { width: 100% !important; height: 220px !important; max-height: 220px !important; object-fit: cover; }
+      .category-slide.is-hidden-mobile { display: none !important; }
       .category-row { flex-direction: column; align-items: flex-start; }
       .cat-img { width: 100%; max-width: none; height: 160px; margin-bottom: 0.75rem; }
       .divider-v { display: none; }
-      .manage-tab-btn { white-space: normal; text-align: center; height: auto; min-height: 60px; padding: 12px 16px; }
+      .footer-desktop { display: none !important; }
+      .footer-mobile { display: block !important; }
+      .site-footer { border-radius: 2rem 2rem 0 0; }
       .sixia{
         display:block !important
       }
@@ -326,51 +417,63 @@
 <body class="page-bg">
   <!-- Hero wrapper: remove fixed height, keep border/radius -->
   <div style="border: 10px solid #ffff; border-radius: 25px;">
-    <header class="w-full pt-8 relative z-50 flex items-center justify-between px-4 sm:px-8 md:px-16 lg:px-24">
-      <div class="flex-shrink-0">
-        <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
-            <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
+    <header class="w-full pt-4 sm:pt-8 relative z-50 px-3 sm:px-8 md:px-16 lg:px-24">
+      <div class="flex items-center gap-3">
+        <a href="{{ route('home') }}" class="hidden lg:block shrink-0">
+          <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
+              <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
+          </div>
+        </a>
+
+        <nav class="hidden lg:flex navbar-glass border border-[5px] border-white rounded-full pl-8 pr-2 py-2 items-center gap-8 ml-auto">
+          <div class="flex items-center gap-7">
+            <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
+            <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
+            <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
+            <a href="{{ route('join') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
+            <a href="{{ route('membership-verification') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <a href="https://isgh.wildapricot.org/Sys/Login" target="_blank" rel="noopener noreferrer" class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
+            <a href="{{ route('join') }}" style="background: #00d084;" class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Join Now</a>
+          </div>
+        </nav>
+
+        <div class="w-full lg:hidden">
+          <div class="flex w-full items-center justify-between rounded-full border-[8px] border-white bg-[#1c1c1c] px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] min-h-[72px]">
+            <a href="{{ route('home') }}" class="shrink-0" aria-label="ISGH Home">
+              <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="h-11 w-11 sm:h-12 sm:w-12 object-contain">
+            </a>
+
+            <button onclick="openMobileMenu()" aria-label="Open menu" class="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/5">
+              <span class="flex flex-col items-center justify-center gap-1.5">
+                <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+                <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+                <span class="block h-0.5 w-6 rounded-full bg-white"></span>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
-
-      <nav class="navbar-glass border border-[5px] border-white rounded-full pl-8 pr-2 py-2 flex items-center gap-8 ml-auto">
-        <div class="hidden lg:flex items-center gap-7">
-          <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
-          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
-          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
-          <a href="{{ route('join') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
-          <a href="{{ route('membership-verification') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
-        </div>
-
-        <div class="hidden lg:flex items-center gap-3">
-          <a href="https://isgh.wildapricot.org/Sys/Login" target="_blank" rel="noopener noreferrer" class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
-          <a href="{{ route('join') }}" style="background: #00d084;" class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Join Now</a>
-        </div>
-
-        <button onclick="openMobileMenu()" class="lg:hidden ml-2 pr-2 text-white/70 hover:text-white transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-        </button>
-      </nav>
     </header>
 
     <!-- Hero grid: responsive padding, no fixed height/margins -->
-    <div class="px-4 sm:px-8 md:px-16 lg:px-24 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center mt-16 pb-10">
+    <div class="hero-grid px-4 sm:px-8 md:px-16 lg:px-24 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center mt-12 sm:mt-16 pb-10">
       <!-- Left text block: remove fixed dimensions -->
-      <div class="flex flex-col gap-6 order-2 lg:order-1">
+      <div class="hero-copy flex flex-col gap-6 order-1 lg:order-1 text-center lg:text-left">
         <div class="fade-up-1">
           <h1 class="leading-tight">
             <span class="text-emerald-700 text-4xl sm:text-5xl xl:text-6xl font-extrabold block" style="font-family: 'SF Pro regular';">Join Our Mission:</span>
-            <span class="text-gray-900 text-4xl sm:text-5xl xl:text-6xl font-extrabold block" style="font-family: 'SF Pro regular';">Become the Strong Voice Your Community</span>
+            <span class="text-gray-900 text-4xl sm:text-5xl xl:text-6xl font-extrabold block" style="font-family: 'SF Pro regular';">Be the Voice of Your Community</span>
           </h1>
         </div>
 
-        <p class="fade-up-2 text-gray-500 text-base sm:text-lg leading-relaxed">
-          Join the largest Muslim community in North America. We are dedicated to fostering spiritual growth through our Masajid, empowering families through Social Services.
+        <p class="fade-up-2 text-gray-500 text-base sm:text-lg leading-relaxed mx-auto lg:mx-0 max-w-xl">
+          Join one of the largest Muslim communities in North America. Support your local masjid, gain voting rights, and help shape the future of our community.
         </p>
 
-        <div class="fade-up-3 mt-5">
+        <div class="fade-up-3 mt-5 flex justify-center lg:justify-start">
           <a href="{{ route('join') }}" class="cta-btn border border-white border-[5px] text-white font-semibold text-base px-7 py-3.5 rounded-full flex items-center gap-3 w-fit inline-block">
             Become a Member
             <span class="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -381,7 +484,7 @@
           </a>
         </div>
 
-        <div class="fade-up-4 flex items-center gap-3 flex-wrap mt-5">
+        <div class="fade-up-4 flex items-center justify-center lg:justify-start gap-3 flex-wrap mt-5">
           <div class="flex items-center gap-0.5">
             <span class="star text-xl">★</span>
             <span class="star text-xl">★</span>
@@ -389,10 +492,10 @@
             <span class="star text-xl">★</span>
             <span class="star text-xl">★</span>
           </div>
-          <p class="text-gray-600" style="font-size: 16px;font-weight: bold;">Trusted by over <strong class="text-gray-800">thousands</strong> active members across the region.</p>
+          <p class="text-gray-600" style="font-size: 16px;font-weight: bold;">Trusted by <strong class="text-gray-800">thousands</strong> of active members across Greater Houston.</p>
         </div>
 
-        <div class="fade-up-5 flex items-center gap-6 flex-wrap pt-1 mt-5">
+        <div class="fade-up-5 flex items-center justify-center lg:justify-start gap-6 flex-wrap pt-1 mt-5">
           <div class="partner-logo flex items-center gap-1.5">
             <img src="{{ asset('images/food.png') }}" alt="" width="95px" height="32px">
           </div>
@@ -410,22 +513,44 @@
       </div>
 
       <!-- Right image column -->
-      <div class="relative order-1 lg:order-2 fade-up-right">
+      <div class="hero-visual relative order-2 lg:order-2 fade-up-right">
         <!-- Image card: full width on mobile, max 561px on large screens -->
         <div class="image-card overflow-hidden relative mx-auto" style="background: url('{{ asset('images/Frame 116.png') }}') center/cover no-repeat; width: 100%; max-width: 561px; float: none; height: clamp(300px, 50vw, 622px); border: 8px solid white;
     border-radius: 40px;">
           <div class="absolute bottom-0 left-0 right-0 h-32 z-10"></div>
         </div>
 
+        <div class="hero-badges-mobile hidden lg:hidden absolute left-0 right-0 bottom-7 z-30">
+          <div class="relative h-[110px]">
+            <div class="absolute left-[-6px] bottom-6 w-[185px] max-w-[48vw] rounded-[16px] border border-white/70 bg-[linear-gradient(108.46deg,rgba(31,171,118,0.75)_0%,rgba(71,191,149,0.92)_100%)] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-md">
+              <div class="flex items-center gap-2">
+                <img src="{{ asset('images/mosque.png') }}" alt="Mosque" class="h-10 w-10 flex-shrink-0 object-contain">
+                <p class="text-white text-[11px] leading-snug font-semibold">
+                  22+ Masajids (Centers Across greater Houston)
+                </p>
+              </div>
+            </div>
+
+            <div class="absolute right-[-6px] bottom-[-8px] w-[190px] max-w-[49vw] rounded-[16px] border border-white/70 bg-[linear-gradient(108.46deg,rgba(31,171,118,0.75)_0%,rgba(71,191,149,0.92)_100%)] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-md">
+              <div class="flex items-center gap-2">
+                <img src="{{ asset('images/hands1.png') }}" alt="Handshake" class="h-9 w-10 flex-shrink-0 object-contain">
+                <p class="text-white text-[11px] leading-snug font-semibold">
+                  Thousands of active members (Serving the Muslim Community)
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Badge cards: hidden on screens < 1024px -->
-        <div class="badge-anim-1 hidden lg:block absolute z-20 p-[3px] rounded-[18px] bg-[linear-gradient(262.95deg,#FFFFFF_0.59%,#999999_99.41%)] inline-block" style="top: 375px; left: -60px;width: 360px;height: 107px;">
+        <div class="badge-anim-1 hero-badges-desktop hidden lg:block absolute z-20 p-[3px] rounded-[18px] bg-[linear-gradient(262.95deg,#FFFFFF_0.59%,#999999_99.41%)] inline-block" style="top: 375px; left: -60px;width: 360px;height: 107px;">
           <div class="rounded-[16px] p-[14px_18px] flex items-center gap-3 bg-[linear-gradient(108.46deg,rgba(31,171,118,0.28)_0%,rgba(71,191,149,0.66)_100%)] backdrop-blur-[28px] shadow-[0_10px_27px_rgba(0,0,0,0.55)]" style="width: 355px;height: 100px;">
             <img src="{{ asset('images/mosque.png') }}" alt="Mosque" style="width:52px;height:52px;object-fit:contain;flex-shrink:0;"/>
             <p style="color:#ffffff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;line-height:1.4;margin:0;">22+ Masajid (Centers across<br/>Greater Houston)</p>
           </div>
         </div>
 
-        <div class="badge-anim-2 hidden lg:block absolute p-[3px] rounded-[18px] bg-[linear-gradient(262.95deg,#FFFFFF_0.59%,#999999_99.41%)] inline-block" style="top: 456px; left: 240px;width: 360px;height: 107px;">
+        <div class="badge-anim-2 hero-badges-desktop hidden lg:block absolute p-[3px] rounded-[18px] bg-[linear-gradient(262.95deg,#FFFFFF_0.59%,#999999_99.41%)] inline-block" style="top: 456px; left: 240px;width: 360px;height: 107px;">
           <div class="rounded-[16px] p-[14px_18px] flex items-center gap-3 bg-[linear-gradient(108.46deg,rgba(31,171,118,0.28)_0%,rgba(71,191,149,0.66)_100%)] backdrop-blur-[28px] shadow-[0_10px_27px_rgba(0,0,0,0.55)]" style="width: 355px;height: 100px;">
             <img src="{{ asset('images/hands1.png') }}" alt="Handshake" style="width:89px;height:53px;object-fit:contain;flex-shrink:0;"/>
             <p style="color:#ffffff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;line-height:1.4;margin:0;">Thousands Members (Serving<br/>the Muslim Community)</p>
@@ -438,10 +563,10 @@
   <!-- ===================== WHY JOIN SECTION ===================== -->
   <section class="w-full relative" style="background: linear-gradient(145deg, #e8ece8 0%, #dde5de 40%, #e4e9e4 100%);">
     <div class="max-w-3xl mx-auto px-5 sm:px-8 pt-16 pb-16 text-center">
-      <h2 class=" text-gray-900 text-4xl sm:text-5xl font-extrabold mb-5">
+      <h2 class="benefits-title text-gray-900 text-4xl sm:text-5xl font-extrabold mb-5">
         Why Join ISGH? (Exclusive<br/>Member Benefits)
       </h2>
-      <p class="text-gray-500 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+      <p class="benefits-subtitle text-gray-500 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
         Becoming a member is more than just a registration—it's your contribution to the backbone of the Houston Muslim community.
       </p>
 
@@ -449,8 +574,21 @@
         <img src="{{ asset('images/Line 2.png') }}" alt="">
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 text-left">
-        <div class="benefit-card rounded-3xl p-6 flex flex-col gap-0">
+      <div class="flex justify-center gap-3 mb-5 benefits-arrows hidden sm:hidden">
+        <button type="button" id="benefits-prev" class="w-12 h-12 rounded-full bg-[#3b3b3b] text-white flex items-center justify-center shadow-md" aria-label="Previous benefit">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <button type="button" id="benefits-next" class="w-12 h-12 rounded-full bg-[#3b3b3b] text-white flex items-center justify-center shadow-md" aria-label="Next benefit">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 6l6 6-6 6"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="benefits-track grid grid-cols-1 sm:grid-cols-2 gap-5 text-left">
+        <div class="benefit-slide benefit-card rounded-3xl p-6 flex flex-col gap-0">
           <div class="benefit-icon-bg rounded-2xl flex items-center justify-center w-full mb-5" style="height:220px;">
             <img src="{{ asset('images/vote.png') }}" alt="">
           </div>
@@ -460,7 +598,7 @@
           </p>
         </div>
 
-        <div class="benefit-card rounded-3xl p-6 flex flex-col gap-0">
+        <div class="benefit-slide benefit-card rounded-3xl p-6 flex flex-col gap-0">
           <div class="benefit-icon-bg rounded-2xl flex items-center justify-center w-full mb-5" style="height:220px;">
             <img src="{{ asset('images/tag.png') }}" alt="">
           </div>
@@ -470,7 +608,7 @@
           </p>
         </div>
 
-        <div class="benefit-card rounded-3xl p-6 flex flex-col gap-0">
+        <div class="benefit-slide benefit-card rounded-3xl p-6 flex flex-col gap-0">
           <div class="benefit-icon-bg rounded-2xl flex items-center justify-center w-full mb-5" style="height:220px;">
             <img src="{{ asset('images/search.png') }}" alt="">
           </div>
@@ -480,7 +618,7 @@
           </p>
         </div>
 
-        <div class="benefit-card rounded-3xl p-6 flex flex-col gap-0">
+        <div class="benefit-slide benefit-card rounded-3xl p-6 flex flex-col gap-0">
           <div class="benefit-icon-bg rounded-2xl flex items-center justify-center w-full mb-5" style="height:220px;">
             <img src="{{ asset('images/mosque.png') }}" alt="">
           </div>
@@ -489,6 +627,13 @@
             <strong class="text-gray-700">Sadaqah Jariyah.</strong> Your membership fees directly fund the operations of our 22+ Masajid and Shifa Clinics, providing healthcare to those in need.
           </p>
         </div>
+      </div>
+
+      <div class="benefits-dots hidden sm:hidden justify-center gap-2 mt-4 mb-6">
+        <button type="button" class="benefit-dot active" aria-label="Go to benefit 1"></button>
+        <button type="button" class="benefit-dot" aria-label="Go to benefit 2"></button>
+        <button type="button" class="benefit-dot" aria-label="Go to benefit 3"></button>
+        <button type="button" class="benefit-dot" aria-label="Go to benefit 4"></button>
       </div>
 
       <div class="mt-12 flex justify-center">
@@ -520,7 +665,7 @@
       </p>
 
       <!-- Action Buttons — responsive wrapping row -->
-      <div style="display:flex; flex-direction:row;  align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; width:100%;" class="mb-14 sixia">
+      <div class="manage-actions mb-14 sixia" style="flex-direction:row; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; width:100%;">
 
         <a href="{{ route('membership-verification') }}" class="manage-tab-btn">
           Verify Membership Voting Status
@@ -544,7 +689,7 @@
 
   <!-- ===================== THREE CATEGORIES SECTION ===================== -->
 <section 
-  class="relative w-full py-16 px-5 sm:px-8 container m-auto border border-[10px] border-white rounded-[30px] overflow-hidden"
+  class="category-carousel-shell relative w-full py-16 px-5 sm:px-8 container m-auto border border-[10px] border-white rounded-[30px] overflow-hidden"
   style="
     background: linear-gradient(135deg, #0b3d2e 0%, #0f5a3c 40%, #138a5a 75%, #1aa06d 100%);
   "
@@ -613,19 +758,34 @@
 
     <!-- Heading -->
     <div class="text-center mb-12">
-      <h2 class="text-white text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
-        There are three categories for<br/>ISGH members to pick from
+      <h2 class="category-section-title text-white text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
+        Select the membership option that best fits your commitment to supporting the community.
+        {{-- <br/>ISGH members to pick from --}}
       </h2>
-      <p class="text-green-200 text-base sm:text-lg">
+      <p class="category-section-subtitle text-green-200 text-base sm:text-lg">
         Take control of your community involvement in just a few clicks.
       </p>
     </div>
 
+    <div class="flex justify-center gap-3 mb-5 category-carousel-controls hidden sm:hidden">
+      <button type="button" id="category-prev" class="w-12 h-12 rounded-full bg-[#3b3b3b] text-white flex items-center justify-center shadow-md" aria-label="Previous category">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <button type="button" id="category-next" class="w-12 h-12 rounded-full bg-[#3b3b3b] text-white flex items-center justify-center shadow-md" aria-label="Next category">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 6l6 6-6 6"/>
+        </svg>
+      </button>
+    </div>
+
     <!-- Category Rows -->
-    <div class="flex flex-col gap-5">
+    <div class="category-carousel-viewport">
+      <div class="category-carousel-track flex flex-col gap-5">
 
       <!-- Row 1 -->
-      <div class="rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
+      <div class="category-slide rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
         <div class="p-3">
           <img src="{{ asset('images/couple.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
         </div>
@@ -636,7 +796,7 @@
       </div>
 
       <!-- Row 2 -->
-      <div class="rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
+      <div class="category-slide rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
         <div class="p-3">
           <img src="{{ asset('images/quran1.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
         </div>
@@ -647,7 +807,7 @@
       </div>
 
       <!-- Row 3 -->
-      <div class="rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
+      <div class="category-slide rounded-2xl flex flex-col sm:flex-row overflow-hidden shadow-md bg-white/80 backdrop-blur">
         <div class="p-3">
           <img src="{{ asset('images/hands.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
         </div>
@@ -657,6 +817,13 @@
         </div>
       </div>
 
+      </div>
+    </div>
+
+    <div class="category-carousel-dots hidden sm:hidden justify-center gap-2 mt-5">
+      <button type="button" class="category-dot active" data-index="0" aria-label="Go to category 1"></button>
+      <button type="button" class="category-dot" data-index="1" aria-label="Go to category 2"></button>
+      <button type="button" class="category-dot" data-index="2" aria-label="Go to category 3"></button>
     </div>
   </div>
 </section>
@@ -901,8 +1068,8 @@
   </section>
 
   <!-- ===================== FOOTER ===================== -->
-  <footer style="background: linear-gradient(135deg, #0a5e3a 0%, #0d7a4e 50%, #12a060 100%); border-radius: 2rem 2rem 0 0; margin-top: 0; border-top: 10px solid white; border-left: 2px solid white; border-right: 2px solid white; box-shadow: 0 -4px 24px rgba(180,220,255,0.25), inset 0 1px 0 rgba(255,255,255,0.15);">
-    <div class="max-w-6xl mx-auto px-8 sm:px-12 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+  <footer class="site-footer" style="background: linear-gradient(135deg, #0a5e3a 0%, #0d7a4e 50%, #12a060 100%); border-radius: 2rem 2rem 0 0; margin-top: 0; border-top: 10px solid white; border-left: 2px solid white; border-right: 2px solid white; box-shadow: 0 -4px 24px rgba(180,220,255,0.25), inset 0 1px 0 rgba(255,255,255,0.15);">
+    <div class="footer-desktop max-w-6xl mx-auto px-8 sm:px-12 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
       <div class="flex flex-col gap-4">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 rounded-full border-2 border-yellow-500 flex items-center justify-center bg-green-900 flex-shrink-0">
@@ -945,6 +1112,63 @@
       </div>
     </div>
 
+    <div class="footer-mobile hidden mx-auto w-full max-w-[390px] px-4 pt-10 pb-8">
+      <div class="rounded-[34px] bg-[linear-gradient(135deg,#0a5e3a_0%,#0d7a4e_50%,#12a060_100%)] border border-white/20 shadow-[0_20px_45px_rgba(0,0,0,0.18)] px-4 py-5">
+        <div class="flex justify-center">
+          <div class="w-12 h-12 rounded-full border-2 border-yellow-500 flex items-center justify-center bg-green-900 flex-shrink-0">
+            <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-8 h-8 object-contain">
+          </div>
+        </div>
+
+        <form class="mt-5 flex flex-col gap-3">
+          <input type="text" placeholder="Name" class="w-full rounded-[6px] bg-black/10 text-white placeholder:text-white/70 px-4 py-3 outline-none border border-black/10">
+          <input type="email" placeholder="Email" class="w-full rounded-[6px] bg-black/10 text-white placeholder:text-white/70 px-4 py-3 outline-none border border-black/10">
+          <textarea placeholder="Message" rows="4" class="w-full rounded-[6px] bg-black/10 text-white placeholder:text-white/70 px-4 py-3 outline-none border border-black/10 resize-none"></textarea>
+          <button type="button" class="w-full rounded-[4px] bg-white text-black font-bold py-3.5 tracking-wide">SUBMIT</button>
+        </form>
+
+        <div class="mt-6 flex items-center justify-between gap-4">
+          <h4 class="text-white font-bold text-sm uppercase tracking-wide">Follow Us</h4>
+          <div class="flex items-center gap-3">
+            <a href="#" class="w-10 h-10 rounded-full border border-white/70 flex items-center justify-center text-white font-bold">f</a>
+            <a href="#" class="w-10 h-10 rounded-full border border-white/70 flex items-center justify-center text-white font-bold">t</a>
+            <a href="#" class="w-10 h-10 rounded-full border border-white/70 flex items-center justify-center text-white font-bold">▶</a>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-2 gap-6">
+          <div class="text-left">
+            <h4 class="text-white font-bold text-sm uppercase mb-3 tracking-wide">Contact Us</h4>
+            <p class="text-green-100 text-sm leading-7">
+              123 Simply Quidem<br>
+              Soluta Lorem<br>
+              The Park<br>
+              AB 10000
+            </p>
+            <div class="mt-5">
+              <h5 class="text-white font-bold text-sm uppercase tracking-wide">Phone No.</h5>
+              <p class="text-green-100 text-sm">(123) 4567890</p>
+            </div>
+            <div class="mt-4">
+              <h5 class="text-white font-bold text-sm uppercase tracking-wide">Email</h5>
+              <p class="text-green-100 text-sm">abc123@gmail.com</p>
+            </div>
+          </div>
+
+          <div class="text-left">
+            <h4 class="text-white font-bold text-sm uppercase mb-3 tracking-wide">Quick Links</h4>
+            <ul class="flex flex-col gap-3">
+              <li class="text-green-100 text-sm">Text</li>
+              <li class="text-green-100 text-sm">Ipsum</li>
+              <li class="text-green-100 text-sm">Popular</li>
+              <li class="text-green-100 text-sm">Services</li>
+              <li class="text-green-100 text-sm">Matters</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="border-t border-green-700/50 mx-8 sm:mx-12">
       <div class="max-w-6xl mx-auto py-5 flex flex-col sm:flex-row items-center justify-between gap-2">
         <p class="text-green-300 text-xs">© 2026 Islamic Society of Greater Houston. All rights reserved.</p>
@@ -977,6 +1201,127 @@
   <script>
     function openMobileMenu() { document.getElementById('mobileMenu').classList.remove('hidden'); document.body.style.overflow='hidden'; }
     function closeMobileMenu() { document.getElementById('mobileMenu').classList.add('hidden'); document.body.style.overflow=''; }
+
+    (function initBenefitsCarousel() {
+      const track = document.querySelector('.benefits-track');
+      const slides = track ? Array.from(track.querySelectorAll('.benefit-slide')) : [];
+      const prevBtn = document.getElementById('benefits-prev');
+      const nextBtn = document.getElementById('benefits-next');
+      const dots = Array.from(document.querySelectorAll('.benefit-dot'));
+
+      if (!track || !slides.length || !prevBtn || !nextBtn || !dots.length) return;
+
+      const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+
+      function getActiveIndex() {
+        if (!isMobile()) return 0;
+
+        const trackRect = track.getBoundingClientRect();
+        const center = trackRect.left + trackRect.width / 2;
+        let activeIndex = 0;
+        let smallest = Infinity;
+
+        slides.forEach((slide, index) => {
+          const rect = slide.getBoundingClientRect();
+          const slideCenter = rect.left + rect.width / 2;
+          const distance = Math.abs(slideCenter - center);
+          if (distance < smallest) {
+            smallest = distance;
+            activeIndex = index;
+          }
+        });
+
+        return activeIndex;
+      }
+
+      function setActiveDot(index) {
+        dots.forEach((dot, dotIndex) => {
+          dot.classList.toggle('active', dotIndex === index);
+        });
+      }
+
+      function scrollToIndex(index) {
+        const clamped = Math.max(0, Math.min(index, slides.length - 1));
+        slides[clamped].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        setActiveDot(clamped);
+      }
+
+      prevBtn.addEventListener('click', () => {
+        scrollToIndex(Math.max(0, getActiveIndex() - 1));
+      });
+
+      nextBtn.addEventListener('click', () => {
+        scrollToIndex(Math.min(slides.length - 1, getActiveIndex() + 1));
+      });
+
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => scrollToIndex(index));
+      });
+
+      let rafId = null;
+      track.addEventListener('scroll', () => {
+        if (!isMobile()) return;
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          setActiveDot(getActiveIndex());
+        });
+      });
+
+      window.addEventListener('resize', () => {
+        setActiveDot(getActiveIndex());
+      });
+
+      setActiveDot(0);
+    })();
+
+    (function initCategoryCarousel() {
+      const track = document.querySelector('.category-carousel-track');
+      const slides = track ? Array.from(track.querySelectorAll('.category-slide')) : [];
+      const prevBtn = document.getElementById('category-prev');
+      const nextBtn = document.getElementById('category-next');
+      const dots = Array.from(document.querySelectorAll('.category-dot'));
+
+      if (!track || !slides.length || !prevBtn || !nextBtn || !dots.length) return;
+
+      const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+      let activeIndex = 0;
+
+      function setActiveDot(index) {
+        dots.forEach((dot, dotIndex) => {
+          dot.classList.toggle('active', dotIndex === index);
+        });
+      }
+
+      function renderCarousel() {
+        if (isMobile()) {
+          slides.forEach((slide, index) => {
+            slide.classList.toggle('is-hidden-mobile', index !== activeIndex);
+          });
+        } else {
+          slides.forEach((slide) => {
+            slide.classList.remove('is-hidden-mobile');
+          });
+          activeIndex = 0;
+        }
+
+        setActiveDot(activeIndex);
+      }
+
+      function goToIndex(index) {
+        activeIndex = Math.max(0, Math.min(index, slides.length - 1));
+        renderCarousel();
+      }
+
+      prevBtn.addEventListener('click', () => goToIndex(activeIndex - 1));
+      nextBtn.addEventListener('click', () => goToIndex(activeIndex + 1));
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => goToIndex(index));
+      });
+
+      window.addEventListener('resize', renderCarousel);
+
+      renderCarousel();
+    })();
 
     function toggleFaq(btn) {
       const item = btn.closest('.faq-item');

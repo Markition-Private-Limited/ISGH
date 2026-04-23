@@ -24,7 +24,7 @@
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    @include('layout.navbar')
+    @include('layouts.navbar')
 <div class="" style="border: 10px solid #ffff;border-radius: 40px; background: rgba(248, 248, 248, 1);">
   <main class="main">
     <div class="cards-wrapper">

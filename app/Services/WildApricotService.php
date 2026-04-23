@@ -357,6 +357,53 @@ class WildApricotService
         return is_array($r->json()) ? $r->json() : [];
     }
 
+    // ─── PHONE EXISTENCE CHECK ──────────────────────────────────────────────
+    // Queries the WA contact list for any contact whose Phone matches the last
+    // 7 digits of the supplied number. Returns true if a match is found.
+
+    public function checkPhoneExists(string $phone): bool
+    {
+        $digits = preg_replace('/\D/', '', $phone);
+        if (strlen($digits) < 10) return false;
+
+        $accountId = $this->getAccountId();
+        $last7     = substr($digits, -7);
+
+        // Format as WA typically stores phone numbers: (NNN) NNN-NNNN
+        $formatted = '(' . substr($digits, 0, 3) . ') '
+                   . substr($digits, 3, 3) . '-'
+                   . substr($digits, 6, 4);
+
+        $r = $this->apiGet(
+            "/accounts/{$accountId}/contacts?" . http_build_query([
+                '$filter' => "Phone eq '{$formatted}'",
+                '$async'  => 'false',
+                '$top'    => 1,
+            ])
+        );
+
+        Log::debug('WA checkPhoneExists', [
+            'phone'  => $formatted,
+            'status' => $r->status(),
+        ]);
+
+        if (! $r->successful()) return false;
+
+        $body     = $r->json();
+        $contacts = $body['Contacts'] ?? (is_array($body) ? array_filter($body, 'is_array') : []);
+
+        foreach ($contacts as $c) {
+            $waPhone = preg_replace('/\D/', '',
+                $this->extractFieldValue($c, 'Phone') ?: ($c['Phone'] ?? '')
+            );
+            if ($waPhone && str_ends_with($waPhone, $last7)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // ─── MEMBERSHIP VERIFICATION — SEARCH CONTACT ───────────────────────────
     // Searches WA contacts by email (primary) or first+last name (fallback).
     // Returns the first matching contact array, or null if none found.

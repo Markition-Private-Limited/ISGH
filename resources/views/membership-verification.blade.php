@@ -297,57 +297,88 @@
 
     /* ─── RESPONSIVE ──────────────────────────────── */
     @media (max-width: 560px) {
-      .verify-card { padding: 1.75rem 1.25rem 2rem; }
+      .verify-card { padding: 1.75rem 1.25rem 2rem; margin-top: 0.80rem; }
       .result-card  { padding: 1.5rem 1.25rem 1.75rem; }
       .result-grid  { grid-template-columns: 1fr; gap: 1.1rem; }
+    }
+
+    /* ─── MOBILE (≤ 768px) ────────────────────────── */
+    @media (max-width: 768px) {
+      .page-outer-wrapper {
+        border: none !important;
+        border-radius: 0 !important;
+      }
+      .hero-bg {
+        top: -25px !important;
+      }
+      .main-container {
+        padding: 0 0.75rem 3rem;
+      }
     }
   </style>
 </head>
 
 <body>
-<div style="border:10px solid #fff; border-radius:40px; background:rgba(248,248,248,1);">
+<div class="page-outer-wrapper" style="background:rgba(248,248,248,1);">
 
   <!-- ══════════ HEADER ══════════ -->
-  <header class="w-full pt-8 relative z-50 flex items-center justify-between px-4 sm:px-8 md:px-16 lg:px-24">
-    <div class="flex-shrink-0">
-      <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
-        <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
+  <header class="w-full pt-2 sm:pt-4 relative z-50 px-3 sm:px-8 md:px-16 lg:px-24">
+    <div class="flex items-center gap-3">
+      <!-- Desktop logo -->
+      <div class="hidden lg:block flex-shrink-0">
+        <div class="w-14 h-14 rounded-full border border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
+          <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-10 h-10 object-contain">
+        </div>
+      </div>
+      <!-- Desktop nav -->
+      <nav class="hidden lg:flex navbar-glass rounded-full pl-8 pr-2 py-2 items-center gap-8 ml-auto">
+        <div class="hidden lg:flex items-center gap-7">
+          <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
+          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
+          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
+          <a href="{{ route('join') }}" class="text-white/75 text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
+          <a href="{{ route('membership-verification') }}" class="text-white/75 text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="https://isgh.wildapricot.org/Sys/Login" target="_blank" rel="noopener noreferrer"
+             class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
+          <a href="{{ route('join') }}" style="background:#00d084;"
+             class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Join Now</a>
+        </div>
+      </nav>
+      <!-- Mobile nav pill -->
+      <div class="w-full lg:hidden">
+        <div class="flex w-full items-center justify-between rounded-full border-[8px] border-white bg-[#1c1c1c] px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] min-h-[72px]">
+          <a href="{{ route('home') }}" class="shrink-0" aria-label="ISGH Home">
+            <div class="w-12 h-12 rounded-full border-2 border-[#c8a84b] flex items-center justify-center bg-[#1a4a2e] shadow-lg">
+              <img src="{{ asset('images/logo.png') }}" alt="ISGH Logo" class="w-8 h-8 object-contain">
+            </div>
+          </a>
+          <button class="flex h-11 w-11 items-center justify-center rounded-full"
+                  onclick="openMobileMenu()" aria-label="Open menu">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
-    <nav class="navbar-glass rounded-full pl-8 pr-2 py-2 flex items-center gap-8 ml-auto">
-      <div class="hidden lg:flex items-center gap-7">
-        <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
-        <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
-        <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
-        <a href="{{ route('join') }}" class="text-white/75 text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
-        <a href="{{ route('membership-verification') }}" class="text-white/75 text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
-      </div>
-      <div class="flex items-center gap-3">
-        <a href="#" class="bg-white/20 hover:bg-white/30 text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors inline-block text-center">Sign in</a>
-        <a href="{{ route('join') }}" style="background:#00d084;" class="hover:bg-[#00b870] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full transition-colors shadow-md inline-block text-center">Join Now</a>
-      </div>
-      <button onclick="openMobileMenu()" class="lg:hidden ml-2 pr-2 text-white/70 hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-    </nav>
   </header>
 
   <!-- ══════════ HERO ══════════ -->
-  <section class="hero-bg min-h-[260px] sm:min-h-[420px] flex items-center justify-center py-20 px-4"
+  <section class="hero-bg min-h-[260px] sm:min-h-[420px] flex items-center justify-center pt-4 sm:pt-8 pb-14 sm:pb-16 px-4"
            style="border-bottom-left-radius:50px;border-bottom-right-radius:50px;position:relative;top:-86px;">
-    <div class="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto gap-6 mt-16">
-      <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold text-white drop-shadow-md tracking-tight">
+    <div class="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto gap-4 sm:gap-6 mt-6 sm:mt-16">
+      <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-md tracking-tight">
         ISGH Membership Verification
       </h1>
       <p class="text-white/90 text-sm sm:text-base leading-relaxed max-w-lg drop-shadow-sm">
         Your membership supports our Masajid, provides free healthcare at Shifa Clinics, and empowers our
         youth through education. Choose the category that best fits your family and join our legacy of service.
       </p>
-      <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full py-2 px-6 mt-2 shadow-lg">
-        <div class="flex items-center gap-1 text-yellow-400 text-lg">★ ★ ★ ★ ★</div>
-        <span class="text-white text-sm font-medium" style="font-family:'SF Pro regular';">
+      <div class="inline-flex flex-col sm:flex-row items-center gap-1 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl sm:rounded-full py-2 px-5 sm:px-6 shadow-lg">
+        <div class="flex items-center gap-1 text-yellow-400 text-base sm:text-lg">★ ★ ★ ★ ★</div>
+        <span class="text-white text-xs sm:text-sm font-medium" style="font-family:'SF Pro regular';">
           Join thousands active members across Greater Houston.
         </span>
       </div>
