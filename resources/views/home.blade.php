@@ -564,7 +564,8 @@
   <section class="w-full relative" style="background: linear-gradient(145deg, #e8ece8 0%, #dde5de 40%, #e4e9e4 100%);">
     <div class="max-w-3xl mx-auto px-5 sm:px-8 pt-16 pb-16 text-center">
       <h2 class="benefits-title text-gray-900 text-4xl sm:text-5xl font-extrabold mb-5">
-        Why Join ISGH? (Exclusive<br/>Member Benefits)
+        Why Become an ISGH Member? (Exclusive Member Benefits) 
+
       </h2>
       <p class="benefits-subtitle text-gray-500 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
         Becoming a member is more than just a registration—it's your contribution to the backbone of the Houston Muslim community.
@@ -594,7 +595,7 @@
           </div>
           <h3 class="text-gray-900 font-bold text-xl mb-2">Voting Rights</h3>
           <p class="text-gray-500 text-sm leading-relaxed">
-            <strong class="text-gray-700">Empower Your Voice.</strong> Only active members have the right to vote in ISGH elections and help shape the future leadership and policies of our community.
+            <strong class="text-gray-700">Empower Your Voice.</strong> Active members are eligible to vote in ISGH elections and contribute to shaping the leadership and policies of the community.
           </p>
         </div>
 
@@ -604,7 +605,7 @@
           </div>
           <h3 class="text-gray-900 font-bold text-xl mb-2">Exclusive Discounts</h3>
           <p class="text-gray-500 text-sm leading-relaxed">
-            <strong class="text-gray-700">Save on Essential Services.</strong> Members get special discounted rates on Funeral Services (Tadfeen), Weekend Schools, and Summer Camps for kids.
+            <strong class="text-gray-700">Exclusive Member Savings.</strong> Enjoy discounted rates on essential services, including funeral services (Tadfeen), weekend schools, and youth programs.
           </p>
         </div>
 
@@ -614,7 +615,7 @@
           </div>
           <h3 class="text-gray-900 font-bold text-xl mb-2">Community Portal Access</h3>
           <p class="text-gray-500 text-sm leading-relaxed">
-            <strong class="text-gray-700">Stay Informed.</strong> Get exclusive access to the ISGH Community Portal. View financial reports, project updates, and internal community news.
+            <strong class="text-gray-700">Stay Informed.</strong> Get exclusive access to the ISGH Community Portal, where you can view financial reports, project updates, and important community news.
           </p>
         </div>
 
@@ -622,9 +623,9 @@
           <div class="benefit-icon-bg rounded-2xl flex items-center justify-center w-full mb-5" style="height:220px;">
             <img src="{{ asset('images/mosque.png') }}" alt="">
           </div>
-          <h3 class="text-gray-900 font-bold text-xl mb-2">Direct Community Impact</h3>
+          <h3 class="text-gray-900 font-bold text-xl mb-2">Make a real Impact</h3>
           <p class="text-gray-500 text-sm leading-relaxed">
-            <strong class="text-gray-700">Sadaqah Jariyah.</strong> Your membership fees directly fund the operations of our 22+ Masajid and Shifa Clinics, providing healthcare to those in need.
+            <strong class="text-gray-700">Make a Lasting Impact.</strong> Your membership acts as Sadaqah Jariyah, sustaining masajid and Shifa clinics that provide vital services and healthcare to those in need.
           </p>
         </div>
       </div>
@@ -638,7 +639,7 @@
 
       <div class="mt-12 flex justify-center">
         <a href="{{ route('join') }}" class="cta-btn text-white font-semibold text-base px-8 py-4 rounded-full flex items-center gap-3 inline-block">
-          Secure My 2026 Membership
+          Become a Member Today
           <span class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
@@ -790,8 +791,8 @@
           <img src="{{ asset('images/couple.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
         </div>
         <div class="p-6 flex flex-col justify-center">
-          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Annual</h3>
-          <p class="text-gray-600 text-sm">Yearly pricing + description. Fixed Dec 31 expiry note</p>
+          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Annual Membership</h3>
+          <p class="text-gray-600 text-sm">$20 per year. This membership provides full access to ISGH benefits, including voting rights and community participation. Membership is valid through December 31 of each year and must be renewed annually to remain active.</p>
         </div>
       </div>
 
@@ -801,8 +802,8 @@
           <img src="{{ asset('images/quran1.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
         </div>
         <div class="p-6 flex flex-col justify-center">
-          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Chequematic</h3>
-          <p class="text-gray-600 text-sm">Monthly contribution — min $10/month. Threshold must be reached within 4 months.</p>
+          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Checkomatic</h3>
+          <p class="text-gray-600 text-sm">A convenient monthly contribution option with a minimum of $10 per month directed to your selected masjid. While membership remains active, voting eligibility requires that total contributions reach $40 by June 30 of each year.</p>
         </div>
       </div>
 
@@ -812,8 +813,8 @@
           <img src="{{ asset('images/hands.jpg')}}" class="w-full sm:w-40 object-cover rounded-xl" style="min-height:150px; max-height:180px;">
         </div>
         <div class="p-6 flex flex-col justify-center">
-          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Lifetime</h3>
-          <p class="text-gray-600 text-sm">Lifetime pricing. One-time payment. No expiry.</p>
+          <h3 class="text-gray-900 text-xl sm:text-2xl font-bold mb-3">Lifetime Membership</h3>
+          <p class="text-gray-600 text-sm">A one-time contribution for lifetime membership with no annual renewal required. This option ensures continuous support for ISGH and long-term community impact.</p>
         </div>
       </div>
 
@@ -1019,7 +1020,7 @@
             <i class="faq-icon" id="icon0">−</i>
           </button>
           <div class="faq-answer">
-            <p>Becoming a member means joining the largest Muslim community in North America. Membership grants you Voting Rights to shape future leadership, provides Discounts on funeral and educational services, and ensures your contributions support the operations of 22+ Masajid and Shifa Clinics.</p>
+            <p>Becoming a member means joining one of the largest Muslim communities in North America. Membership gives you voting rights, access to community services, and the opportunity to support and shape the future of your local masjid.</p>
           </div>
         </div>
 
@@ -1029,17 +1030,17 @@
             <i class="faq-icon">+</i>
           </button>
           <div class="faq-answer">
-            <p>Any Muslim individual 18 years of age or older residing in the Greater Houston area is eligible to become an ISGH member. Family memberships include husband and wife. Student and extended family plans have their own eligibility criteria.</p>
+            <p>Any Muslim individual aged 18 or older residing in the Greater Houston area is eligible to become an ISGH member.</p>
           </div>
         </div>
 
         <div class="faq-item">
           <button class="faq-question" onclick="toggleFaq(this)">
-            <span>3. What are the three membership categories?</span>
+            <span>3. What membership options are available?</span>
             <i class="faq-icon">+</i>
           </button>
           <div class="faq-answer">
-            <p>ISGH offers three membership categories: <strong>Category I – Family</strong> ($40/year), <strong>Category II – Individual</strong> ($25/year for one person 18+), and <strong>Category III – Lifetime</strong> ($1,500 for family or $1,000 for individual, with a permanent option via a $25,000+ donation).</p>
+            <p>ISGH offers three membership options: Annual, Check-O-Matic, and Lifetime. Each option provides membership access, with flexible ways to contribute and support the community.</p>
           </div>
         </div>
 
@@ -1049,7 +1050,7 @@
             <i class="faq-icon">+</i>
           </button>
           <div class="faq-answer">
-            <p>Annual and Checkomatic memberships require yearly renewal. Lifetime members do not need to renew. If you are on the Checkomatic plan, your monthly contributions must total the required annual fee by June 30th each year to remain eligible to vote.</p>
+            <p>Annual memberships must be renewed each year. Check-O-Matic members must meet the required contribution threshold annually to maintain voting eligibility. Lifetime memberships do not require renewal.</p>
           </div>
         </div>
 
@@ -1059,7 +1060,7 @@
             <i class="faq-icon">+</i>
           </button>
           <div class="faq-answer">
-            <p>Yes! You can register and pay for your ISGH membership entirely online through our secure membership portal. Simply click "Become a Member" or "Join Now" to get started. You will receive a confirmation email once your membership is processed.</p>
+            <p>Yes, you can register and pay for your ISGH membership securely online. Simply click “Join ISGH Today” to get started. You will receive a confirmation once your membership is processed.</p>
           </div>
         </div>
 

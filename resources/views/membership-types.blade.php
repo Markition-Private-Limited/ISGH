@@ -8,6 +8,7 @@
     <title>Choose Membership Type - ISGH</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
         rel="stylesheet" />
@@ -1569,6 +1570,144 @@
             border-radius: 6px;
             display: inline-block;
         }
+
+        /* ── ID SCAN MODAL ─────────────────────────────────────────────────── */
+        .id-scan-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .id-scan-overlay.active { display: flex; }
+
+        .id-scan-modal {
+            background: #0f1923;
+            border-radius: 1.25rem;
+            width: min(95vw, 520px);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+
+        .id-scan-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(90deg,#0f5c45,#2f8f6b);
+        }
+        .id-scan-header h3 {
+            color: #eaf7f3;
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        .id-scan-close-btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .id-scan-close-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .id-scan-body { padding: 1.25rem; }
+
+        .id-scan-instruction {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.82rem;
+            margin-bottom: 0.9rem;
+            line-height: 1.5;
+        }
+        .id-scan-instruction strong { color: #eaf7f3; }
+
+        .id-scan-viewfinder {
+            position: relative;
+            background: #000;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+        }
+        .id-scan-viewfinder video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .id-scan-corners {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .id-scan-corners::before,
+        .id-scan-corners::after,
+        .id-scan-corner-br,
+        .id-scan-corner-bl {
+            content: '';
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-color: #10b981;
+            border-style: solid;
+        }
+        .id-scan-corners::before { top: 12px; left: 12px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+        .id-scan-corners::after  { top: 12px; right: 12px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+        .id-scan-corner-br { bottom: 12px; right: 12px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+        .id-scan-corner-bl { bottom: 12px; left: 12px;  border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+
+        .id-scan-laser {
+            position: absolute;
+            left: 10%; right: 10%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #10b981, transparent);
+            animation: idLaserSweep 1.8s ease-in-out infinite;
+            border-radius: 2px;
+        }
+        @keyframes idLaserSweep {
+            0%   { top: 15%; opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { top: 85%; opacity: 0; }
+        }
+
+        .id-scan-status {
+            text-align: center;
+            margin-top: 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+        }
+        .id-scan-status.scanning { color: #9ca3af; background: #1a2430; }
+        .id-scan-status.success  { color: #10b981; background: #052e1c; }
+        .id-scan-status.error    { color: #f87171; background: #2d1515; }
+
+        .id-scan-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .id-scan-cancel-btn {
+            flex: 1;
+            padding: 0.7rem;
+            border: 1px solid #374151;
+            background: transparent;
+            color: #9ca3af;
+            border-radius: 0.7rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        .id-scan-cancel-btn:hover { background: #1f2937; color: #e5e7eb; }
     </style>
 
     <script>
@@ -1605,14 +1744,14 @@
                 submitLabel: 'Complete Registration &amp; Pay',
             },
             flat: {
-                bannerTitle: 'Annual Membership',
+                bannerTitle: 'Individual Membership',
                 bannerSubtitle: 'All household members for one flat rate',
                 priceAmount: '$20',
                 pricePeriod: 'Per Year',
                 hasSpouse: false,
                 hasFlatMembers: true,
                 isAnnual: true,
-                orderType: 'ANNUAL MEMBERSHIP',
+                orderType: 'INDIVIDUAL MEMBERSHIP',
                 orderFee: '$20.00',
                 orderTotal: '$20.00',
                 billingNote: '',
@@ -1872,17 +2011,19 @@
             syncCheckomaticWarningVisibility();
         }
 
-        function buildDependentAddressText(street, city, state, zip) {
+        function buildDependentAddressText(street, city, state, zip, zone) {
             const lineOne = (street || '').trim();
             const locality = [city, state].map(v => (v || '').trim()).filter(Boolean).join(', ');
             const lineTwo = [locality, (zip || '').trim()].filter(Boolean).join(' ');
-            return [lineOne, lineTwo].filter(Boolean).join(', ') || 'Same as primary member address';
+            const addressText = [lineOne, lineTwo].filter(Boolean).join(', ') || 'Same as primary member address';
+            const zoneText = (zone || '').trim() ? ` • 📍 ${zone}` : '';
+            return addressText + zoneText;
         }
 
-        function setDependentAddressSummary(summaryId, street, city, state, zip) {
+        function setDependentAddressSummary(summaryId, street, city, state, zip, zone) {
             const summaryEl = document.getElementById(summaryId);
             if (!summaryEl) return;
-            summaryEl.textContent = buildDependentAddressText(street, city, state, zip);
+            summaryEl.textContent = buildDependentAddressText(street, city, state, zip, zone);
         }
 
         // ─── DYNAMIC SPOUSE BLOCKS ───────────────────────────────────────────────
@@ -1977,7 +2118,7 @@
               Spouse ${idx + 1}
             </div>
           </div>
-          <div class="dependent-scan-btn">
+          <div class="dependent-scan-btn" onclick="openIdScan('uni_spouse_${idx}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
             <span style="letter-spacing:0.3px;">Scan Your ID</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
@@ -2017,6 +2158,10 @@
             </div>
           </div>
           <div class="field"><label>ZIP Code</label><input type="text" id="uni_spouse_${idx}_zip" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+          <div class="field zone-field" id="uni_spouse_${idx}_center_field" style="display:none;">
+            <label>Center / Zone</label>
+            <div id="uni_spouse_${idx}_center_display"></div>
+          </div>
           </div>
         </div>`;
             autoFillSpouseAddress(idx);
@@ -2072,7 +2217,7 @@
               Member ${displayNum}
             </div>
           </div>
-          <div class="dependent-scan-btn">
+          <div class="dependent-scan-btn" onclick="openIdScan('flat_member_${idx}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
             <span style="letter-spacing:0.3px;">Scan Your ID</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
@@ -2113,6 +2258,10 @@
             </div>
           </div>
           <div class="field"><label>ZIP Code</label><input type="text" id="flat_member_${idx}_zip" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+          <div class="field zone-field" id="flat_member_${idx}_center_field" style="display:none;">
+            <label>Center / Zone</label>
+            <div id="flat_member_${idx}_center_display"></div>
+          </div>
           </div>
         </div>`;
             container.appendChild(block);
@@ -2204,11 +2353,12 @@
             const city = document.getElementById('uni_city')?.value || '';
             const zip = document.getElementById('uni_zip')?.value || '';
             const state = document.getElementById('uni_state')?.value || '';
+            const zone = _zipState['uni']?.zone || '';
             set(ip + 'street', street);
             set(ip + 'city', city);
             set(ip + 'zip', zip);
             set(ip + 'state', state);
-            setDependentAddressSummary(`uni_spouse_${idx}_address_summary`, street, city, state, zip);
+            setDependentAddressSummary(`uni_spouse_${idx}_address_summary`, street, city, state, zip, zone);
         }
 
         function autoFillSpouseAddresses() {
@@ -2266,11 +2416,12 @@
             const city = document.getElementById('uni_city')?.value || '';
             const zip = document.getElementById('uni_zip')?.value || '';
             const state = document.getElementById('uni_state')?.value || '';
+            const zone = _zipState['uni']?.zone || '';
             set('flat_member_' + idx + '_street', street);
             set('flat_member_' + idx + '_city', city);
             set('flat_member_' + idx + '_zip', zip);
             set('flat_member_' + idx + '_state', state);
-            setDependentAddressSummary(`flat_member_${idx}_address_summary`, street, city, state, zip);
+            setDependentAddressSummary(`flat_member_${idx}_address_summary`, street, city, state, zip, zone);
         }
 
         function autoFillFlatMemberAddresses() {
@@ -3582,6 +3733,18 @@
             });
         }
 
+        function disablePrimaryFields() {
+            PRIMARY_REQUIRED_IDS.push('uni_middle_name');
+            PRIMARY_REQUIRED_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.disabled = true;
+                el.style.background = '#f3f4f6';
+                el.style.cursor = 'not-allowed';
+                el.style.opacity = '0.7';
+            });
+        }
+
         function confirmAndContinue() {
             if (!isPrimaryValid()) return;
 
@@ -3653,6 +3816,7 @@
                     btn.style.cursor = 'pointer';
                 } else {
                     // Not found — hide confirm wrap, reveal rest of form
+                    disablePrimaryFields();
                     document.getElementById('uni_confirm_wrap').style.display = 'none';
                     const restOfForm = document.getElementById('uni_rest_of_form');
                     if (restOfForm) {
@@ -4065,7 +4229,7 @@
                             <h3 class="form-section-title">Primary Information</h3>
                         </div>
                         <div style="text-align:center;">
-                            <div
+                            <div onclick="openIdScan('uni')"
                                 style="display:inline-flex;align-items:center;gap:16px;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:500;color:#eaf7f3;margin-bottom:28px;cursor:pointer;background:linear-gradient(90deg,#0f5c45 0%,#2f8f6b 50%,#55c59a 100%);box-shadow:0 6px 16px rgba(0,0,0,0.15);">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
                                     style="width:34px;height:34px;">
@@ -4225,7 +4389,7 @@
                                                 Spouse 1
                                             </div>
                                         </div>
-                                        <div class="dependent-scan-btn">
+                                        <div class="dependent-scan-btn" onclick="openIdScan('uni_spouse_0')">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
                                             <span style="letter-spacing:0.3px;">Scan Your ID</span>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
@@ -4287,6 +4451,10 @@
                                         </div>
                                         <div class="field"><label>ZIP Code</label><input type="text"
                                                 id="uni_spouse_0_zip" placeholder="Auto-filled from primary" readonly style="background:#f3f4f6;cursor:not-allowed;"></div>
+                                        <div class="field zone-field" id="uni_spouse_0_center_field" style="display:none;">
+                                            <label>Center / Zone</label>
+                                            <div id="uni_spouse_0_center_display"></div>
+                                        </div>
                                         </div>
                                     </div>
                                 </div>
@@ -4696,6 +4864,238 @@
             </div>
         </div>
     </div>
+
+    <!-- ── ID SCAN MODAL ──────────────────────────────────────────────────── -->
+    <div id="idScanOverlay" class="id-scan-overlay">
+        <div class="id-scan-modal">
+            <div class="id-scan-header">
+                <h3>Scan ID Barcode</h3>
+                <button class="id-scan-close-btn" onclick="closeIdScan()">✕</button>
+            </div>
+            <div class="id-scan-body">
+                <p class="id-scan-instruction">
+                    <strong>Point the camera at the PDF417 barcode</strong> on the back of the Texas Driver's License or ID card. Hold steady until detected.
+                </p>
+                <div class="id-scan-viewfinder">
+                    <video id="idScanVideo" autoplay playsinline muted></video>
+                    <div class="id-scan-corners">
+                        <span class="id-scan-corner-br"></span>
+                        <span class="id-scan-corner-bl"></span>
+                    </div>
+                    <div class="id-scan-laser"></div>
+                </div>
+                <div id="idScanStatus" class="id-scan-status scanning">Scanning for barcode…</div>
+                <div class="id-scan-actions">
+                    <button class="id-scan-cancel-btn" onclick="closeIdScan()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── ID SCAN: AAMVA PARSER ────────────────────────────────────────────────
+    function parseAamva(raw) {
+        const result = { first_name: '', middle_name: '', last_name: '', dob: '', id_number: '' };
+        try {
+            // AAMVA subfile starts after "@\n\x1e\rANSI " header
+            const subfileStart = raw.indexOf('ANSI ');
+            const data = subfileStart !== -1 ? raw.slice(subfileStart) : raw;
+
+            const get = (tag) => {
+                const idx = data.indexOf(tag);
+                if (idx === -1) return '';
+                const val = data.slice(idx + tag.length);
+                const end = val.search(/[\r\n]/);
+                return (end !== -1 ? val.slice(0, end) : val).trim();
+            };
+
+            // Try dedicated name fields first (newer AAMVA), fall back to DAA (combined)
+            let firstName = get('DAC');
+            let lastName  = get('DCS');
+            let midName   = get('DAD');
+
+            if (!firstName && !lastName) {
+                // Older format: DAA = LAST,FIRST MIDDLE
+                const full = get('DAA');
+                if (full) {
+                    const [last, rest = ''] = full.split(',');
+                    const parts = rest.trim().split(/\s+/);
+                    lastName  = last.trim();
+                    firstName = parts[0] || '';
+                    midName   = parts.slice(1).join(' ');
+                }
+            }
+
+            // DOB: DBB = MMDDYYYY  → MM/DD/YYYY
+            const dob = get('DBB');
+            let dobFormatted = '';
+            if (dob && dob.length >= 8) {
+                dobFormatted = `${dob.slice(0,2)}/${dob.slice(2,4)}/${dob.slice(4,8)}`;
+            }
+
+            result.first_name  = toTitleCase(firstName);
+            result.middle_name = toTitleCase(midName);
+            result.last_name   = toTitleCase(lastName);
+            result.dob         = dobFormatted;
+            result.id_number   = get('DAQ'); // TX DL / ID number
+        } catch (e) {
+            console.error('AAMVA parse error:', e);
+        }
+        return result;
+    }
+
+    function toTitleCase(str) {
+        return (str || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).trim();
+    }
+
+    // ── ID SCAN: FILL FORM FIELDS ────────────────────────────────────────────
+    function fillIdFields(prefix, data) {
+        const set = (suffix, val) => {
+            if (!val) return;
+            const el = document.getElementById(prefix === 'uni'
+                ? `uni_${suffix}`
+                : `${prefix}_${suffix}`);
+            if (el && !el.disabled) el.value = val;
+        };
+
+        if (prefix === 'uni') {
+            // Primary member: directly set uni_* fields
+            if (data.first_name)  { const el = document.getElementById('uni_first_name');  if (el && !el.disabled) el.value = data.first_name; }
+            if (data.middle_name) { const el = document.getElementById('uni_middle_name'); if (el && !el.disabled) el.value = data.middle_name; }
+            if (data.last_name)   { const el = document.getElementById('uni_last_name');   if (el && !el.disabled) el.value = data.last_name; }
+            if (data.dob)         { const el = document.getElementById('uni_dob');         if (el && !el.disabled) el.value = data.dob; }
+            if (data.id_number)   { const el = document.getElementById('uni_txdl');        if (el && !el.disabled) el.value = data.id_number; }
+            // Trigger watchers so validation state updates
+            ['uni_first_name','uni_last_name','uni_dob','uni_txdl'].forEach(id => {
+                document.getElementById(id)?.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            updateConfirmBtn();
+        } else {
+            // Spouse / flat member
+            if (data.first_name)  { const el = document.getElementById(`${prefix}_first_name`);  if (el) el.value = data.first_name; }
+            if (data.middle_name) { const el = document.getElementById(`${prefix}_middle_name`); if (el) el.value = data.middle_name; }
+            if (data.last_name)   { const el = document.getElementById(`${prefix}_last_name`);   if (el) el.value = data.last_name; }
+            if (data.dob)         { const el = document.getElementById(`${prefix}_dob`);         if (el) el.value = data.dob; }
+            if (data.id_number)   { const el = document.getElementById(`${prefix}_txdl`);        if (el) el.value = data.id_number; }
+            [`${prefix}_first_name`,`${prefix}_last_name`,`${prefix}_dob`].forEach(id => {
+                document.getElementById(id)?.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            checkFormReadiness?.();
+        }
+    }
+
+    // ── ID SCAN: CAMERA & ZXING ──────────────────────────────────────────────
+    let _idScanPrefix    = '';
+    let _idScanReader    = null;
+    let _idScanStream    = null;
+    let _idScanAnimFrame = null;
+
+    function openIdScan(prefix) {
+        _idScanPrefix = prefix;
+        document.getElementById('idScanOverlay').classList.add('active');
+        document.body.style.overflow = 'hidden';
+        setIdScanStatus('scanning', 'Starting camera…');
+        _startIdScanCamera();
+    }
+
+    function closeIdScan() {
+        _stopIdScanCamera();
+        document.getElementById('idScanOverlay').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    async function _startIdScanCamera() {
+        try {
+            _idScanStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }
+            });
+            const video = document.getElementById('idScanVideo');
+            video.srcObject = _idScanStream;
+            await video.play();
+
+            if (!window.ZXing) {
+                setIdScanStatus('error', 'Barcode library not loaded. Please refresh.');
+                return;
+            }
+
+            const hints = new Map();
+            hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.PDF_417]);
+            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+            _idScanReader = new ZXing.BrowserMultiFormatReader(hints);
+
+            setIdScanStatus('scanning', 'Scanning for barcode…');
+            _idScanLoop();
+        } catch (err) {
+            console.error('Camera error:', err);
+            const msg = err.name === 'NotAllowedError'
+                ? 'Camera access denied. Please allow camera permission and try again.'
+                : 'Could not access camera. Please check your device settings.';
+            setIdScanStatus('error', msg);
+        }
+    }
+
+    function _idScanLoop() {
+        const video  = document.getElementById('idScanVideo');
+        if (!video || !_idScanStream) return;
+
+        if (video.readyState < 2) {
+            _idScanAnimFrame = requestAnimationFrame(_idScanLoop);
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        try {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const luminanceSource = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
+            const binaryBitmap    = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+            const result = _idScanReader.decode(binaryBitmap);
+
+            if (result && result.text) {
+                _onIdBarcodeDetected(result.text);
+                return;
+            }
+        } catch (e) {
+            // NotFoundException is thrown on every frame with no barcode — ignore it
+        }
+
+        _idScanAnimFrame = requestAnimationFrame(_idScanLoop);
+    }
+
+    function _onIdBarcodeDetected(raw) {
+        setIdScanStatus('success', '✓ Barcode detected! Filling in fields…');
+        const data = parseAamva(raw);
+
+        const hasData = data.first_name || data.last_name || data.dob;
+        if (!hasData) {
+            setIdScanStatus('error', 'Could not read ID data. Please try again.');
+            _idScanAnimFrame = requestAnimationFrame(_idScanLoop);
+            return;
+        }
+
+        fillIdFields(_idScanPrefix, data);
+        setTimeout(closeIdScan, 1200);
+    }
+
+    function _stopIdScanCamera() {
+        if (_idScanAnimFrame) { cancelAnimationFrame(_idScanAnimFrame); _idScanAnimFrame = null; }
+        if (_idScanStream)    { _idScanStream.getTracks().forEach(t => t.stop()); _idScanStream = null; }
+        const video = document.getElementById('idScanVideo');
+        if (video) video.srcObject = null;
+        _idScanReader = null;
+    }
+
+    function setIdScanStatus(type, msg) {
+        const el = document.getElementById('idScanStatus');
+        if (!el) return;
+        el.className = `id-scan-status ${type}`;
+        el.textContent = msg;
+    }
+    </script>
 </body>
 
 </html>

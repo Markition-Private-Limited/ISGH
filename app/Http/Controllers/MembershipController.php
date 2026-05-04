@@ -49,6 +49,8 @@ class MembershipController extends Controller
             return response()->json(['exists' => false]);
         }
 
+        Log::debug('Checking phone existence in WA', ['phone' => $phone]);
+
         try {
             $exists = $this->wa->checkPhoneExists($phone);
             return response()->json(['exists' => $exists]);
@@ -278,7 +280,7 @@ class MembershipController extends Controller
                 'middle_name' => $request->input('primary.middle_name'),
                 'last_name' => $request->input('primary.last_name'),
                 'email' => $request->input('primary.email'),
-                'phone' => $request->input('primary.phone'),
+                'phone' => preg_replace('/\D/', '', $request->input('primary.phone', '')),
                 'dob' => $parseDob($request->input('primary.dob')),
                 'tx_dl' => $request->input('primary.tx_dl'),
                 'street' => $request->input('primary.street'),
@@ -309,7 +311,7 @@ class MembershipController extends Controller
                     return response()->json(['success' => false, 'message' => 'Spouse email '.$spouse['email'].' is already in use.']);
                 }
 
-                $spousePhone=$this->wa->checkPhoneExists($spouse['phone']);
+                $spousePhone=$this->wa->checkPhoneExists(preg_replace('/\D/', '', $spouse['phone'] ?? ''));
                 if($spousePhone){
                     return response()->json(['success' => false, 'message' => 'Spouse phone '.$spouse['phone'].' is already in use.']);
                 }
@@ -325,7 +327,7 @@ class MembershipController extends Controller
                     'middle_name' => $spouse['middle_name'] ?? null,
                     'last_name' => $spouse['last_name'] ?? '',
                     'email' => $spouse['email'] ?? null,
-                    'phone' => $spouse['phone'] ?? null,
+                    'phone' => preg_replace('/\D/', '', $spouse['phone'] ?? '') ?: null,
                     'dob' => $parseDob($spouse['dob'] ?? null),
                     'tx_dl' => $spouse['tx_dl'] ?? null,
                     'gender' => $spouse['gender'] ?? null,
@@ -354,7 +356,7 @@ class MembershipController extends Controller
                     return response()->json(['success' => false, 'message' => 'Family member email '.$flat['email'].' is already in use.']);
                 }
 
-                $flatPhone=$this->wa->checkPhoneExists($flat['phone']);
+                $flatPhone=$this->wa->checkPhoneExists(preg_replace('/\D/', '', $flat['phone'] ?? ''));
                 if($flatPhone){
                     return response()->json(['success' => false, 'message' => 'Family member phone '.$flat['phone'].' is already in use.']);
                 }
@@ -370,7 +372,7 @@ class MembershipController extends Controller
                     'middle_name' => $flat['middle_name'] ?? null,
                     'last_name' => $flat['last_name'] ?? '',
                     'email' => $flat['email'] ?? null,
-                    'phone' => $flat['phone'] ?? null,
+                    'phone' => preg_replace('/\D/', '', $flat['phone'] ?? '') ?: null,
                     'dob' => $parseDob($flat['dob'] ?? null),
                     'tx_dl' => $flat['tx_dl'] ?? null,
                     'relation' => $flat['relation'] ?? null,
@@ -406,7 +408,7 @@ class MembershipController extends Controller
                 $customer = $this->stripe->createCustomer([
                     'name' => $request->input('primary.first_name').' '.$request->input('primary.last_name'),
                     'email' => $request->input('primary.email'),
-                    'phone' => $request->input('primary.phone'),
+                    'phone' => preg_replace('/\D/', '', $request->input('primary.phone', '')),
                 ]);
 
                 $paymentRecord->update([

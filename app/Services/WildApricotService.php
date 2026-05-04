@@ -364,26 +364,22 @@ class WildApricotService
     public function checkPhoneExists(string $phone): bool
     {
         $digits = preg_replace('/\D/', '', $phone);
+        Log::debug('WA checkPhoneExists', ['input' => $phone, 'digits' => $digits]);
         if (strlen($digits) < 10) return false;
 
         $accountId = $this->getAccountId();
         $last7     = substr($digits, -7);
 
-        // Format as WA typically stores phone numbers: (NNN) NNN-NNNN
-        $formatted = '(' . substr($digits, 0, 3) . ') '
-                   . substr($digits, 3, 3) . '-'
-                   . substr($digits, 6, 4);
-
         $r = $this->apiGet(
             "/accounts/{$accountId}/contacts?" . http_build_query([
-                '$filter' => "Phone eq '{$formatted}'",
+                '$filter' => "Phone eq '{$digits}'",
                 '$async'  => 'false',
                 '$top'    => 1,
             ])
         );
 
         Log::debug('WA checkPhoneExists', [
-            'phone'  => $formatted,
+            'phone'  => $digits,
             'status' => $r->status(),
         ]);
 
@@ -747,12 +743,15 @@ class WildApricotService
     {
         $fields = [];
 
+        $phoneDigits = preg_replace('/\D/', '', $data['phone'] ?? '') ?: null;
+        $data['phone'] = $phoneDigits;
+
         // Standard system fields
         $standard = [
             'FirstName' => $data['first_name'] ?? null,
             'LastName'  => $data['last_name']  ?? null,
             'Email'     => $data['email']      ?? null,
-            'Phone'     => $data['phone']      ?? null,
+            'Phone'     => $phoneDigits,
         ];
         foreach ($standard as $code => $val) {
             if ($val !== null && $val !== '') {
