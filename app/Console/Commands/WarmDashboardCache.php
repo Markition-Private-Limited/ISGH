@@ -2,35 +2,29 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User;
 use App\Services\WildApricotService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
 class WarmDashboardCache extends Command
 {
-    protected $signature   = 'portal:warm-dashboard';
-    protected $description = 'Pre-fetch WildApricot dashboard stats into cache (run via scheduler or manually)';
+    protected $signature   = 'portal:sync-dashboard';
+    protected $description = 'Fetch WildApricot dashboard stats and persist them to the database (runs hourly via scheduler)';
 
     public function handle(WildApricotService $wa): int
     {
-        // This command pages through all WA member contacts to build ZIP aggregations.
-        // With 6000+ members at 100/page it takes ~4-5 minutes — run via scheduler at 2am.
         set_time_limit(600);
 
-        $this->info('Warming dashboard cache (this takes 4-5 minutes)...');
-
-        Cache::forget('wa_dashboard_data');
+        $this->info('Syncing dashboard data from WildApricot to DB...');
 
         $start = microtime(true);
-        $wa->getDashboardData();
+        $wa->syncDashboardToDb();
         $elapsed = round(microtime(true) - $start, 1);
 
-        // Bump the global members cache version — all per-user member page caches
-        // include this version in their key, so incrementing it instantly invalidates them.
+        // Bump member page cache version so stale paginated results are discarded
         Cache::increment('members_cache_version');
 
-        $this->info("Done in {$elapsed}s. Member page caches invalidated.");
+        $this->info("Done in {$elapsed}s. Dashboard DB updated, member caches invalidated.");
         return self::SUCCESS;
     }
 }

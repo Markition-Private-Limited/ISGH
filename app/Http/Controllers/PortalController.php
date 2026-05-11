@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\WildApricotService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -66,21 +65,18 @@ class PortalController extends Controller
     {
         $user = Auth::user();
 
-        $empty = [
-            'stats'          => ['total' => 0, 'active' => 0, 'lapsed' => 0],
-            'levelBreakdown' => ['individual' => 0, 'checkmatic' => 0, 'lifetime' => 0],
-            'profileStatus'  => ['active' => 0, 'lapsed' => 0, 'active_pct' => 0, 'lapsed_pct' => 0],
-            'zipStats'       => ['total' => 0],
-            'zipData'        => collect(),
-            'zones'          => [],
-        ];
-
-        $data = Cache::get('wa_dashboard_data');
+        $data = app(\App\Services\WildApricotService::class)->getDashboardFromDb();
 
         if ($data === null) {
-            Artisan::queue('portal:warm-dashboard');
-            $data = $empty;
-            $data['_warming'] = true;
+            $data = [
+                'stats'          => ['total' => 0, 'active' => 0, 'lapsed' => 0],
+                'levelBreakdown' => ['individual' => 0, 'checkmatic' => 0, 'lifetime' => 0],
+                'profileStatus'  => ['active' => 0, 'lapsed' => 0, 'active_pct' => 0, 'lapsed_pct' => 0],
+                'zipStats'       => ['total' => 0],
+                'zipData'        => collect(),
+                'zones'          => [],
+                '_warming'       => true,
+            ];
         } else {
             $data = $this->scopeDashboardData($data, $user);
         }
@@ -126,65 +122,65 @@ class PortalController extends Controller
         ));
 
         if ($user->isCenterLevel()) {
-            // Resolve the WA center label for this user's center DB value
             $waLabel = self::CENTER_WA_LABELS[$user->center] ?? $user->center;
-
-            // Within the zone, keep only the user's center
-            $zones = array_map(function ($zone) use ($waLabel) {
+            $zones   = array_map(function ($zone) use ($waLabel) {
                 $zone['centers'] = array_values(array_filter(
                     $zone['centers'] ?? [],
                     fn($c) => strcasecmp($c['name'] ?? '', $waLabel) === 0
                 ));
-                // Recalculate zone member total to match visible centers only
                 $zone['members'] = array_sum(array_column($zone['centers'], 'total'));
                 $zone['masjids'] = count($zone['centers']);
                 return $zone;
             }, $zones);
-
-            // Recalculate top-level stats to reflect this center only
-            $centerTotal  = array_sum(array_map(fn($z) => $z['members'], $zones));
-            $data['stats']['total']  = $centerTotal;
-            $data['stats']['active'] = $centerTotal; // best estimate without per-center active count
-            $data['stats']['lapsed'] = 0;
-
-            // Narrow ZIP data to zips belonging to this center
-            $centerZips = [];
-            foreach ($zones as $z) {
-                foreach ($z['centers'] as $c) {
-                    foreach ($c['zips'] ?? [] as $zipRow) {
-                        $centerZips[$zipRow['code']] = ($centerZips[$zipRow['code']] ?? 0) + $zipRow['count'];
-                    }
-                }
-            }
-            $data['zipData'] = collect(array_map(
-                fn($zip, $n) => ['zip' => $zip, 'city' => '', 'count' => $n],
-                array_keys($centerZips),
-                array_values($centerZips)
-            ));
-        } elseif ($user->isZoneLevel()) {
-            // Recalculate stats for this zone
-            $zoneTotal = array_sum(array_map(fn($z) => $z['members'], $zones));
-            $data['stats']['total']  = $zoneTotal;
-            $data['stats']['active'] = $zoneTotal;
-            $data['stats']['lapsed'] = 0;
-
-            // Narrow ZIP data to zips in this zone's centers
-            $zoneZips = [];
-            foreach ($zones as $z) {
-                foreach ($z['centers'] as $c) {
-                    foreach ($c['zips'] ?? [] as $zipRow) {
-                        $zoneZips[$zipRow['code']] = ($zoneZips[$zipRow['code']] ?? 0) + $zipRow['count'];
-                    }
-                }
-            }
-            $data['zipData'] = collect(array_map(
-                fn($zip, $n) => ['zip' => $zip, 'city' => '', 'count' => $n],
-                array_keys($zoneZips),
-                array_values($zoneZips)
-            ));
         }
 
-        $data['zones']            = $zones;
+        // Collect all visible centers (applies to both zone and center level)
+        $visibleCenters = [];
+        foreach ($zones as $z) {
+            foreach ($z['centers'] as $c) {
+                $visibleCenters[] = $c;
+            }
+        }
+
+        // Recompute all stats from visible centers
+        $data['stats'] = [
+            'total'  => array_sum(array_column($visibleCenters, 'total')),
+            'active' => array_sum(array_column($visibleCenters, 'active')),
+            'lapsed' => array_sum(array_column($visibleCenters, 'lapsed')),
+        ];
+
+        $data['levelBreakdown'] = [
+            'individual' => array_sum(array_column($visibleCenters, 'individual')),
+            'checkmatic' => array_sum(array_column($visibleCenters, 'checkmatic')),
+            'lifetime'   => array_sum(array_column($visibleCenters, 'lifetime')),
+        ];
+
+        $scopedTotal     = $data['stats']['total'];
+        $scopedActive    = $data['stats']['active'];
+        $scopedActivePct = $scopedTotal > 0 ? (int) round($scopedActive / $scopedTotal * 100) : 0;
+
+        $data['profileStatus'] = [
+            'active'     => $scopedActive,
+            'lapsed'     => $data['stats']['lapsed'],
+            'active_pct' => $scopedActivePct,
+            'lapsed_pct' => 100 - $scopedActivePct,
+        ];
+
+        // Narrow ZIP data to visible centers only
+        $scopedZips = [];
+        foreach ($visibleCenters as $c) {
+            foreach ($c['zips'] ?? [] as $zipRow) {
+                $zip = $zipRow['code'];
+                $scopedZips[$zip] = ($scopedZips[$zip] ?? 0) + $zipRow['count'];
+            }
+        }
+        $data['zipData'] = collect(array_map(
+            fn($zip, $n) => ['zip' => $zip, 'city' => '', 'count' => $n],
+            array_keys($scopedZips),
+            array_values($scopedZips)
+        ));
+
+        $data['zones']             = $zones;
         $data['zipStats']['total'] = count($data['zipData']);
 
         return $data;

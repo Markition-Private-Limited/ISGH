@@ -8,5 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Refresh the portal dashboard cache every 30 minutes.
-Schedule::command('portal:warm-dashboard')->everyThirtyMinutes()->withoutOverlapping(10);
+// Sync dashboard data from WildApricot to DB every hour.
+Schedule::command('portal:sync-dashboard')->hourly()->withoutOverlapping(10);

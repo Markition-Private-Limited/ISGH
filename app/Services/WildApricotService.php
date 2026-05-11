@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -986,22 +987,116 @@ class WildApricotService
      * Zone/ZIP aggregation via per-zone-choice count calls using the cached zone choice list.
      * ZIP breakdown is omitted (requires fetching all contacts — too slow at 6000+ members).
      */
-    public function getDashboardData(): array
+    /**
+     * Reads dashboard data from the DB and returns the array shape the controller expects.
+     * Returns null if the DB has never been populated (command hasn't run yet).
+     */
+    public function getDashboardFromDb(): ?array
     {
-        return Cache::remember('wa_dashboard_data', 1800, function () {
-            $accountId = $this->getAccountId();
+        $stat = \App\Models\DashboardStat::current();
+        if (! $stat->exists) {
+            return null;
+        }
 
-            // Fast count helper — returns {"Count": N}, no Contacts in response
-            $countOf = fn(string $filter): int => (function () use ($accountId, $filter) {
-                $r = $this->apiGet(
-                    "/accounts/{$accountId}/contacts?" . http_build_query([
-                        '$async'  => 'false',
-                        '$filter' => $filter,
-                        '$count'  => 'true',
-                    ])
-                );
-                return $r->successful() ? (int) ($r->json()['Count'] ?? 0) : 0;
-            })();
+        $centers = \App\Models\DashboardCenter::with('zips')->get();
+
+        // Build zones array
+        $zoneMap = [];
+        $globalZipCount = [];
+        $globalZipCity  = [];
+
+        foreach ($centers as $center) {
+            $zoneName   = $center->zone_name;
+            $centerName = $center->center_name;
+
+            $zoneMap[$zoneName] ??= ['members' => 0, 'centers' => []];
+            $zoneMap[$zoneName]['members'] += $center->member_count;
+
+            $zips = [];
+            foreach ($center->zips->sortByDesc('member_count') as $zipRow) {
+                $zips[] = ['code' => $zipRow->zip, 'count' => $zipRow->member_count];
+                $globalZipCount[$zipRow->zip] = ($globalZipCount[$zipRow->zip] ?? 0) + $zipRow->member_count;
+                if ($zipRow->city && ! isset($globalZipCity[$zipRow->zip])) {
+                    $globalZipCity[$zipRow->zip] = $zipRow->city;
+                }
+            }
+
+            $zoneMap[$zoneName]['centers'][] = [
+                'name'        => $centerName,
+                'img'         => 'mosque.png',
+                'total'       => $center->member_count,
+                'active'      => $center->active_members,
+                'lapsed'      => $center->lapsed_members,
+                'individual'  => $center->individual_members,
+                'checkmatic'  => $center->checkmatic_members,
+                'lifetime'    => $center->lifetime_members,
+                'zips'        => $zips,
+            ];
+        }
+
+        $zones = [];
+        foreach ($zoneMap as $zoneName => $zoneData) {
+            $sortedCenters = $zoneData['centers'];
+            usort($sortedCenters, fn($a, $b) => $b['total'] <=> $a['total']);
+            $zones[] = [
+                'name'    => $zoneName,
+                'members' => $zoneData['members'],
+                'masjids' => count($sortedCenters),
+                'centers' => $sortedCenters,
+            ];
+        }
+        usort($zones, fn($a, $b) => $b['members'] <=> $a['members']);
+
+        arsort($globalZipCount);
+        $zipData = collect(array_map(
+            fn($zip, $n) => ['zip' => $zip, 'city' => $globalZipCity[$zip] ?? '', 'count' => $n],
+            array_keys($globalZipCount),
+            array_values($globalZipCount)
+        ));
+
+        $total     = $stat->total_members;
+        $active    = $stat->active_members;
+        $activePct = $total > 0 ? (int) round($active / $total * 100) : 0;
+
+        return [
+            'stats'          => ['total' => $total, 'active' => $active, 'lapsed' => $stat->lapsed_members],
+            'levelBreakdown' => [
+                'individual' => $stat->individual_members,
+                'checkmatic' => $stat->checkmatic_members,
+                'lifetime'   => $stat->lifetime_members,
+            ],
+            'profileStatus'  => [
+                'active'     => $active,
+                'lapsed'     => $stat->lapsed_members,
+                'active_pct' => $activePct,
+                'lapsed_pct' => 100 - $activePct,
+            ],
+            'zipStats'       => ['total' => $stat->total_zips],
+            'zipData'        => $zipData,
+            'zones'          => $zones,
+            'last_synced_at' => $stat->last_synced_at,
+        ];
+    }
+
+    /**
+     * Fetches fresh data from WildApricot and writes it to the DB.
+     * Called by the portal:sync-dashboard Artisan command hourly.
+     */
+    public function syncDashboardToDb(): void
+    {
+        $accountId = $this->getAccountId();
+
+        // Fast count helper
+        $countOf = fn(string $filter): int => (function () use ($accountId, $filter) {
+            $r = $this->apiGet(
+                "/accounts/{$accountId}/contacts?" . http_build_query([
+                    '$async'  => 'false',
+                    '$filter' => $filter,
+                    '$count'  => 'true',
+                ])
+            );
+            return $r->successful() ? (int) ($r->json()['Count'] ?? 0) : 0;
+        })();
 
             // ── Stats ────────────────────────────────────────────────────────────
             $total  = $countOf('Member eq true');
@@ -1062,10 +1157,34 @@ class WildApricotService
 
                 [$zoneName, $centerName] = $parseZoneName($label);
 
+                // Per-center status and level breakdown (3 fast count calls)
+                $centerActive     = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId} AND Status eq 'Active'");
+                $centerLapsed     = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId} AND Status eq 'Lapsed'");
+
+                $centerIndividual = 0;
+                $centerCheckmatic = 0;
+                $centerLifetime   = 0;
+                foreach ($this->getMembershipLevels() as $level) {
+                    $n    = strtolower($level['Name'] ?? '');
+                    $lcnt = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId} AND MembershipLevelId eq " . (int) $level['Id']);
+                    if (str_contains($n, 'lifetime'))                                          $centerLifetime   += $lcnt;
+                    elseif (str_contains($n, 'checkomatic') || str_contains($n, 'checkmatic')) $centerCheckmatic += $lcnt;
+                    else                                                                        $centerIndividual += $lcnt;
+                }
+
                 $zoneMap[$zoneName] ??= ['members' => 0, 'centers' => []];
                 $zoneMap[$zoneName]['members'] += $cnt;
-                $zoneMap[$zoneName]['centers'][$centerName] ??= ['total' => 0, 'zips' => []];
-                $zoneMap[$zoneName]['centers'][$centerName]['total'] = $cnt;
+                $zoneMap[$zoneName]['centers'][$centerName] ??= [
+                    'total' => 0, 'active' => 0, 'lapsed' => 0,
+                    'individual' => 0, 'checkmatic' => 0, 'lifetime' => 0,
+                    'zips' => [], 'zipCities' => [],
+                ];
+                $zoneMap[$zoneName]['centers'][$centerName]['total']      = $cnt;
+                $zoneMap[$zoneName]['centers'][$centerName]['active']      = $centerActive;
+                $zoneMap[$zoneName]['centers'][$centerName]['lapsed']      = $centerLapsed;
+                $zoneMap[$zoneName]['centers'][$centerName]['individual']  = $centerIndividual;
+                $zoneMap[$zoneName]['centers'][$centerName]['checkmatic']  = $centerCheckmatic;
+                $zoneMap[$zoneName]['centers'][$centerName]['lifetime']    = $centerLifetime;
 
                 // Page through all contacts for this center to collect ZIP distribution
                 $skip     = 0;
@@ -1096,6 +1215,9 @@ class WildApricotService
                         if ($zip) {
                             $zoneMap[$zoneName]['centers'][$centerName]['zips'][$zip] =
                                 ($zoneMap[$zoneName]['centers'][$centerName]['zips'][$zip] ?? 0) + 1;
+                            if ($city && ! isset($zoneMap[$zoneName]['centers'][$centerName]['zipCities'][$zip])) {
+                                $zoneMap[$zoneName]['centers'][$centerName]['zipCities'][$zip] = $city;
+                            }
                             $globalZipCount[$zip] = ($globalZipCount[$zip] ?? 0) + 1;
                             if ($city && !isset($globalZipCity[$zip])) $globalZipCity[$zip] = $city;
                         }
@@ -1104,56 +1226,63 @@ class WildApricotService
                 } while (count($batch) === $pageSize);
             }
 
-            // ── Build zones array for view ────────────────────────────────────────
-            $zones = [];
+        // ── Write to DB (truncate + re-insert for atomicity) ─────────────────
+        DB::transaction(function () use (
+            $total, $active, $lapsed, $individual, $checkmatic, $lifetime,
+            $zoneMap, $globalZipCount
+        ) {
+            // Stats — update existing row or create if first run
+            \App\Models\DashboardStat::query()->update([
+                'total_members'      => $total,
+                'active_members'     => $active,
+                'lapsed_members'     => $lapsed,
+                'individual_members' => $individual,
+                'checkmatic_members' => $checkmatic,
+                'lifetime_members'   => $lifetime,
+                'total_zips'         => count($globalZipCount),
+                'last_synced_at'     => now(),
+            ]) || \App\Models\DashboardStat::create([
+                'total_members'      => $total,
+                'active_members'     => $active,
+                'lapsed_members'     => $lapsed,
+                'individual_members' => $individual,
+                'checkmatic_members' => $checkmatic,
+                'lifetime_members'   => $lifetime,
+                'total_zips'         => count($globalZipCount),
+                'last_synced_at'     => now(),
+            ]);
+
+            // Delete child rows first to respect the FK constraint, then parent
+            \App\Models\DashboardCenterZip::query()->delete();
+            \App\Models\DashboardCenter::query()->delete();
+
             foreach ($zoneMap as $zoneName => $zoneData) {
-                $centers = [];
                 foreach ($zoneData['centers'] as $centerName => $centerData) {
-                    arsort($centerData['zips']);
-                    $centers[] = [
-                        'name'  => $centerName,
-                        'img'   => 'mosque.png',
-                        'total' => $centerData['total'],
-                        'zips'  => array_map(
-                            fn($z, $n) => ['code' => $z, 'count' => $n],
-                            array_keys($centerData['zips']),
-                            array_values($centerData['zips'])
-                        ),
-                    ];
+                    $center = \App\Models\DashboardCenter::create([
+                        'zone_name'          => $zoneName,
+                        'center_name'        => $centerName,
+                        'member_count'       => $centerData['total'],
+                        'active_members'     => $centerData['active']      ?? 0,
+                        'lapsed_members'     => $centerData['lapsed']      ?? 0,
+                        'individual_members' => $centerData['individual']  ?? 0,
+                        'checkmatic_members' => $centerData['checkmatic']  ?? 0,
+                        'lifetime_members'   => $centerData['lifetime']    ?? 0,
+                    ]);
+
+                    $zipRows = [];
+                    foreach ($centerData['zips'] as $zip => $count) {
+                        $zipRows[] = [
+                            'dashboard_center_id' => $center->id,
+                            'zip'                 => $zip,
+                            'city'                => $centerData['zipCities'][$zip] ?? '',
+                            'member_count'        => $count,
+                        ];
+                    }
+                    if ($zipRows) {
+                        \App\Models\DashboardCenterZip::insert($zipRows);
+                    }
                 }
-                usort($centers, fn($a, $b) => $b['total'] <=> $a['total']);
-                $zones[] = [
-                    'name'    => $zoneName,
-                    'members' => $zoneData['members'],
-                    'masjids' => count($centers),
-                    'centers' => $centers,
-                ];
             }
-            usort($zones, fn($a, $b) => $b['members'] <=> $a['members']);
-
-            // ── Global ZIP table ─────────────────────────────────────────────────
-            arsort($globalZipCount);
-            $zipData = collect(array_map(
-                fn($zip, $n) => ['zip' => $zip, 'city' => $globalZipCity[$zip] ?? '', 'count' => $n],
-                array_keys($globalZipCount),
-                array_values($globalZipCount)
-            ));
-
-            $activePct = $total > 0 ? (int) round($active / $total * 100) : 0;
-
-            return [
-                'stats'          => ['total' => $total, 'active' => $active, 'lapsed' => $lapsed],
-                'levelBreakdown' => ['individual' => $individual, 'checkmatic' => $checkmatic, 'lifetime' => $lifetime],
-                'profileStatus'  => [
-                    'active'     => $active,
-                    'lapsed'     => $lapsed,
-                    'active_pct' => $activePct,
-                    'lapsed_pct' => 100 - $activePct,
-                ],
-                'zipStats' => ['total' => count($globalZipCount)],
-                'zipData'  => $zipData,
-                'zones'    => $zones,
-            ];
         });
     }
 

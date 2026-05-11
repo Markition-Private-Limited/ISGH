@@ -5,8 +5,8 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard')
-@section('page-title', 'Welcome, ' . auth()->user()->name)
-@section('user-role', auth()->user()->name . ' – ' . auth()->user()->roleLabel())
+@section('page-title', 'Welcome, ' . auth()->user()->roleLabel())
+@section('user-role', auth()->user()->roleLabel())
 
 @section('content')
 
