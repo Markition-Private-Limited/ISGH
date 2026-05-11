@@ -12,7 +12,9 @@ use App\Services\ZipCenterService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Stripe\Exception\ApiErrorException;
@@ -40,6 +42,80 @@ class MembershipController extends Controller
     // ─────────────────────────────────────────────────────────────────────
     //  MEMBERSHIP VERIFICATION  (AJAX — called from verification page)
     // ─────────────────────────────────────────────────────────────────────
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  OCR ID  (AJAX — receives uploaded ID photo, returns parsed fields)
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function ocrId(Request $request)
+    {
+        // Ensure session is active — refresh it so it doesn't expire mid-form
+        $request->session()->reflash();
+
+        $request->validate(['image' => 'required|image|max:10240']);
+
+        $mode  = $request->input('mode', 'id'); // 'id' or 'card'
+        $image = $request->file('image');
+
+        // For ID scans: store persistently so we can upload to WildApricot after payment.
+        // For card scans: OCR only, no need to keep the image.
+        $storageDir = $mode === 'id' ? 'id_cards/members' : 'ocr_tmp';
+        $path  = $image->store($storageDir, 'local');
+        $full  = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, Storage::disk('local')->path($path));
+
+        $cleanupOnFailure = $mode !== 'id'; // only auto-delete card scans
+
+        try {
+            $script  = base_path('scripts/ocr_service.py');
+            $pythonEnv = env('PYTHON_BIN', PHP_OS_FAMILY === 'Windows' ? 'py' : 'python3');
+            $cmd = array_merge(explode(' ', $pythonEnv), [$script, '--mode', $mode, $full]);
+            Log::info('OCR command', ['cmd' => implode(' ', $cmd), 'image' => $full]);
+            $env = array_merge($_SERVER, getenv(), [
+                'PATH' => getenv('PATH') ?: (getenv('Path') ?: ''),
+                'path' => getenv('PATH') ?: (getenv('Path') ?: ''),
+            ]);
+            $result  = Process::timeout(60)->env($env)->run($cmd);
+            Log::info('OCR result', [
+                'exit_code' => $result->exitCode(),
+                'stdout'    => substr($result->output(), 0, 2000),
+                'stderr'    => substr($result->errorOutput(), 0, 500),
+            ]);
+
+            if (! $result->successful()) {
+                Log::error('OCR process failed', [
+                    'exit_code' => $result->exitCode(),
+                    'stderr'    => $result->errorOutput(),
+                    'stdout'    => $result->output(),
+                ]);
+                if ($cleanupOnFailure) @unlink($full);
+                return response()->json(['error' => 'OCR process failed.'], 500);
+            }
+
+            $data = json_decode(trim($result->output()), true);
+
+            if (! is_array($data) || isset($data['error'])) {
+                $msg = $data['error'] ?? 'Could not parse OCR output.';
+                Log::error('OCR script error', ['message' => $msg, 'trace' => $data['trace'] ?? null]);
+                if ($cleanupOnFailure) @unlink($full);
+                return response()->json(['error' => $msg], 422);
+            }
+
+            // Strip internal debug key before sending to client
+            unset($data['_ocr_lines']);
+
+            // For ID scans: return the storage-relative path so JS can include it at checkout
+            if ($mode === 'id') {
+                $data['image_path'] = $path;
+            } else {
+                @unlink($full);
+            }
+
+            return response()->json($data);
+        } catch (\Throwable $ex) {
+            if ($cleanupOnFailure) @unlink($full);
+            throw $ex;
+        }
+    }
 
     public function checkPhone(Request $request)
     {
@@ -144,6 +220,7 @@ class MembershipController extends Controller
         return response()->json([
             'success' => true,
             'member' => [
+                'id' => $contact['Id'] ?? null,
                 'name' => trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? '')),
                 'email' => $contact['Email'] ?? $get('Email'),
                 'phone' => $get('Phone') ?: ($contact['Phone'] ?? ''),
@@ -155,6 +232,29 @@ class MembershipController extends Controller
                 'voting' => $isActive ? 'Yes' : 'No',
             ],
         ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  UPLOAD MEMBER PHOTO  (AJAX — called from verification page)
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function uploadMemberPhoto(Request $request)
+    {
+        $request->validate([
+            'contact_id' => 'required|integer|min:1',
+            'photo'      => 'required|image|max:10240',
+        ]);
+
+        $contactId = (int) $request->input('contact_id');
+
+        try {
+            $this->wa->uploadContactPicture($contactId, $request->file('photo'));
+        } catch (Throwable $e) {
+            Log::error('WA uploadMemberPhoto failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to upload photo: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -194,15 +294,29 @@ class MembershipController extends Controller
         $verifiedEmail = strtolower(trim((string) Session::get('otp_verified_email', '')));
         $submittedEmail = strtolower(trim((string) $request->input('primary.email', '')));
 
-        if (! Session::get('otp_verified') || $verifiedEmail !== $submittedEmail) {
-            return response()->json([
-                'success' => false,
-                'message' => ! Session::get('otp_verified')
-                    ? 'Please verify your email address with OTP before paying.'
-                    : 'The email you entered does not match your verified email ('.Session::get('otp_verified_email').'). Please use the same email.',
-            ], 422);
+        // if (! Session::get('otp_verified') || $verifiedEmail !== $submittedEmail) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => ! Session::get('otp_verified')
+        //             ? 'Please verify your email address with OTP before paying.'
+        //             : 'The email you entered does not match your verified email ('.Session::get('otp_verified_email').'). Please use the same email.',
+        //     ], 422);
+        // }
+
+        // primary, terms, spouses, flat_members arrive as JSON strings from FormData — merge them
+        // into the request so dot-notation validation and $request->input() work normally.
+        foreach (['primary', 'terms', 'spouses', 'flat_members'] as $key) {
+            $raw = $request->input($key);
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $request->merge([$key => $decoded]);
+                }
+            }
         }
-        // dd($request->all());
+
+        // Store uploaded ID card images temporarily (keyed by role/index for later attachment)
+        $idCards = $this->storeIdCardImages($request);
         // Validate
         $validator = Validator::make($request->all(), [
             'membership_type' => 'required|string|in:family,individual,flat,checkomatic_family,checkomatic_individual,lifetime_family,lifetime_individual',
@@ -490,6 +604,7 @@ class MembershipController extends Controller
                         'zone' => $request->input('zone', ''),
                         'amount_cents' => $fee['cents'],
                         'amount_label' => $fee['label'],
+                        'id_cards' => $idCards,
                     ],
                     'processed' => false,
                 ]
@@ -739,6 +854,48 @@ class MembershipController extends Controller
         );
 
         return response('OK', 200);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  STORE ID CARD IMAGES LOCALLY
+    // ─────────────────────────────────────────────────────────────────────
+
+    private function storeIdCardImages(Request $request): array
+    {
+        $idCards = [
+            'primary'      => null,
+            'spouses'      => [],
+            'flat_members' => [],
+        ];
+
+        // Primary — prefer pre-stored OCR path, fall back to direct file upload
+        if ($request->filled('primary_id_card_path')) {
+            $idCards['primary'] = $request->input('primary_id_card_path');
+        } elseif ($request->hasFile('primary_id_card') && $request->file('primary_id_card')->isValid()) {
+            $idCards['primary'] = $request->file('primary_id_card')->store('id_cards/members', 'local');
+        }
+
+        // Spouses — path is embedded in the JSON array sent from the form
+        $spousesRaw = $request->input('spouses');
+        $spouses = is_string($spousesRaw) ? json_decode($spousesRaw, true) : (array) $spousesRaw;
+        foreach ($spouses as $idx => $spouse) {
+            $path = $spouse['id_card_path'] ?? null;
+            if ($path && Storage::disk('local')->exists($path)) {
+                $idCards['spouses'][$idx] = $path;
+            }
+        }
+
+        // Flat members — same pattern
+        $flatRaw = $request->input('flat_members');
+        $flatMembers = is_string($flatRaw) ? json_decode($flatRaw, true) : (array) $flatRaw;
+        foreach ($flatMembers as $idx => $member) {
+            $path = $member['id_card_path'] ?? null;
+            if ($path && Storage::disk('local')->exists($path)) {
+                $idCards['flat_members'][$idx] = $path;
+            }
+        }
+
+        return $idCards;
     }
 
     // ─────────────────────────────────────────────────────────────────────

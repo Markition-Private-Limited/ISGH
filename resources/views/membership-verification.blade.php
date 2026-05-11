@@ -513,6 +513,32 @@
           </div>
 
         </div>
+
+        <!-- ── PHOTO UPLOAD SECTION ── -->
+        <div id="photo-upload-section" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
+          <p style="font-family:'SF Pro bold';font-size:0.88rem;color:#374151;margin-bottom:0.6rem;">Upload Profile Photo</p>
+          <p style="font-size:0.78rem;color:#9ca3af;margin-bottom:1rem;">Upload a clear photo to attach to your membership record on Wild Apricot.</p>
+
+          <label id="photo-drop-label" for="photo-input"
+                 style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;border:2px dashed #d1d5db;border-radius:1rem;padding:1.5rem 1rem;cursor:pointer;background:#fafafa;transition:border-color 0.2s;">
+            <svg style="width:32px;height:32px;color:#9ca3af;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M3 16.5V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18v-1.5M16.5 12L12 7.5m0 0L7.5 12M12 7.5V18"/>
+            </svg>
+            <span id="photo-label-text" style="font-size:0.82rem;color:#6b7280;">Click to choose an image or drag & drop</span>
+            <img id="photo-preview" src="" alt="" style="display:none;max-height:140px;border-radius:0.6rem;margin-top:0.5rem;object-fit:contain;" />
+            <input type="file" id="photo-input" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
+          </label>
+
+          <div id="photo-upload-msg" style="display:none;margin-top:0.75rem;font-size:0.8rem;"></div>
+
+          <button id="btn-photo-submit" onclick="handlePhotoSubmit()"
+                  style="display:none;margin-top:1rem;width:100%;padding:0.9rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;">
+            Submit Photo
+          </button>
+        </div>
+        <!-- /photo-upload-section -->
+
       </div>
     </div>
     <!-- /result-card -->
@@ -603,6 +629,67 @@
     return `<span class="${cls}">${status}</span>`;
   }
 
+  let verifiedContactId = null;
+
+  function handlePhotoSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const preview = document.getElementById('photo-preview');
+    const labelText = document.getElementById('photo-label-text');
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    labelText.style.display = 'none';
+    document.getElementById('photo-upload-msg').style.display = 'none';
+    document.getElementById('btn-photo-submit').style.display = 'block';
+  }
+
+  async function handlePhotoSubmit() {
+    const fileInput = document.getElementById('photo-input');
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (!verifiedContactId) {
+      showPhotoMsg('No member ID found. Please verify again.', '#991b1b');
+      return;
+    }
+
+    const btn = document.getElementById('btn-photo-submit');
+    btn.disabled = true;
+    btn.textContent = 'Uploading…';
+
+    const formData = new FormData();
+    formData.append('contact_id', verifiedContactId);
+    formData.append('photo', file);
+    formData.append('_token', CSRF);
+
+    try {
+      const res = await fetch('{{ route("membership.upload-photo") }}', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        showPhotoMsg('Photo uploaded successfully!', '#15803d');
+        btn.style.display = 'none';
+        document.getElementById('photo-drop-label').style.borderColor = '#10b981';
+      } else {
+        showPhotoMsg(data.message || 'Upload failed. Please try again.', '#991b1b');
+      }
+    } catch (err) {
+      showPhotoMsg('A network error occurred. Please try again.', '#991b1b');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Submit Photo';
+    }
+  }
+
+  function showPhotoMsg(text, color) {
+    const el = document.getElementById('photo-upload-msg');
+    el.textContent = text;
+    el.style.color = color;
+    el.style.display = 'block';
+  }
+
   async function handleVerify() {
     const firstName = document.getElementById('inp-first-name').value.trim();
     const lastName  = document.getElementById('inp-last-name').value.trim();
@@ -639,6 +726,8 @@
     btn.disabled = true;
     btn.textContent = 'Verifying…';
     showCard(null);
+    verifiedContactId = null;
+    resetPhotoSection();
 
     try {
       const res = await fetch('{{ route("membership.verify") }}', {
@@ -655,6 +744,7 @@
 
       if (data.success) {
         const m = data.member;
+        verifiedContactId = m.id || null;
         setVal('res-name',   m.name);
         setVal('res-email',  m.email);
         setVal('res-phone',  m.phone);
@@ -682,6 +772,35 @@
       btn.textContent = 'Verify Membership';
     }
   }
+
+  function resetPhotoSection() {
+    document.getElementById('photo-input').value = '';
+    const preview = document.getElementById('photo-preview');
+    preview.src = '';
+    preview.style.display = 'none';
+    document.getElementById('photo-label-text').style.display = '';
+    document.getElementById('btn-photo-submit').style.display = 'none';
+    document.getElementById('photo-upload-msg').style.display = 'none';
+    document.getElementById('photo-drop-label').style.borderColor = '#d1d5db';
+  }
+
+  // Drag-and-drop support on the photo label
+  document.addEventListener('DOMContentLoaded', () => {
+    const drop = document.getElementById('photo-drop-label');
+    if (!drop) return;
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = '#10b981'; });
+    drop.addEventListener('dragleave', () => { drop.style.borderColor = '#d1d5db'; });
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      drop.style.borderColor = '#d1d5db';
+      const file = e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById('photo-input').files = dt.files;
+      handlePhotoSelect({ target: { files: dt.files } });
+    });
+  });
 
   // Allow Enter key to submit from any input
   document.addEventListener('keydown', e => {

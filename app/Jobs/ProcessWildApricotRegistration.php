@@ -9,6 +9,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ProcessWildApricotRegistration implements ShouldQueue
@@ -147,56 +148,100 @@ class ProcessWildApricotRegistration implements ShouldQueue
             ]);
         }
 
-        // ── Step 4: Add dependents ────────────────────────────────────────────
+        // ── Step 4: Upload primary member ID card ─────────────────────────────
+        if ($data['id_cards']['primary'] ?? null) {
+            try {
+                $wa->uploadIdCardFromPath($contactId, Storage::disk('local')->path($data['id_cards']['primary']));
+                Log::info('Uploaded primary member ID card to WA', ['contact_id' => $contactId]);
+            } catch (Throwable $e) {
+                Log::warning('Failed to upload primary ID card to WA', [
+                    'contact_id' => $contactId,
+                    'error'      => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // ── Step 5: Add dependents ────────────────────────────────────────────
         $pending->update(['wa_step' => 'spouses']);
+        $spouseContactIds = [];
 
         if ($isFamilyType) {
-            foreach ($data['spouses'] ?? [] as $spouse) {
+            foreach (($data['spouses'] ?? []) as $idx => $spouse) {
                 if (empty($spouse['first_name'])) continue;
                 try {
-                    $wa->addRelatedContact($contactId, $bundleId, $levelId, array_merge($spouse, [
+                    $spouseContact = $wa->addRelatedContact($contactId, $bundleId, $levelId, array_merge($spouse, [
                         'membership_type' => $type,
                         'role'            => 'Spouse',
                         'zone'            => $data['zone'] ?? '',
                         'terms_agreed_at' => $termsAgreedAt,
                         'invoice_number'  => $invoiceId,
                     ]));
+                    $spouseContactIds[$idx] = (int) $spouseContact['Id'];
+
+                    // Upload spouse ID card
+                    if ($data['id_cards']['spouses'][$idx] ?? null) {
+                        try {
+                            $wa->uploadIdCardFromPath($spouseContactIds[$idx], Storage::disk('local')->path($data['id_cards']['spouses'][$idx]));
+                            Log::info('Uploaded spouse ID card to WA', ['contact_id' => $spouseContactIds[$idx], 'spouse_idx' => $idx]);
+                        } catch (Throwable $e) {
+                            Log::warning('Failed to upload spouse ID card to WA', [
+                                'contact_id' => $spouseContactIds[$idx],
+                                'spouse_idx' => $idx,
+                                'error'      => $e->getMessage(),
+                            ]);
+                        }
+                    }
                 } catch (Throwable $e) {
                     Log::error('ProcessWildApricotRegistration: spouse add failed', ['error' => $e->getMessage()]);
                 }
             }
         }
 
-        // if ($type === 'flat' || $type === 'checkomatic_family') {
-            foreach ($data['flat_members'] ?? [] as $flatMember) {
-                if (empty($flatMember['first_name'])) continue;
-                try {
-                    $wa->addRelatedContact($contactId, $bundleId, $levelId, [
-                        'membership_type'   => $type,
-                        'first_name'        => $flatMember['first_name'] ?? '',
-                        'last_name'         => $flatMember['last_name'] ?? '',
-                        'middle_name'       => $flatMember['middle_name'] ?? '',
-                        'email'             => $flatMember['email'] ?? '',
-                        'dob'              => $flatMember['dob'] ?? '',
-                        'phone'             => $flatMember['phone'] ?? '',
-                        'tx_dl'             => $flatMember['tx_dl'] ?? '',
-                        'role'              => $flatMember['relation'] ?? 'Family Member',
-                        'zone'              => $data['zone'] ?? '',
-                        'street'            => $flatMember['street'] ?: ($data['primary']['street'] ?? ''),
-                        'city'              => $flatMember['city'] ?: ($data['primary']['city'] ?? ''),
-                        'state'             => $flatMember['state'] ?: ($data['primary']['state'] ?? ''),
-                        'zip'               => $flatMember['zip'] ?: ($data['primary']['zip'] ?? ''),
-                        'terms_agreed_at'   => $termsAgreedAt,
-                        'member_identifier' => $contactId,
-                        'invoice_number'    => $invoiceId,
-                    ]);
-                } catch (Throwable $e) {
-                    Log::error('ProcessWildApricotRegistration: flat member add failed', ['error' => $e->getMessage()]);
-                }
-            }
-        // }
+        // ── Step 6: Add flat members ──────────────────────────────────────────
+        $flatMemberContactIds = [];
+        foreach (($data['flat_members'] ?? []) as $idx => $flatMember) {
+            if (empty($flatMember['first_name'])) continue;
+            try {
+                $flatContact = $wa->addRelatedContact($contactId, $bundleId, $levelId, [
+                    'membership_type'   => $type,
+                    'first_name'        => $flatMember['first_name'] ?? '',
+                    'last_name'         => $flatMember['last_name'] ?? '',
+                    'middle_name'       => $flatMember['middle_name'] ?? '',
+                    'email'             => $flatMember['email'] ?? '',
+                    'dob'              => $flatMember['dob'] ?? '',
+                    'phone'             => $flatMember['phone'] ?? '',
+                    'tx_dl'             => $flatMember['tx_dl'] ?? '',
+                    'role'              => $flatMember['relation'] ?? 'Family Member',
+                    'zone'              => $data['zone'] ?? '',
+                    'street'            => $flatMember['street'] ?: ($data['primary']['street'] ?? ''),
+                    'city'              => $flatMember['city'] ?: ($data['primary']['city'] ?? ''),
+                    'state'             => $flatMember['state'] ?: ($data['primary']['state'] ?? ''),
+                    'zip'               => $flatMember['zip'] ?: ($data['primary']['zip'] ?? ''),
+                    'terms_agreed_at'   => $termsAgreedAt,
+                    'member_identifier' => $contactId,
+                    'invoice_number'    => $invoiceId,
+                ]);
+                $flatMemberContactIds[$idx] = (int) $flatContact['Id'];
 
-        // ── Step 5: Mark complete ─────────────────────────────────────────────
+                // Upload flat member ID card
+                if ($data['id_cards']['flat_members'][$idx] ?? null) {
+                    try {
+                        $wa->uploadIdCardFromPath($flatMemberContactIds[$idx], Storage::disk('local')->path($data['id_cards']['flat_members'][$idx]));
+                        Log::info('Uploaded flat member ID card to WA', ['contact_id' => $flatMemberContactIds[$idx], 'member_idx' => $idx]);
+                    } catch (Throwable $e) {
+                        Log::warning('Failed to upload flat member ID card to WA', [
+                            'contact_id' => $flatMemberContactIds[$idx],
+                            'member_idx' => $idx,
+                            'error'      => $e->getMessage(),
+                        ]);
+                    }
+                }
+            } catch (Throwable $e) {
+                Log::error('ProcessWildApricotRegistration: flat member add failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // ── Step 7: Mark complete ─────────────────────────────────────────────
         $pending->update([
             'processed'    => true,
             'wa_step'      => 'done',
@@ -204,6 +249,10 @@ class ProcessWildApricotRegistration implements ShouldQueue
             'wa_error_at'  => null,
             'wa_contact_id' => $contactId,
             'wa_invoice_id' => $invoiceId,
+            'data'         => array_merge($data, [
+                'wa_spouse_contact_ids' => $spouseContactIds,
+                'wa_flat_member_contact_ids' => $flatMemberContactIds,
+            ]),
             'processed_at' => now(),
         ]);
 

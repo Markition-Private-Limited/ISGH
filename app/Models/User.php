@@ -2,48 +2,90 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'role',
+        'access_level',
+        'zone',
+        'center',
+        'must_change_password',
+        'is_active',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'             => 'hashed',
+            'is_active'            => 'boolean',
+            'must_change_password' => 'boolean',
         ];
+    }
+
+    // ── Access level helpers ──────────────────────────────────────────────────
+
+    public function isCityWide(): bool
+    {
+        return $this->access_level === 'city_wide';
+    }
+
+    public function isZoneLevel(): bool
+    {
+        return $this->access_level === 'zone';
+    }
+
+    public function isCenterLevel(): bool
+    {
+        return $this->access_level === 'center';
+    }
+
+    // ── Role helpers ──────────────────────────────────────────────────────────
+
+    public function isExecutiveBoard(): bool
+    {
+        return $this->role === 'executive_board';
+    }
+
+    public function isZoneDirector(): bool
+    {
+        return $this->role === 'zone_director';
+    }
+
+    public function isAssociateDirector(): bool
+    {
+        return $this->role === 'associate_director';
+    }
+
+    // ── Display label ─────────────────────────────────────────────────────────
+
+    public function roleLabel(): string
+    {
+        if ($this->isExecutiveBoard()) {
+            return 'Executive Board';
+        }
+
+        if ($this->isZoneDirector()) {
+            return ($this->zone ?? '') . ' Zone Director';
+        }
+
+        if ($this->isAssociateDirector()) {
+            return 'Associate Director' . ($this->center ? ' – ' . $this->center : '');
+        }
+
+        return ucwords(str_replace('_', ' ', $this->role ?? ''));
     }
 }

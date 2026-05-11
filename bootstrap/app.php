@@ -15,9 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
             '/membership/webhook',
         ]);
         $middleware->alias([
-            'admin.token' => \App\Http\Middleware\AdminToken::class,
+            'admin.token'          => \App\Http\Middleware\AdminToken::class,
+            'portal.auth'          => \App\Http\Middleware\PortalAuth::class,
+            'active.user'          => \App\Http\Middleware\CheckActiveUser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $_, \Illuminate\Http\Request $request) {
+            if (! $request->expectsJson()) {
+                return redirect()->route('portal.login')
+                    ->with('error', 'Please sign in to access the staff portal.');
+            }
+        });
     })->create();

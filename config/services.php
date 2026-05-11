@@ -48,4 +48,12 @@ return [
     'admin' => [
         'token' => env('ADMIN_TOKEN', 'change-me-in-env'),
     ],
+
+    'portal' => [
+        'credentials' => [
+            env('PORTAL_USER_1_EMAIL', 'president@isgh.org')  => env('PORTAL_USER_1_PASS', 'Admin@1234'),
+            env('PORTAL_USER_2_EMAIL', 'secretary@isgh.org')  => env('PORTAL_USER_2_PASS', 'Admin@1234'),
+            env('PORTAL_USER_3_EMAIL', 'treasurer@isgh.org')  => env('PORTAL_USER_3_PASS', 'Admin@1234'),
+        ],
+    ],
 ];

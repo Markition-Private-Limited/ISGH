@@ -1665,6 +1665,7 @@
         .id-scan-corner-bl { bottom: 12px; left: 12px;  border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
 
         .id-scan-laser {
+            display: none;
             position: absolute;
             left: 10%; right: 10%;
             height: 2px;
@@ -1820,12 +1821,101 @@
         };
 
         // ─── SECTION TOGGLE ──────────────────────────────────────────────────────
+        function resetMembershipForm() {
+            const unified = document.getElementById('unifiedMembershipSection');
+            if (unified) {
+                // Re-enable fields disabled by disablePrimaryFields(), skipping the email
+                // (it is server-rendered readonly and must never be touched by reset)
+                unified.querySelectorAll('input:not(#uni_email), select:not(#uni_state), textarea, button').forEach(el => {
+                    el.disabled = false;
+                    el.removeAttribute('readonly');
+                    el.style.background = '';
+                    el.style.cursor = '';
+                    el.style.opacity = '';
+                    // Clear watcher flag so attachConfirmWatchers() re-registers listeners
+                    el._confirmWatchAttached = false;
+                });
+                // Clear all values except email and state
+                unified.querySelectorAll('input:not([type="hidden"]):not(#uni_email), select:not(#uni_state), textarea').forEach(el => {
+                    if (el.type === 'checkbox' || el.type === 'radio') { el.checked = false; }
+                    else { el.value = ''; }
+                    el.classList.remove('field-invalid', 'field-valid');
+                });
+                // Clear inline validation messages
+                unified.querySelectorAll('.email-msg, .phone-msg, .dob-msg').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+            }
+
+            // Remove uni_middle_name from PRIMARY_REQUIRED_IDS if disablePrimaryFields() pushed it in
+            const midIdx = PRIMARY_REQUIRED_IDS.indexOf('uni_middle_name');
+            if (midIdx !== -1) PRIMARY_REQUIRED_IDS.splice(midIdx, 1);
+
+            // Remove dynamically added spouse blocks (keep the static spouse-0 shell)
+            const spousesContainer = document.getElementById('uni_spouses_container');
+            if (spousesContainer) {
+                spousesContainer.querySelectorAll('.spouse-block:not(#uni_spouse_block_0)').forEach(el => el.remove());
+            }
+            // Hide spouse form wrap
+            const spouseFormWrap = document.getElementById('uni_spouse_form_wrap');
+            if (spouseFormWrap) spouseFormWrap.style.display = 'none';
+            const addSpouseBtn = document.getElementById('uni_add_spouse_btn');
+            if (addSpouseBtn) addSpouseBtn.style.display = '';
+
+            // Remove all dynamically added flat member blocks
+            const flatContainer = document.getElementById('flat_members_container');
+            if (flatContainer) flatContainer.innerHTML = '';
+
+            // Reset block counters so new blocks get sequential IDs again
+            spouseCount = 1;
+            flatMemberCount = 1;
+
+            // Restore confirm button label in case it was stuck on "Checking…"
+            const confirmBtn = document.getElementById('uni_confirm_btn');
+            if (confirmBtn) {
+                confirmBtn.innerHTML = 'Confirm &amp; Continue';
+                confirmBtn._confirmWatchAttached = false;
+            }
+
+            // Clear scanned ID paths and badges
+            for (const key of Object.keys(_scannedIdPaths)) { delete _scannedIdPaths[key]; }
+            document.querySelectorAll('[id^="scan_badge_"]').forEach(el => el.remove());
+
+            // Clear OCR upload status
+            const ocrStatus = document.getElementById('ocr_upload_status');
+            if (ocrStatus) { ocrStatus.style.display = 'none'; ocrStatus.textContent = ''; }
+
+            // Clear zip state
+            for (const key of Object.keys(_zipState)) { delete _zipState[key]; }
+
+            // Clear ZIP-driven center/donation displays
+            ['uni_center_display', 'uni_donation_section'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // Clear stripe card element
+            if (_cardElement) { _cardElement.clear(); }
+            const cardErr = document.getElementById('stripe-card-error');
+            if (cardErr) cardErr.textContent = '';
+            document.getElementById('uni_cardholder_name') && (document.getElementById('uni_cardholder_name').value = '');
+
+            // Reset OTP section
+            const otpSection = document.getElementById('uni_otp_section');
+            if (otpSection) {
+                otpSection.querySelectorAll('input').forEach(el => { el.value = ''; });
+                const otpMsg = document.getElementById('uni_otp_msg');
+                if (otpMsg) { otpMsg.textContent = ''; otpMsg.style.display = 'none'; }
+            }
+        }
+
         function toggleMembershipForm() {
             const val = document.getElementById("membershipSelector").value;
             ['defaultLockedSection', 'unifiedMembershipSection'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
+
+            // Reset form whenever the type changes (covers switching between types)
+            if (currentMembershipType) resetMembershipForm();
 
             if (!val) {
                 document.getElementById('defaultLockedSection').style.display = 'block';
@@ -1836,7 +1926,6 @@
             currentMembershipType = val;
             const unified = document.getElementById('unifiedMembershipSection');
             unified.style.display = 'block';
-            // Reset confirm/continue state when membership type changes
             document.getElementById('uni_confirm_wrap').style.display = 'block';
             document.getElementById('uni_rest_of_form').style.display = 'none';
             document.getElementById('uni_duplicate_error').style.display = 'none';
@@ -2118,9 +2207,9 @@
               Spouse ${idx + 1}
             </div>
           </div>
-          <div class="dependent-scan-btn" onclick="openIdScan('uni_spouse_${idx}')">
+          <div class="dependent-scan-btn" onclick="openIdChoiceModal('uni_spouse_${idx}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
-            <span style="letter-spacing:0.3px;">Scan Your ID</span>
+            <span style="letter-spacing:0.3px;">Scan ID Card</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
           </div>
           <div class="dependent-card-actions">
@@ -2217,9 +2306,9 @@
               Member ${displayNum}
             </div>
           </div>
-          <div class="dependent-scan-btn" onclick="openIdScan('flat_member_${idx}')">
+          <div class="dependent-scan-btn" onclick="openIdChoiceModal('flat_member_${idx}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
-            <span style="letter-spacing:0.3px;">Scan Your ID</span>
+            <span style="letter-spacing:0.3px;">Scan ID Card</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
           </div>
           <div class="dependent-card-actions">
@@ -2262,6 +2351,7 @@
             <label>Center / Zone</label>
             <div id="flat_member_${idx}_center_display"></div>
           </div>
+
           </div>
         </div>`;
             container.appendChild(block);
@@ -3445,14 +3535,42 @@
             setOverlayStep(1, 'Saving your registration…', 'Securely sending your information.');
 
             try {
+                // Build FormData to support file uploads
+                const formData = new FormData();
+                formData.append('membership_type', type);
+                formData.append('primary', JSON.stringify(primary));
+                formData.append('spouses', JSON.stringify(spouses));
+                formData.append('flat_members', JSON.stringify(flatMembers));
+                formData.append('terms', JSON.stringify(terms));
+                formData.append('zone', zone);
+                formData.append('donation_type', document.getElementById('uni_donation_type')?.value || null);
+                formData.append('payment_method_id', paymentMethodId);
+                formData.append('checkomatic_amount', (type === 'checkomatic_family' || type === 'checkomatic_individual') ? (parseInt(document.getElementById('uni_checkomatic_amount')?.value, 10) || getCheckomaticMinimum(type)) : null);
+
+                // Attach scanned ID card paths so Laravel can upload images to WildApricot.
+                // Primary path goes as a top-level field; spouse/flat-member paths are
+                // embedded directly in their JSON arrays before stringifying.
+                if (_scannedIdPaths['uni']) {
+                    formData.append('primary_id_card_path', _scannedIdPaths['uni']);
+                }
+                const spousesWithPaths = spouses.map((s, i) => {
+                    const key = `uni_spouse_${i}`;
+                    return _scannedIdPaths[key] ? { ...s, id_card_path: _scannedIdPaths[key] } : s;
+                });
+                const flatMembersWithPaths = flatMembers.map((m, i) => {
+                    const key = `flat_member_${i + 1}`;
+                    return _scannedIdPaths[key] ? { ...m, id_card_path: _scannedIdPaths[key] } : m;
+                });
+                formData.set('spouses', JSON.stringify(spousesWithPaths));
+                formData.set('flat_members', JSON.stringify(flatMembersWithPaths));
+
                 const res = await fetch('/membership/checkout', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ membership_type: type, primary, spouses, flat_members: flatMembers, terms, zone, donation_type: document.getElementById('uni_donation_type')?.value || null, payment_method_id: paymentMethodId, checkomatic_amount: (type === 'checkomatic_family' || type === 'checkomatic_individual') ? (parseInt(document.getElementById('uni_checkomatic_amount')?.value, 10) || getCheckomaticMinimum(type)) : null }),
+                    body: formData,
                 });
 
                 console.log('[submitMembership] response status:', res.status);
@@ -4111,33 +4229,28 @@
                     <div class="side-item">
                         <img src="{{ asset('images/truck.png') }}" alt="Humanitarian Aid">
                         <h3>Humanitarian Aid</h3>
-                        <p>Join our mission to provide immediate relief to those affected by natural disasters and
-                            poverty. Your generosity provides a lifeline to families in their most vulnerable moments.
+                        <p>Join our mission to provide immediate relief to those affected by natural disasters and poverty. Your generosity helps deliver essential resources such as food, shelter, and medical care to families in crisis. Together, we can restore hope, rebuild lives, and support communities during their most vulnerable and challenging moments.
                         </p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/molvi.png') }}" alt="Chaplaincy">
                         <h3>Chaplaincy</h3>
-                        <p>ISGH's Chaplaincy Services is dedicated to offering services to Muslim chaplains through
-                            endorsement, education & training, and leadership development.</p>
+                        <p>ISGH’s Chaplaincy Services support Muslim chaplains through professional endorsement, training, and leadership development. We prepare chaplains to serve in hospitals, universities, and public institutions with compassion and cultural understanding. Our goal is to strengthen spiritual care and provide meaningful support to diverse communities in times of need.</p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/education_forum.png') }}" alt="Education Forum">
                         <h3>Education Forum</h3>
-                        <p>Provide training & resources for students to realize their full potential and contribute to
-                            society. Help us support educational excellence and lifelong learning.</p>
+                        <p>Our Education Forum provides students with access to training, mentorship, and educational resources designed to help them reach their full potential. We aim to promote academic excellence, personal growth, and lifelong learning. By investing in education, we empower individuals to contribute positively and become future leaders in their communities.</p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/molvi.png') }}" alt="Youth Programs">
                         <h3>Youth Programs</h3>
-                        <p>The ISGH I-YOUTH program provides programming, leadership, and support with a sustainable
-                            focus on our youth and the future of the Muslim community.</p>
+                        <p>The ISGH I-YOUTH program is dedicated to empowering young individuals through engaging activities, mentorship, and leadership development. We focus on building confidence, strengthening identity, and encouraging positive values. Our programs create a supportive environment where youth can grow, connect, and actively contribute to their communities and future success.</p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/kronic_Academy.png') }}" alt="Quran Academy">
                         <h3>Quran Academy</h3>
-                        <p>Ensure the teaching of the Holy Quran under our expert religious instructors. Give the gift
-                            of Islamic education to our youth and family.</p>
+                        <p>Our Quran Academy is committed to providing high-quality Quranic education under the guidance of qualified instructors. We offer structured learning programs for all age groups, helping individuals develop proper recitation, understanding, and connection with the Quran. Our mission is to nurture strong faith and lifelong spiritual growth within families.</p>
                     </div>
                 </div>
 
@@ -4228,26 +4341,24 @@
                             <div class="step-number">2</div>
                             <h3 class="form-section-title">Primary Information</h3>
                         </div>
-                        <div style="text-align:center;">
-                            <div onclick="openIdScan('uni')"
-                                style="display:inline-flex;align-items:center;gap:16px;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:500;color:#eaf7f3;margin-bottom:28px;cursor:pointer;background:linear-gradient(90deg,#0f5c45 0%,#2f8f6b 50%,#55c59a 100%);box-shadow:0 6px 16px rgba(0,0,0,0.15);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6"
-                                    style="width:34px;height:34px;">
+                        <div style="text-align:center;margin-bottom:28px;">
+                            <div onclick="openIdChoiceModal('uni')"
+                                style="display:inline-flex;align-items:center;gap:16px;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:500;color:#eaf7f3;cursor:pointer;background:linear-gradient(90deg,#0f5c45 0%,#2f8f6b 50%,#55c59a 100%);box-shadow:0 6px 16px rgba(0,0,0,0.15);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:34px;height:34px;">
                                     <path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round" />
                                     <path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round" />
                                     <path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round" />
                                     <path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round" />
                                 </svg>
                                 <span style="letter-spacing:0.3px;">Scan ID Card</span>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4"
-                                    style="width:30px;height:30px;">
-                                    <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z"
-                                        stroke-linejoin="round" />
-                                    <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z"
-                                        stroke-linejoin="round" />
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:30px;height:30px;">
+                                    <path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round" />
+                                    <path d="M19 15l.8 1.8L22 18l-2.2.8L19 21l-.8-1.8L16 18l2.2-.8L19 15z" stroke-linejoin="round" />
                                 </svg>
                             </div>
                         </div>
+                        <input type="file" id="ocr_upload_input" accept="image/*" style="display:none;" onchange="handleOcrUpload(event)">
+                        <div id="ocr_upload_status" style="display:none;text-align:center;font-size:12px;margin-bottom:12px;color:#2f8f6b;font-weight:500;"></div>
 
                         <div class="fields-stack">
                             <div class="field">
@@ -4311,6 +4422,7 @@
                                         <line x1="2" y1="10" x2="22" y2="10" />
                                     </svg></div>
                             </div>
+
                             <div class="field">
                                 <label>Street Address <span>*</span></label>
                                 <input type="text" id="uni_street" placeholder="123 Main Street"
@@ -4389,9 +4501,9 @@
                                                 Spouse 1
                                             </div>
                                         </div>
-                                        <div class="dependent-scan-btn" onclick="openIdScan('uni_spouse_0')">
+                                        <div class="dependent-scan-btn" onclick="openIdChoiceModal('uni_spouse_0')">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="#eaf7f3" stroke-width="2.6" style="width:26px;height:26px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
-                                            <span style="letter-spacing:0.3px;">Scan Your ID</span>
+                                            <span style="letter-spacing:0.3px;">Scan ID Card</span>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="#f7c873" stroke-width="2.4" style="width:22px;height:22px;"><path d="M12 3l2.2 5.2L20 10l-5.8 1.8L12 17l-2.2-5.2L4 10l5.8-1.8L12 3z" stroke-linejoin="round"/></svg>
                                         </div>
                                         <div class="dependent-card-actions">
@@ -4455,6 +4567,7 @@
                                             <label>Center / Zone</label>
                                             <div id="uni_spouse_0_center_display"></div>
                                         </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -4489,11 +4602,18 @@
                         <div class="section-divider"></div>
                         <!-- STRIPE CARD ELEMENT -->
         <div class="stripe-card-section">
-            <p class="stripe-card-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                Card Details
-            </p>
-            <div class="field stripe-card-name-field" style="margin-top:1.5rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                <p class="stripe-card-label" style="margin:0;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Card Details
+                </p>
+                <div onclick="openIdChoiceModal('cc')" style="display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:999px;font-size:11px;font-weight:600;color:#fff;cursor:pointer;background:linear-gradient(90deg,#0f5c45 0%,#2f8f6b 50%,#55c59a 100%);box-shadow:0 4px 12px rgba(0,0,0,0.12);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" style="width:18px;height:18px;"><path d="M8 4H6a2 2 0 0 0-2 2v2" stroke-linecap="round"/><path d="M16 4h2a2 2 0 0 1 2 2v2" stroke-linecap="round"/><path d="M8 20H6a2 2 0 0 1-2-2v-2" stroke-linecap="round"/><path d="M16 20h2a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>
+                    Scan Card
+                </div>
+            </div>
+            <div id="cc_scan_status" style="display:none;font-size:12px;color:#2f8f6b;font-weight:500;margin-top:8px;text-align:center;"></div>
+            <div class="field stripe-card-name-field" style="margin-top:1.25rem">
                 <label for="uni_cardholder_name">Name on Card <span>*</span></label>
                 <input type="text" id="uni_cardholder_name" placeholder="Enter the name shown on your card" autocomplete="cc-name">
             </div>
@@ -4612,32 +4732,27 @@
                     <div class="side-item">
                         <img src="{{ asset('images/sadaqah.png') }}" alt="Sadaqah Jariyah">
                         <h3>Sadaqah Jariyah</h3>
-                        <p>Invest in long-term projects like schools, water wells, and educational resources that
-                            benefit generations. Your contribution earns continuous reward long after it's given.</p>
+                        <p>Invest in long-term charitable projects such as schools, water wells, and educational initiatives that continue to benefit communities for years to come. Your contribution creates a lasting impact and provides ongoing support to those in need. Earn continuous rewards while helping build a better future for generations ahead.</p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/latter.png') }}" alt="Zakat">
                         <h3>Zakat</h3>
-                        <p>Zakat is one of the five pillars of Islam. Help us distribute Zakat to those who truly need
-                            it and fulfill your religious obligation through ISGH's trusted channels.</p>
+                        <p>Zakat is one of the five pillars of Islam and a vital act of giving to support those in need. Through ISGH’s trusted channels, your Zakat is carefully distributed to eligible individuals and families. Fulfill your religious obligation while making a meaningful difference in the lives of others.</p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/mosque2.png') }}" alt="Masjid Maintenance Fund">
                         <h3>Masjid Maintenance / Fund</h3>
-                        <p>Support daily operations, maintenance, and beautification of our facilities, ensuring a safe
-                            and welcoming environment for every worshiper.</p>
+                        <p>Support the daily operations, maintenance, and improvement of our masjid facilities to ensure a clean, safe, and welcoming environment for all worshipers. Your contribution helps cover essential expenses, upgrades, and upkeep, allowing the community to gather, pray, and connect in a comfortable and well-maintained space.</p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/takecare.png') }}" alt="Ongoing Charity Fund">
                         <h3>Ongoing Charity / Fund</h3>
-                        <p>Help sustain continuous charitable programs that serve our community throughout the year,
-                            from Ramadan initiatives to emergency aid distributions.</p>
+                        <p>Contribute to continuous charitable programs that serve the community throughout the year. From Ramadan initiatives to emergency relief efforts, your support ensures that help is always available when needed. Together, we can sustain impactful programs that uplift lives and provide consistent support to those facing hardships.</p>
                     </div>
                     <div class="side-item">
                         <img src="{{ asset('images/matrimonial_services.png') }}" alt="Matrimonial Services">
                         <h3>Matrimonial Services</h3>
-                        <p>Finding a life partner is a significant journey. ISGH is here to simplify that process and
-                            guide you toward a blessed and community-centered marriage.</p>
+                        <p>Finding the right life partner is an important and meaningful journey. ISGH’s Matrimonial Services are designed to support individuals in this process by providing guidance, resources, and a community-focused approach. We aim to help you build a strong, faith-centered relationship and a blessed, lasting marriage.</p>
                     </div>
                 </div>
 
@@ -4865,16 +4980,45 @@
         </div>
     </div>
 
+    <!-- ── ID CHOICE MODAL ───────────────────────────────────────────────── -->
+    <div id="idChoiceOverlay" onclick="if(event.target===this)closeIdChoiceModal()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:20px;padding:32px 28px 28px;width:340px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,0.25);position:relative;">
+            <button onclick="closeIdChoiceModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:#6b7280;cursor:pointer;line-height:1;">✕</button>
+            <h3 id="idChoiceTitle" style="margin:0 0 6px;font-size:17px;font-weight:700;color:#111827;text-align:center;">Scan ID Card</h3>
+            <p id="idChoiceSubtitle" style="margin:0 0 24px;font-size:13px;color:#6b7280;text-align:center;">How would you like to scan your ID?</p>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <button onclick="choiceSelectCamera()" style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;border:2px solid #e5e7eb;background:#f9fafb;cursor:pointer;text-align:left;transition:border-color .2s,background .2s;" onmouseover="this.style.borderColor='#2f8f6b';this.style.background='#f0faf6'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'">
+                    <span style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#0f5c45,#55c59a);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" style="width:24px;height:24px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    </span>
+                    <span>
+                        <strong id="idChoiceCameraTitle" style="display:block;font-size:14px;color:#111827;">Use Camera</strong>
+                        <span id="idChoiceCameraDesc" style="font-size:12px;color:#6b7280;">Scan the barcode on the back of your ID</span>
+                    </span>
+                </button>
+                <button onclick="choiceSelectUpload()" style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;border:2px solid #e5e7eb;background:#f9fafb;cursor:pointer;text-align:left;transition:border-color .2s,background .2s;" onmouseover="this.style.borderColor='#2962b5';this.style.background='#f0f4ff'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'">
+                    <span style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1a3a6b,#5b9bd5);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" style="width:24px;height:24px;"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4" stroke-linecap="round"/><path d="M9 10l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span>
+                        <strong style="display:block;font-size:14px;color:#111827;">Upload Photo</strong>
+                        <span id="idChoiceUploadDesc" style="font-size:12px;color:#6b7280;">Take or upload a photo of the front of your ID</span>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ── ID SCAN MODAL ──────────────────────────────────────────────────── -->
     <div id="idScanOverlay" class="id-scan-overlay">
         <div class="id-scan-modal">
             <div class="id-scan-header">
-                <h3>Scan ID Barcode</h3>
+                <h3>Scan ID Card</h3>
                 <button class="id-scan-close-btn" onclick="closeIdScan()">✕</button>
             </div>
             <div class="id-scan-body">
                 <p class="id-scan-instruction">
-                    <strong>Point the camera at the PDF417 barcode</strong> on the back of the Texas Driver's License or ID card. Hold steady until detected.
+                    <strong>Point camera at the front of your ID card</strong>, then tap Capture.
                 </p>
                 <div class="id-scan-viewfinder">
                     <video id="idScanVideo" autoplay playsinline muted></video>
@@ -4882,11 +5026,14 @@
                         <span class="id-scan-corner-br"></span>
                         <span class="id-scan-corner-bl"></span>
                     </div>
-                    <div class="id-scan-laser"></div>
                 </div>
-                <div id="idScanStatus" class="id-scan-status scanning">Scanning for barcode…</div>
+                <div id="idScanStatus" class="id-scan-status scanning">Camera starting…</div>
                 <div class="id-scan-actions">
                     <button class="id-scan-cancel-btn" onclick="closeIdScan()">Cancel</button>
+                    <button id="idScanCaptureBtn" onclick="captureIdPhoto()"
+                        style="flex:2;padding:0.7rem;border-radius:0.6rem;border:none;background:linear-gradient(90deg,#0f5c45,#2f8f6b);color:#fff;font-size:0.9rem;font-weight:600;font-family:inherit;cursor:pointer;display:none;">
+                        📷 Capture
+                    </button>
                 </div>
             </div>
         </div>
@@ -5007,24 +5154,14 @@
     async function _startIdScanCamera() {
         try {
             _idScanStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
             });
             const video = document.getElementById('idScanVideo');
             video.srcObject = _idScanStream;
             await video.play();
-
-            if (!window.ZXing) {
-                setIdScanStatus('error', 'Barcode library not loaded. Please refresh.');
-                return;
-            }
-
-            const hints = new Map();
-            hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.PDF_417]);
-            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-            _idScanReader = new ZXing.BrowserMultiFormatReader(hints);
-
-            setIdScanStatus('scanning', 'Scanning for barcode…');
-            _idScanLoop();
+            setIdScanStatus('scanning', 'Ready — point at the front of your ID and tap Capture.');
+            const captureBtn = document.getElementById('idScanCaptureBtn');
+            if (captureBtn) captureBtn.style.display = '';
         } catch (err) {
             console.error('Camera error:', err);
             const msg = err.name === 'NotAllowedError'
@@ -5034,51 +5171,94 @@
         }
     }
 
-    function _idScanLoop() {
-        const video  = document.getElementById('idScanVideo');
+    async function captureIdPhoto() {
+        const video = document.getElementById('idScanVideo');
         if (!video || !_idScanStream) return;
 
-        if (video.readyState < 2) {
-            _idScanAnimFrame = requestAnimationFrame(_idScanLoop);
-            return;
-        }
+        const captureBtn = document.getElementById('idScanCaptureBtn');
+        if (captureBtn) { captureBtn.disabled = true; captureBtn.style.display = 'none'; }
+        setIdScanStatus('scanning', 'Scanning…');
 
+        // Draw current video frame to a canvas and export as JPEG blob
         const canvas = document.createElement('canvas');
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
+        canvas.width  = video.videoWidth  || 1280;
+        canvas.height = video.videoHeight || 960;
+        canvas.getContext('2d').drawImage(video, 0, 0);
 
-        try {
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const luminanceSource = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
-            const binaryBitmap    = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
-            const result = _idScanReader.decode(binaryBitmap);
+        const _showCaptureBtn = () => {
+            if (captureBtn) { captureBtn.disabled = false; captureBtn.style.display = ''; }
+        };
 
-            if (result && result.text) {
-                _onIdBarcodeDetected(result.text);
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                setIdScanStatus('error', 'Could not capture image. Please try again.');
+                _showCaptureBtn();
                 return;
             }
-        } catch (e) {
-            // NotFoundException is thrown on every frame with no barcode — ignore it
-        }
 
-        _idScanAnimFrame = requestAnimationFrame(_idScanLoop);
-    }
+            const formData = new FormData();
+            formData.append('image', blob, 'id_capture.jpg');
+            formData.append('mode', 'id');
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content ?? '');
 
-    function _onIdBarcodeDetected(raw) {
-        setIdScanStatus('success', '✓ Barcode detected! Filling in fields…');
-        const data = parseAamva(raw);
+            try {
+                const res = await fetch('/membership/ocr-id', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
 
-        const hasData = data.first_name || data.last_name || data.dob;
-        if (!hasData) {
-            setIdScanStatus('error', 'Could not read ID data. Please try again.');
-            _idScanAnimFrame = requestAnimationFrame(_idScanLoop);
-            return;
-        }
+                const contentType = res.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    setIdScanStatus('error', 'Session expired. Please refresh and try again.');
+                    _showCaptureBtn();
+                    return;
+                }
 
-        fillIdFields(_idScanPrefix, data);
-        setTimeout(closeIdScan, 1200);
+                const data = await res.json();
+
+                if (!res.ok || data.error) {
+                    setIdScanStatus('error', data.error || 'Could not scan ID. Please retake or use Upload Photo.');
+                    _showCaptureBtn();
+                    return;
+                }
+
+                const hasData = data.first_name || data.last_name || data.dob;
+                if (!hasData) {
+                    setIdScanStatus('error', 'Could not read ID. Retake photo or use Upload Photo instead.');
+                    _showCaptureBtn();
+                    return;
+                }
+
+                if (data.image_path) {
+                    _scannedIdPaths[_idScanPrefix] = data.image_path;
+                }
+
+                fillIdFields(_idScanPrefix, {
+                    first_name:  data.first_name  || '',
+                    middle_name: data.middle_name || '',
+                    last_name:   data.last_name   || '',
+                    dob:         data.dob         || '',
+                    id_number:   data.id_number   || '',
+                });
+
+                if (_idScanPrefix === 'uni') {
+                    if (data.address) { const el = document.getElementById('uni_street');  if (el && !el.disabled) { el.value = data.address; el.dispatchEvent(new Event('input', {bubbles:true})); } }
+                    if (data.city)    { const el = document.getElementById('uni_city');    if (el && !el.disabled) { el.value = data.city;    el.dispatchEvent(new Event('input', {bubbles:true})); } }
+                    if (data.state)   { const el = document.getElementById('uni_state');   if (el && !el.disabled) { el.value = data.state;   el.dispatchEvent(new Event('change', {bubbles:true})); } }
+                    if (data.zip)     { const el = document.getElementById('uni_zip');     if (el && !el.disabled) { el.value = data.zip;     el.dispatchEvent(new Event('input', {bubbles:true})); } }
+                }
+
+                _showScanBadge(_idScanPrefix, '✓ ID Scanned', '#0f5c45');
+                setIdScanStatus('success', '✓ ID scanned');
+                setTimeout(closeIdScan, 1500);
+
+            } catch (err) {
+                console.error('OCR capture error:', err);
+                setIdScanStatus('error', 'Network error. Please try again.');
+                _showCaptureBtn();
+            }
+        }, 'image/jpeg', 0.92);
     }
 
     function _stopIdScanCamera() {
@@ -5087,6 +5267,8 @@
         const video = document.getElementById('idScanVideo');
         if (video) video.srcObject = null;
         _idScanReader = null;
+        const captureBtn = document.getElementById('idScanCaptureBtn');
+        if (captureBtn) { captureBtn.style.display = 'none'; captureBtn.disabled = false; }
     }
 
     function setIdScanStatus(type, msg) {
@@ -5094,6 +5276,164 @@
         if (!el) return;
         el.className = `id-scan-status ${type}`;
         el.textContent = msg;
+    }
+
+    // ── ID CHOICE MODAL ──────────────────────────────────────────────────────
+    let _idChoicePrefix = '';
+
+    function openIdChoiceModal(prefix) {
+        _idChoicePrefix = prefix;
+        const isCard = (prefix === 'cc');
+        document.getElementById('idChoiceTitle').textContent       = isCard ? 'Scan Credit Card' : 'Scan ID Card';
+        document.getElementById('idChoiceSubtitle').textContent    = isCard ? 'How would you like to scan your card?' : 'How would you like to scan your ID?';
+        document.getElementById('idChoiceCameraDesc').textContent  = isCard ? 'Scan the front of your credit/debit card' : 'Use your camera to capture the front of your ID';
+        document.getElementById('idChoiceUploadDesc').textContent  = isCard ? 'Take or upload a photo of your card' : 'Take or upload a photo of the front of your ID';
+        document.getElementById('idChoiceCameraTitle').textContent = isCard ? 'Use Camera' : 'Use Camera';
+        const el = document.getElementById('idChoiceOverlay');
+        el.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeIdChoiceModal() {
+        document.getElementById('idChoiceOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function choiceSelectCamera() {
+        closeIdChoiceModal();
+        if (_idChoicePrefix === 'cc') {
+            // Credit card has no barcode — go straight to upload for OCR
+            _ocrUploadPrefix = 'cc';
+            const input = document.getElementById('ocr_upload_input');
+            if (input) { input.value = ''; input.click(); }
+        } else {
+            openIdScan(_idChoicePrefix);
+        }
+    }
+
+    function choiceSelectUpload() {
+        closeIdChoiceModal();
+        _ocrUploadPrefix = _idChoicePrefix;
+        const input = document.getElementById('ocr_upload_input');
+        if (input) { input.value = ''; input.click(); }
+    }
+
+    // ── OCR UPLOAD: PADDLEOCR PHOTO FLOW ────────────────────────────────────
+    let _ocrUploadPrefix = '';
+    // Keyed by prefix (e.g. 'uni', 'uni_spouse_0', 'flat_member_1') → storage-relative path
+    // returned by the server after OCR. Sent to Laravel at checkout so the image
+    // can be uploaded to WildApricot after payment.
+    const _scannedIdPaths = {};
+
+    function openOcrUpload(prefix) {
+        _ocrUploadPrefix = prefix;
+        const input = document.getElementById('ocr_upload_input');
+        if (input) { input.value = ''; input.click(); }
+    }
+
+    function _showScanBadge(prefix, text, color) {
+        // Show a small badge next to the Scan ID button for this section
+        const badgeId = `scan_badge_${prefix}`;
+        let badge = document.getElementById(badgeId);
+        if (!badge) {
+            // Insert after the scan button trigger element
+            const btn = document.querySelector(`[onclick*="openIdChoiceModal('${prefix}')"]`);
+            if (!btn) return;
+            badge = document.createElement('div');
+            badge.id = badgeId;
+            badge.style.cssText = 'font-size:11px;font-weight:600;text-align:center;margin-top:6px;padding:4px 10px;border-radius:20px;background:#f0faf6;';
+            btn.parentNode.insertBefore(badge, btn.nextSibling);
+        }
+        badge.style.color = color || '#0f5c45';
+        badge.textContent = text;
+        badge.style.display = 'block';
+    }
+
+    async function handleOcrUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const isCard   = (_ocrUploadPrefix === 'cc');
+        const statusEl = document.getElementById(isCard ? 'cc_scan_status' : 'ocr_upload_status');
+        const show = (msg, color) => {
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.style.color   = color || '#2f8f6b';
+                statusEl.textContent   = msg;
+            }
+            if (!isCard) _showScanBadge(_ocrUploadPrefix, msg, color);
+        };
+
+        show(isCard ? 'Scanning card…' : 'Uploading and scanning ID…', '#2962b5');
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('mode', isCard ? 'card' : 'id');
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content ?? '');
+
+        try {
+            const res  = await fetch('/membership/ocr-id', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                show('Session expired. Please refresh the page and try again.', '#dc2626');
+                return;
+            }
+
+            const data = await res.json();
+
+            if (!res.ok || data.error) {
+                show(data.error || 'OCR failed. Please fill in manually.', '#dc2626');
+                return;
+            }
+
+            // ── Credit card mode ───────────────────────────────────────────
+            if (isCard) {
+                const name = data.cardholder_name || '';
+                if (!name) {
+                    show('Could not read card name. Please type it manually.', '#dc2626');
+                    return;
+                }
+                const el = document.getElementById('uni_cardholder_name');
+                if (el) { el.value = name; el.dispatchEvent(new Event('input', {bubbles:true})); }
+                show('Card name filled! Please verify.', '#0f5c45');
+                setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 4000);
+                return;
+            }
+
+            // ── ID card mode ───────────────────────────────────────────────
+            const hasData = data.first_name || data.last_name || data.dob;
+            if (!hasData) {
+                show('Could not extract data from the image. Please fill in manually.', '#dc2626');
+                return;
+            }
+
+            // Store the server-side path so it gets sent to WildApricot at checkout
+            if (data.image_path) {
+                _scannedIdPaths[_ocrUploadPrefix] = data.image_path;
+            }
+
+            fillIdFields(_ocrUploadPrefix, {
+                first_name:  data.first_name  || '',
+                middle_name: data.middle_name || '',
+                last_name:   data.last_name   || '',
+                dob:         data.dob         || '',
+                id_number:   data.id_number   || '',
+            });
+
+            if (_ocrUploadPrefix === 'uni') {
+                if (data.address) { const el = document.getElementById('uni_street');  if (el && !el.disabled) { el.value = data.address; el.dispatchEvent(new Event('input', {bubbles:true})); } }
+                if (data.city)    { const el = document.getElementById('uni_city');    if (el && !el.disabled) { el.value = data.city;    el.dispatchEvent(new Event('input', {bubbles:true})); } }
+                if (data.state)   { const el = document.getElementById('uni_state');   if (el && !el.disabled) { el.value = data.state;   el.dispatchEvent(new Event('change', {bubbles:true})); } }
+                if (data.zip)     { const el = document.getElementById('uni_zip');     if (el && !el.disabled) { el.value = data.zip;     el.dispatchEvent(new Event('input', {bubbles:true})); } }
+            }
+
+            show('✓ ID Scanned', '#0f5c45');
+            setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 5000);
+        } catch (err) {
+            console.error('OCR upload error:', err);
+            show('Network error. Please try again.', '#dc2626');
+        }
     }
     </script>
 </body>

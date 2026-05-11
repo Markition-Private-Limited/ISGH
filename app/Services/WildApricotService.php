@@ -666,6 +666,114 @@ class WildApricotService
         return $r->json();
     }
 
+    // ─── UPLOAD CONTACT PICTURE ──────────────────────────────────────────────
+    // POST /accounts/{accountId}/pictures
+    // Uploads a photo/ID card to WildApricot and optionally attaches it to the member contact.
+
+    public function uploadContactPicture(int $contactId, \Illuminate\Http\UploadedFile $file): void
+    {
+        $accountId = $this->getAccountId();
+        $token     = $this->getAccessToken();
+
+        $fh = fopen($file->getRealPath(), 'rb');
+        try {
+            $r = Http::withToken($token)
+                ->acceptJson()
+                ->attach('picture0', $fh, $file->getClientOriginalName())
+                ->post("{$this->baseUrl}/accounts/{$accountId}/pictures");
+
+            Log::info('WA uploadContactPicture response', [
+                'contact_id' => $contactId,
+                'status'     => $r->status(),
+                'body'       => substr($r->body(), 0, 500),
+            ]);
+
+            if (! $r->successful()) {
+                throw new \RuntimeException("WA uploadContactPicture failed for contact {$contactId}: " . $r->body());
+            }
+
+            // The response contains picture IDs — now link this picture to the contact
+            $pictureIds = $r->json();
+            if (! empty($pictureIds['picture0'])) {
+                $pictureId = $pictureIds['picture0'];
+                $this->setContactPicture($contactId, $pictureId);
+            }
+        } finally {
+            @fclose($fh);
+        }
+    }
+
+    /**
+     * Uploads a stored ID card file path (local filesystem) to WildApricot.
+     * Used when creating members from pending registrations that have stored ID card files.
+     */
+    public function uploadIdCardFromPath(int $contactId, string $filePath): void
+    {
+        if (! file_exists($filePath)) {
+            Log::warning('WA uploadIdCardFromPath: file not found', ['path' => $filePath, 'contact_id' => $contactId]);
+            return;
+        }
+
+        $accountId = $this->getAccountId();
+        $token     = $this->getAccessToken();
+
+        $fh = fopen($filePath, 'rb');
+        try {
+            $fileName = basename($filePath);
+            $r = Http::withToken($token)
+                ->acceptJson()
+                ->attach('picture0', $fh, $fileName)
+                ->post("{$this->baseUrl}/accounts/{$accountId}/pictures");
+
+            Log::info('WA uploadIdCardFromPath response', [
+                'contact_id' => $contactId,
+                'file_path'  => $filePath,
+                'status'     => $r->status(),
+            ]);
+
+            if (! $r->successful()) {
+                Log::error('WA uploadIdCardFromPath failed', ['contact_id' => $contactId, 'body' => $r->body()]);
+                return;
+            }
+
+            $pictureIds = $r->json();
+            if (! empty($pictureIds['picture0'])) {
+                $pictureId = $pictureIds['picture0'];
+                $this->setContactPicture($contactId, $pictureId);
+            }
+        } finally {
+            @fclose($fh);
+        }
+    }
+
+    /**
+     * Sets the uploaded picture as the contact's profile photo.
+     * PUT /accounts/{accountId}/contacts/{contactId}
+     */
+    private function setContactPicture(int $contactId, string $pictureId): void
+    {
+        $accountId = $this->getAccountId();
+
+        $r = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+        if (! $r->successful()) {
+            throw new \RuntimeException("WA setContactPicture: fetch failed for contact {$contactId}: " . $r->body());
+        }
+
+        $contact = $r->json();
+        $contact['Photo'] = ['Id' => $pictureId];
+
+        $rp = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $contact);
+        Log::info('WA setContactPicture response', [
+            'contact_id' => $contactId,
+            'picture_id' => $pictureId,
+            'status'     => $rp->status(),
+        ]);
+
+        if (! $rp->successful()) {
+            throw new \RuntimeException("WA setContactPicture failed for contact {$contactId}: " . $rp->body());
+        }
+    }
+
     // ─── TARGETED FIELD PATCHES ──────────────────────────────────────────────
 
     /**
@@ -868,6 +976,420 @@ class WildApricotService
 
         return $fields;
     }
+
+    // ─── DASHBOARD DATA ──────────────────────────────────────────────────────
+
+    /**
+     * Fetches dashboard statistics using only fast $count=true calls — no contact pages fetched.
+     * Each call returns {"Count": N} in ~1s. Total: ~15 calls = ~15-20s, cached 1 hour.
+     *
+     * Zone/ZIP aggregation via per-zone-choice count calls using the cached zone choice list.
+     * ZIP breakdown is omitted (requires fetching all contacts — too slow at 6000+ members).
+     */
+    public function getDashboardData(): array
+    {
+        return Cache::remember('wa_dashboard_data', 1800, function () {
+            $accountId = $this->getAccountId();
+
+            // Fast count helper — returns {"Count": N}, no Contacts in response
+            $countOf = fn(string $filter): int => (function () use ($accountId, $filter) {
+                $r = $this->apiGet(
+                    "/accounts/{$accountId}/contacts?" . http_build_query([
+                        '$async'  => 'false',
+                        '$filter' => $filter,
+                        '$count'  => 'true',
+                    ])
+                );
+                return $r->successful() ? (int) ($r->json()['Count'] ?? 0) : 0;
+            })();
+
+            // ── Stats ────────────────────────────────────────────────────────────
+            $total  = $countOf('Member eq true');
+            $active = $countOf("Member eq true AND Status eq 'Active'");
+            $lapsed = $countOf("Member eq true AND Status eq 'Lapsed'");
+
+            // ── Level breakdown — one count per level (11 levels × ~1s) ─────────
+            $individual = 0;
+            $checkmatic = 0;
+            $lifetime   = 0;
+            foreach ($this->getMembershipLevels() as $level) {
+                $n   = strtolower($level['Name'] ?? '');
+                $cnt = $countOf('Member eq true AND MembershipLevelId eq ' . (int) $level['Id']);
+                if (str_contains($n, 'lifetime'))                                          $lifetime   += $cnt;
+                elseif (str_contains($n, 'checkomatic') || str_contains($n, 'checkmatic')) $checkmatic += $cnt;
+                else                                                                        $individual += $cnt;
+            }
+
+            // ── Zone + ZIP breakdown ──────────────────────────────────────────────
+            // For each zone choice: count members (fast), then page through contacts
+            // to collect ZIP distribution. ZIP data is only available on contact records.
+            // This runs in the background command (portal:warm-dashboard), so time is fine.
+            $zoneChoices = $this->getZoneChoices(); // [label => choiceId]
+            $zoneMap     = []; // [zoneName => ['members'=>N, 'centers'=>[name=>['total'=>N,'zips'=>[zip=>N]]]]]
+            $globalZipCount   = []; // [zip => count] across all zones
+            $globalZipCity    = []; // [zip => city]
+
+            // Maps WA choice label to [zoneName, centerName].
+            // Actual WA prefixes from live account: NO=North, NW=Northwest,
+            // SO=South, SW=Southwest, SE=Southeast.
+            $parseZoneName = function (string $label): array {
+                if (preg_match('/^([A-Z]+)\s*-\s*(.+)$/i', $label, $m)) {
+                    $prefix = strtoupper(trim($m[1]));
+                    return [
+                        match ($prefix) {
+                            'NO'      => 'North Zone',
+                            'NW'      => 'Northwest Zone',
+                            'SO'      => 'South Zone',
+                            'SW'      => 'Southwest Zone',
+                            'SE'      => 'Southeast Zone',
+                            'N'       => 'North Zone',
+                            'NE'      => 'Northeast Zone',
+                            'S'       => 'South Zone',
+                            'W'       => 'West Zone',
+                            'E'       => 'East Zone',
+                            default   => $prefix . ' Zone',
+                        },
+                        trim($m[2]),
+                    ];
+                }
+                return [$label, $label];
+            };
+
+            foreach ($zoneChoices as $label => $choiceId) {
+                // Fast count first — skip empty zones without fetching contacts
+                $cnt = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId}");
+                if ($cnt === 0) continue;
+
+                [$zoneName, $centerName] = $parseZoneName($label);
+
+                $zoneMap[$zoneName] ??= ['members' => 0, 'centers' => []];
+                $zoneMap[$zoneName]['members'] += $cnt;
+                $zoneMap[$zoneName]['centers'][$centerName] ??= ['total' => 0, 'zips' => []];
+                $zoneMap[$zoneName]['centers'][$centerName]['total'] = $cnt;
+
+                // Page through all contacts for this center to collect ZIP distribution
+                $skip     = 0;
+                $pageSize = 100;
+                do {
+                    $r = $this->apiGet(
+                        "/accounts/{$accountId}/contacts?" . http_build_query([
+                            '$async'  => 'false',
+                            '$filter' => "Member eq true AND 'Zone / Center' eq {$choiceId}",
+                            '$top'    => $pageSize,
+                            '$skip'   => $skip,
+                        ])
+                    );
+                    if (!$r->successful()) break;
+
+                    $batch = $r->json()['Contacts'] ?? [];
+                    if (empty($batch)) break;
+
+                    foreach ($batch as $c) {
+                        $zip  = '';
+                        $city = '';
+                        foreach ($c['FieldValues'] ?? [] as $fv) {
+                            $code = $fv['SystemCode'] ?? '';
+                            $val  = $fv['Value'] ?? '';
+                            if ($code === 'custom-9967570') $zip  = trim((string) $val);
+                            if ($code === 'custom-9967567') $city = trim((string) $val);
+                        }
+                        if ($zip) {
+                            $zoneMap[$zoneName]['centers'][$centerName]['zips'][$zip] =
+                                ($zoneMap[$zoneName]['centers'][$centerName]['zips'][$zip] ?? 0) + 1;
+                            $globalZipCount[$zip] = ($globalZipCount[$zip] ?? 0) + 1;
+                            if ($city && !isset($globalZipCity[$zip])) $globalZipCity[$zip] = $city;
+                        }
+                    }
+                    $skip += $pageSize;
+                } while (count($batch) === $pageSize);
+            }
+
+            // ── Build zones array for view ────────────────────────────────────────
+            $zones = [];
+            foreach ($zoneMap as $zoneName => $zoneData) {
+                $centers = [];
+                foreach ($zoneData['centers'] as $centerName => $centerData) {
+                    arsort($centerData['zips']);
+                    $centers[] = [
+                        'name'  => $centerName,
+                        'img'   => 'mosque.png',
+                        'total' => $centerData['total'],
+                        'zips'  => array_map(
+                            fn($z, $n) => ['code' => $z, 'count' => $n],
+                            array_keys($centerData['zips']),
+                            array_values($centerData['zips'])
+                        ),
+                    ];
+                }
+                usort($centers, fn($a, $b) => $b['total'] <=> $a['total']);
+                $zones[] = [
+                    'name'    => $zoneName,
+                    'members' => $zoneData['members'],
+                    'masjids' => count($centers),
+                    'centers' => $centers,
+                ];
+            }
+            usort($zones, fn($a, $b) => $b['members'] <=> $a['members']);
+
+            // ── Global ZIP table ─────────────────────────────────────────────────
+            arsort($globalZipCount);
+            $zipData = collect(array_map(
+                fn($zip, $n) => ['zip' => $zip, 'city' => $globalZipCity[$zip] ?? '', 'count' => $n],
+                array_keys($globalZipCount),
+                array_values($globalZipCount)
+            ));
+
+            $activePct = $total > 0 ? (int) round($active / $total * 100) : 0;
+
+            return [
+                'stats'          => ['total' => $total, 'active' => $active, 'lapsed' => $lapsed],
+                'levelBreakdown' => ['individual' => $individual, 'checkmatic' => $checkmatic, 'lifetime' => $lifetime],
+                'profileStatus'  => [
+                    'active'     => $active,
+                    'lapsed'     => $lapsed,
+                    'active_pct' => $activePct,
+                    'lapsed_pct' => 100 - $activePct,
+                ],
+                'zipStats' => ['total' => count($globalZipCount)],
+                'zipData'  => $zipData,
+                'zones'    => $zones,
+            ];
+        });
+    }
+
+    /**
+     * Fetches contacts from WA with optional filters, returning a paginated result.
+     * Returns ['items' => [...], 'total' => int]
+     */
+    public function getMembersPage(int $page, int $perPage, array $filters = []): array
+    {
+        $accountId = $this->getAccountId();
+        $skip      = ($page - 1) * $perPage;
+
+        // WA treats $count=true as a count-only mode — returns {"Count": N} with no Contacts.
+        // Two calls: one for total count, one for the page.
+        //
+        // 'Member eq true' as the base filter is required: without it the list endpoint
+        // returns only ~8 restricted FieldValues per contact. With it, all 62 FieldValues
+        // including custom fields (Zone, ZIP, City, Street, MemberSince, RenewalDue) are returned.
+        $baseParams  = ['$async' => 'false'];
+        $filterParts = ['Member eq true'];
+
+        // Free-text search via WA's simpleQuery param (name, email, phone)
+        if (!empty($filters['search'])) {
+            $baseParams['simpleQuery'] = $filters['search'];
+        }
+
+        // Status filter — WA values: Active, Lapsed, PendingNew, PendingRenewal, Archived
+        if (!empty($filters['status'])) {
+            $st = ucfirst(strtolower($filters['status']));
+            if ($st === 'Expired') $st = 'Lapsed';
+            $filterParts[] = "Status eq '{$st}'";
+        }
+
+        // Zone / Center filter — maps DB zone/center values to WA choice IDs.
+        // WA choice labels (from live account): NO- = North, NW- = Northwest,
+        // SO- = South, SW- = Southwest, SE- = Southeast.
+        // Flat map [center => choiceId] for center-only lookups (no zone given).
+        if (!empty($filters['zone']) || !empty($filters['center'])) {
+            $centerMap = [
+                'North' => [
+                    '*'            => [10714781, 10714782, 10714783, 10714784],
+                    'Adel Road'    => [10714781],
+                    'Champions'    => [10714782],
+                    'Woodlands'    => [10714783],
+                    'Cypress'      => [10714784],
+                ],
+                'Northwest' => [
+                    '*'            => [10714785, 10714786, 10714787],
+                    'Bear Creek'   => [10714785],
+                    'Katy'         => [10714786],
+                    'Spring Branch'=> [10714787],
+                ],
+                'Southeast' => [
+                    '*'            => [10714788, 10714790],
+                    'HWY3'         => [10714788],
+                    'Pearland'     => [10714790],
+                ],
+                'South' => [
+                    '*'            => [10714792, 21342681],
+                    'Brand Lane'   => [10714792],
+                    'Ayesha'       => [21342681],
+                ],
+                'Southwest' => [
+                    '*'            => [10714794, 10714795, 10714796, 10714797],
+                    'River Oaks'   => [10714794],
+                    'Synott'       => [10714795],
+                    'Mission Bend' => [10714796],
+                    'New Territory'=> [10714797],
+                ],
+            ];
+
+            // Flat center → choiceId map for when no zone is specified
+            $flatCenterMap = [
+                'Adel Road'    => [10714781],
+                'Champions'    => [10714782],
+                'Woodlands'    => [10714783],
+                'Cypress'      => [10714784],
+                'Bear Creek'   => [10714785],
+                'Katy'         => [10714786],
+                'Spring Branch'=> [10714787],
+                'HWY3'         => [10714788],
+                'Pearland'     => [10714790],
+                'Brand Lane'   => [10714792],
+                'Ayesha'       => [21342681],
+                'River Oaks'   => [10714794],
+                'Synott'       => [10714795],
+                'Mission Bend' => [10714796],
+                'New Territory'=> [10714797],
+            ];
+
+            $wantedZone   = ucfirst(strtolower($filters['zone']   ?? ''));
+            $wantedCenter = $filters['center'] ?? '';
+
+            $matchedIds = [];
+            if ($wantedZone && isset($centerMap[$wantedZone])) {
+                $zoneEntry  = $centerMap[$wantedZone];
+                $matchedIds = ($wantedCenter && isset($zoneEntry[$wantedCenter]))
+                    ? $zoneEntry[$wantedCenter]
+                    : $zoneEntry['*'];
+            } elseif ($wantedCenter && isset($flatCenterMap[$wantedCenter])) {
+                // center filter only (city-wide user picks a masjid without a zone)
+                $matchedIds = $flatCenterMap[$wantedCenter];
+            }
+
+            if ($matchedIds) {
+                if (count($matchedIds) === 1) {
+                    $filterParts[] = "'Zone / Center' eq {$matchedIds[0]}";
+                } else {
+                    $orParts = array_map(fn($id) => "'Zone / Center' eq {$id}", $matchedIds);
+                    $filterParts[] = '(' . implode(' OR ', $orParts) . ')';
+                }
+            }
+        }
+
+        $baseParams['$filter'] = implode(' AND ', $filterParts);
+
+        // 1. Get total count
+        $countParams = array_merge($baseParams, ['$count' => 'true']);
+        $cr = $this->apiGet("/accounts/{$accountId}/contacts?" . http_build_query($countParams));
+        $total = $cr->successful() ? (int) ($cr->json()['Count'] ?? 0) : 0;
+
+        // 2. Get this page of contacts (no $select — omitting it returns all FieldValues)
+        $pageParams = array_merge($baseParams, [
+            '$top'  => $perPage,
+            '$skip' => $skip,
+        ]);
+
+        $r = $this->apiGet("/accounts/{$accountId}/contacts?" . http_build_query($pageParams));
+
+        if (!$r->successful()) {
+            Log::error('WA getMembersPage failed', ['status' => $r->status(), 'body' => $r->body()]);
+            return ['items' => [], 'total' => $total];
+        }
+
+        $body     = $r->json();
+        $contacts = $body['Contacts'] ?? (is_array($body) ? $body : []);
+
+        if ($total === 0) {
+            $total = count($contacts);
+        }
+
+        // ZIP filter — WA OData cannot filter on FieldValues, so apply post-fetch.
+        // When active, the count is approximate (based on pre-filter total); the page
+        // may contain fewer rows than $perPage but the paginator still works correctly.
+        $wantedZip = trim($filters['zip'] ?? '');
+        if ($wantedZip !== '') {
+            $contacts = array_values(array_filter($contacts, function (array $c) use ($wantedZip) {
+                foreach ($c['FieldValues'] ?? [] as $fv) {
+                    if (($fv['SystemCode'] ?? '') === 'custom-9967570') {
+                        return trim((string) ($fv['Value'] ?? '')) === $wantedZip;
+                    }
+                }
+                return false;
+            }));
+            $total = count($contacts); // exact count after ZIP filter
+        }
+
+        $items = array_map(fn($c) => $this->mapContactToMemberRow($c), $contacts);
+
+        return ['items' => $items, 'total' => $total];
+    }
+
+    /**
+     * Maps a WA contact array to the flat array shape the members view expects.
+     * MemberSince and RenewalDue live inside FieldValues (SystemCode MemberSince / RenewalDue),
+     * not at the top level of the contact object.
+     */
+    private function mapContactToMemberRow(array $c): array
+    {
+        $firstName = $c['FirstName'] ?? '';
+        $lastName  = $c['LastName']  ?? '';
+        $name      = trim("$firstName $lastName") ?: '—';
+
+        $levelName = $c['MembershipLevel']['Name'] ?? '—';
+
+        $zone      = '';
+        $zip       = '';
+        $city      = '';
+        $street    = '';
+        $joined    = null;
+        $renewal   = null;
+
+        foreach ($c['FieldValues'] ?? [] as $fv) {
+            $code  = $fv['SystemCode'] ?? '';
+            $fname = $fv['FieldName']  ?? '';
+            $val   = $fv['Value']      ?? '';
+
+            // Zone / Center (choice field — value is {"Id":…,"Label":"…"})
+            if ($code === 'custom-9967573' || $fname === 'Zone / Center') {
+                $zone = is_array($val) ? ($val['Label'] ?? '') : (string) $val;
+            }
+            // ZIP
+            if ($code === 'custom-9967570' || $fname === 'ZIP') {
+                $zip = trim((string) $val);
+            }
+            // City
+            if ($code === 'custom-9967567' || $fname === 'City') {
+                $city = trim((string) $val);
+            }
+            // Street Address
+            if ($code === 'custom-9967566' || $fname === 'Street Address') {
+                $street = trim((string) $val);
+            }
+            // MemberSince — stored in FieldValues, value may be null or ISO date string
+            if ($code === 'MemberSince' || $fname === 'Member since') {
+                $joined = $val ?: null;
+            }
+            // RenewalDue — stored in FieldValues
+            if ($code === 'RenewalDue' || $fname === 'Renewal due') {
+                $renewal = $val ?: null;
+            }
+        }
+
+        $address = trim(implode(', ', array_filter([$street, $city]))) ?: '—';
+
+        $fmtDate = function (mixed $d): string {
+            if (!$d || $d === 'null') return '—';
+            $s = is_array($d) ? ($d['Value'] ?? '') : (string) $d;
+            if (!$s || $s === 'Never') return $s ?: '—';
+            try { return Carbon::parse($s)->format('d/m/Y'); } catch (\Throwable) { return $s; }
+        };
+
+        return [
+            'name'     => $name,
+            'type'     => $levelName,
+            'type_sub' => '',
+            'zone'     => $zone ?: '—',
+            'masjid'   => '',
+            'address'  => $address,
+            'zip'      => $zip ?: '—',
+            'joined'   => $fmtDate($joined),
+            'renewal'  => $fmtDate($renewal),
+            'status'   => $c['Status'] ?? 'Active',
+        ];
+    }
+
 
     private function calcRenewalDate(string $type): string
     {
