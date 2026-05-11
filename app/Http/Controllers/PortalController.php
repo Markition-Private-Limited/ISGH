@@ -264,7 +264,7 @@ class PortalController extends Controller
      */
     private function getMembersFilterOptions(\App\Models\User $user): array
     {
-        $dashData = Cache::get('wa_dashboard_data');
+        $dashData = app(\App\Services\WildApricotService::class)->getDashboardFromDb();
 
         if (! $dashData) {
             return [[], []];
