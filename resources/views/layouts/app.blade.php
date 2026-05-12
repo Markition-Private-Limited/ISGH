@@ -108,7 +108,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      <button class="sidebar-logout-btn" type="submit" form="logout-form">
+      <button class="sidebar-logout-btn" type="button" onclick="showLogoutModal()">
         <span class="sidebar-logout-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24">
             <path d="M10 17l5-5-5-5"/>
@@ -170,11 +170,9 @@
           </button>
 
           <div class="role-dropdown-menu" id="role-menu" role="menu" aria-label="User menu">
-            <a class="role-dropdown-item" href="#" role="menuitem">Profile</a>
-            <a class="role-dropdown-item" href="#" role="menuitem">Settings</a>
             <hr style="border:none;border-top:1px solid var(--clr-border-light);margin:4px 0;" />
             <a class="role-dropdown-item" href="#" role="menuitem"
-               onclick="event.preventDefault();document.getElementById('logout-form').submit();">
+               onclick="event.preventDefault();showLogoutModal();">
               Sign Out
             </a>
           </div>
@@ -212,5 +210,49 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="{{ asset('js/app.js') }}"></script>
 @stack('scripts')
+
+{{-- ── Logout Confirmation Modal ───────────────────────────────── --}}
+<div id="logout-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;">
+  {{-- Backdrop --}}
+  <div onclick="hideLogoutModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);"></div>
+  {{-- Dialog --}}
+  <div style="position:relative;background:#fff;border-radius:16px;padding:32px 28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;">
+    {{-- Icon --}}
+    <div style="width:56px;height:56px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 17l5-5-5-5"/>
+        <path d="M15 12H3"/>
+        <path d="M21 19V5a2 2 0 0 0-2-2h-6"/>
+        <path d="M13 21h6a2 2 0 0 0 2-2"/>
+      </svg>
+    </div>
+    <div style="font-size:1.15rem;font-weight:700;color:#111827;margin-bottom:6px;">Confirm Logout</div>
+    <div style="font-size:.875rem;color:#6b7280;margin-bottom:24px;">Are you sure you want to logout?</div>
+    <div style="display:flex;gap:12px;">
+      <button onclick="hideLogoutModal()" style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:.875rem;font-weight:600;color:#374151;cursor:pointer;">
+        No
+      </button>
+      <button onclick="document.getElementById('logout-form').submit()" style="flex:1;padding:10px;border:none;border-radius:8px;background:#ef4444;font-size:.875rem;font-weight:600;color:#fff;cursor:pointer;">
+        Yes, Logout
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showLogoutModal() {
+  var m = document.getElementById('logout-modal');
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function hideLogoutModal() {
+  var m = document.getElementById('logout-modal');
+  m.style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') hideLogoutModal();
+});
+</script>
 </body>
 </html>

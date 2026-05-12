@@ -5,7 +5,7 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard')
-@section('page-title', 'Welcome, ' . auth()->user()->roleLabel())
+@section('page-title', 'Welcome to ISGH – ' . auth()->user()->roleLabel())
 @section('user-role', auth()->user()->roleLabel())
 
 @section('content')
@@ -28,37 +28,40 @@
 
       {{-- Total Members --}}
       <div class="stat-card" data-slide="0">
-        <div class="stat-card-label">Total Members</div>
-        <div class="stat-card-value">{{ number_format($stats['total'] ?? 55432) }}</div>
-        <div class="stat-card-trend">
-          <span class="stat-trend-up">▲ 3.1% this month</span>
-        </div>
-        <div class="stat-sparkline-wrap" aria-hidden="true">
-          <canvas class="sparkline-canvas" id="spark-total" height="50"></canvas>
+        <div class="stat-card-inner">
+          <div class="stat-card-text">
+            <div class="stat-card-label">Total Members</div>
+            <div class="stat-card-value">{{ number_format($stats['total'] ?? 55432) }}</div>
+          </div>
+          <div class="stat-sparkline-wrap" aria-hidden="true">
+            <canvas class="sparkline-canvas" id="spark-total"></canvas>
+          </div>
         </div>
       </div>
 
       {{-- Active Members --}}
       <div class="stat-card" data-slide="1">
-        <div class="stat-card-label">Active Members</div>
-        <div class="stat-card-value">{{ number_format($stats['active'] ?? 1986) }}</div>
-        <div class="stat-card-trend">
-          <span class="stat-trend-up">▲ 2.4% this month</span>
-        </div>
-        <div class="stat-sparkline-wrap" aria-hidden="true">
-          <canvas class="sparkline-canvas" id="spark-active" height="50"></canvas>
+        <div class="stat-card-inner">
+          <div class="stat-card-text">
+            <div class="stat-card-label">Active Members</div>
+            <div class="stat-card-value">{{ number_format($stats['active'] ?? 1986) }}</div>
+          </div>
+          <div class="stat-sparkline-wrap" aria-hidden="true">
+            <canvas class="sparkline-canvas" id="spark-active"></canvas>
+          </div>
         </div>
       </div>
 
       {{-- Lapsed Members --}}
       <div class="stat-card" data-slide="2">
-        <div class="stat-card-label">Lapsed Members</div>
-        <div class="stat-card-value" style="color:var(--clr-danger);">{{ number_format($stats['lapsed'] ?? 2) }}</div>
-        <div class="stat-card-trend">
-          <span class="stat-trend-down">▼ 0.5% this month</span>
-        </div>
-        <div class="stat-sparkline-wrap" aria-hidden="true">
-          <canvas class="sparkline-canvas" id="spark-lapsed" height="50"></canvas>
+        <div class="stat-card-inner">
+          <div class="stat-card-text">
+            <div class="stat-card-label">Lapsed Members</div>
+            <div class="stat-card-value" style="color:var(--clr-danger);">{{ number_format($stats['lapsed'] ?? 2) }}</div>
+          </div>
+          <div class="stat-sparkline-wrap" aria-hidden="true">
+            <canvas class="sparkline-canvas" id="spark-lapsed"></canvas>
+          </div>
         </div>
       </div>
 
@@ -133,7 +136,7 @@
     </div>
 
     {{-- Members Profiles Status --}}
-    <div class="card profile-status-card" style="background:var(--clr-primary);color:#fff;">
+    <div class="card profile-status-card" style="background:linear-gradient(216.02deg,#1C1C1C 1.1%,#11757C 97.31%);color:#fff;">
       <div class="card-header" style="border-bottom:1px solid rgba(255,255,255,.12);">
         <div>
           <div class="card-title" style="color:#fff;">Members Profiles Status</div>
@@ -187,17 +190,28 @@
         <div class="card-title">Members by ZIP Code</div>
       </div>
 
-      <div class="zip-summary-card" style="background:var(--clr-primary);color:#fff;margin:var(--sp-4) var(--sp-5);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);display:flex;align-items:center;justify-content:space-between;">
-        <div>
+      <div class="zip-summary-card" style="background:linear-gradient(216.02deg,#1C1C1C 1.1%,#11757C 97.31%);color:#fff;margin:var(--sp-4) var(--sp-5);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;min-height:90px;">
+
+        {{-- Text --}}
+        <div style="position:relative;z-index:2;">
           <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.5);">Total ZIP Codes</div>
           <div style="font-size:2rem;font-weight:800;line-height:1.1;">{{ $zipStats['total'] ?? 150 }}</div>
           <div style="font-size:.7rem;color:rgba(255,255,255,.5);margin-top:2px;">Across all city zones</div>
         </div>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)"
-             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
+
+        {{-- USA map image (background decoration) --}}
+        <img aria-hidden="true" src="{{ asset('images/USA.png') }}" alt=""
+             style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:75%;height:auto;opacity:0.18;pointer-events:none;object-fit:contain;" />
+
+        {{-- Pin badge --}}
+        <div style="position:relative;z-index:2;background:rgba(255,255,255,.15);backdrop-filter:blur(6px);border-radius:var(--r-md);padding:.75rem;flex-shrink:0;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+
       </div>
 
       <div class="zip-search">
@@ -400,14 +414,37 @@ makeSparkline('spark-active', [2,4,3,5,4,6,5,7,6,8], { solid:'#3aab7b', faded:'r
 makeSparkline('spark-lapsed', [1,2,1,3,2,3,2,4,3,5], { solid:'#c4b5a0', faded:'rgba(196,181,160,.35)' });
 
 /* ── Membership pie chart ─────────────────────────────────── */
-ISGH.initPieChart(
-  'membership-pie',
-  ['Individual', 'Checkomatic', 'Lifetime'],
-  [{{ $levelBreakdown['individual'] ?? 31743 }},
-   {{ $levelBreakdown['checkmatic'] ?? 54438 }},
-   {{ $levelBreakdown['lifetime']   ?? 52434 }}],
-  ['#1a5c42', '#f59e0b', '#3aab7b']
-);
+(function () {
+  var canvas = document.getElementById('membership-pie');
+  if (!canvas || typeof Chart === 'undefined') return;
+  new Chart(canvas, {
+    type: 'pie',
+    data: {
+      labels: ['Individual', 'Checkomatic', 'Lifetime'],
+      datasets: [{
+        data: [{{ $levelBreakdown['individual'] ?? 31743 }},
+               {{ $levelBreakdown['checkmatic'] ?? 54438 }},
+               {{ $levelBreakdown['lifetime']   ?? 52434 }}],
+        backgroundColor: ['#1a5c42', '#f59e0b', '#3aab7b'],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      cutout: 0,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              return ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString();
+            },
+          },
+        },
+      },
+    },
+  });
+})();
 
 /* ── Profile donut ────────────────────────────────────────── */
 ISGH.initPieChart(

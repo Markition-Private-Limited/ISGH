@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\WildApricotService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -300,6 +301,88 @@ class PortalController extends Controller
         sort($zipCodes);
 
         return [$masjids, $zipCodes];
+    }
+
+    // ── PDF Export ───────────────────────────────────────────────────────
+
+    public function exportPdf(Request $request, WildApricotService $wa)
+    {
+        $user    = Auth::user();
+        $page    = max(1, (int) $request->input('page', 1));
+        $perPage = 25;
+
+        $filters = array_filter([
+            'search' => $request->input('search', ''),
+            'status' => $request->input('status', ''),
+            'zone'   => $request->input('zone', ''),
+            'center' => $request->input('center', ''),
+            'zip'    => $request->input('zip', ''),
+            'type'   => $request->input('type', ''),
+        ]);
+
+        if ($user->isZoneLevel()) {
+            $filters['zone'] = $user->zone;
+            if (!empty($filters['center'])) {
+                $allowed = array_keys(self::CENTER_WA_LABELS);
+                if (!in_array($filters['center'], $allowed, true)) {
+                    unset($filters['center']);
+                }
+            }
+        } elseif ($user->isCenterLevel()) {
+            $filters['zone']   = $user->zone;
+            $filters['center'] = $user->center;
+        }
+
+        try {
+            $result = $wa->getMembersPage($page, $perPage, $filters);
+            $items  = $result['items'];
+            $total  = $result['total'];
+        } catch (\Throwable $e) {
+            Log::error('PDF export error', ['error' => $e->getMessage()]);
+            $items = [];
+            $total = 0;
+        }
+
+        $lastPage = $total > 0 ? (int) ceil($total / $perPage) : 1;
+        $offset   = ($page - 1) * $perPage;
+
+        // Build human-readable filter labels
+        $statusMap = ['active' => 'Active', 'pending' => 'Pending', 'expired' => 'Expired', 'lapsed' => 'Lapsed'];
+        $typeMap   = ['individual' => 'Individual', 'checkmatic' => 'Checkmatic', 'lifetime' => 'Lifetime'];
+        $zoneMap   = [
+            'north' => 'North Zone', 'northwest' => 'Northwest Zone', 'south' => 'South Zone',
+            'southeast' => 'Southeast Zone', 'southwest' => 'Southwest Zone',
+        ];
+
+        $fZone   = $filters['zone']   ?? '';
+        $fCenter = $filters['center'] ?? '';
+        $fStatus = $filters['status'] ?? '';
+        $fType   = $filters['type']   ?? '';
+        $fSearch = $filters['search'] ?? '';
+
+        $filterLabels = [
+            'zone'   => $zoneMap[$fZone]   ?? ($fZone   ? ucfirst($fZone)   : null),
+            'center' => $fCenter ?: null,
+            'status' => $statusMap[$fStatus] ?? null,
+            'type'   => $typeMap[$fType]   ?? null,
+            'search' => $fSearch ?: null,
+        ];
+
+        $pdf = Pdf::loadView('portal.members.pdf', [
+            'members'     => $items,
+            'total'       => $total,
+            'currentPage' => $page,
+            'lastPage'    => $lastPage,
+            'offset'      => $offset,
+            'userRole'    => $user->roleLabel(),
+            'filterLabels'=> $filterLabels,
+        ])
+        ->setPaper('a4', 'portrait')
+        ->setOptions(['defaultFont' => 'DejaVu Sans', 'isHtml5ParserEnabled' => true]);
+
+        $filename = 'isgh-members-' . now()->format('Y-m-d') . '-page' . $page . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     // ── CSV Export ────────────────────────────────────────────────────────

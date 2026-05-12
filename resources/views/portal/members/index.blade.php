@@ -6,7 +6,7 @@
 
 @section('title', 'Members')
 @section('page-title', 'Members (' . number_format($totalCount ?? 33908) . ')')
-@section('user-role', auth()->user()->name . ' – ' . auth()->user()->roleLabel())
+@section('user-role', auth()->user()->roleLabel())
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
@@ -163,6 +163,21 @@
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
           CSV
+        </a>
+        <a
+          href="{{ route('portal.members.export.pdf', request()->query()) }}"
+          class="btn btn-secondary btn-sm"
+          aria-label="Export members to PDF"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          PDF
         </a>
         <button
           class="btn btn-secondary btn-sm"
