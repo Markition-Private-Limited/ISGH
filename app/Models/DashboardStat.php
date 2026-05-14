@@ -15,12 +15,14 @@ class DashboardStat extends Model
         'individual_members',
         'checkmatic_members',
         'lifetime_members',
+        'level_breakdown',
         'total_zips',
         'last_synced_at',
     ];
 
     protected $casts = [
-        'last_synced_at' => 'datetime',
+        'last_synced_at'  => 'datetime',
+        'level_breakdown' => 'array',
     ];
 
     public static function current(): self

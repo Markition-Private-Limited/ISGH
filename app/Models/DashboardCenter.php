@@ -17,6 +17,11 @@ class DashboardCenter extends Model
         'individual_members',
         'checkmatic_members',
         'lifetime_members',
+        'level_breakdown',
+    ];
+
+    protected $casts = [
+        'level_breakdown' => 'array',
     ];
 
     public function zips()

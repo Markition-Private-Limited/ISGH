@@ -1022,15 +1022,16 @@ class WildApricotService
             }
 
             $zoneMap[$zoneName]['centers'][] = [
-                'name'        => $centerName,
-                'img'         => 'mosque.png',
-                'total'       => $center->member_count,
-                'active'      => $center->active_members,
-                'lapsed'      => $center->lapsed_members,
-                'individual'  => $center->individual_members,
-                'checkmatic'  => $center->checkmatic_members,
-                'lifetime'    => $center->lifetime_members,
-                'zips'        => $zips,
+                'name'            => $centerName,
+                'img'             => 'mosque.png',
+                'total'           => $center->member_count,
+                'active'          => $center->active_members,
+                'lapsed'          => $center->lapsed_members,
+                'individual'      => $center->individual_members,
+                'checkmatic'      => $center->checkmatic_members,
+                'lifetime'        => $center->lifetime_members,
+                'level_breakdown' => $center->level_breakdown ?? [],
+                'zips'            => $zips,
             ];
         }
 
@@ -1060,10 +1061,10 @@ class WildApricotService
 
         return [
             'stats'          => ['total' => $total, 'active' => $active, 'lapsed' => $stat->lapsed_members],
-            'levelBreakdown' => [
-                'individual' => $stat->individual_members,
-                'checkmatic' => $stat->checkmatic_members,
-                'lifetime'   => $stat->lifetime_members,
+            'levelBreakdown' => $stat->level_breakdown ?? [
+                ['name' => 'Individual', 'count' => $stat->individual_members],
+                ['name' => 'Checkomatic', 'count' => $stat->checkmatic_members],
+                ['name' => 'Lifetime', 'count' => $stat->lifetime_members],
             ],
             'profileStatus'  => [
                 'active'     => $active,
@@ -1103,13 +1104,16 @@ class WildApricotService
             $active = $countOf("Member eq true AND Status eq 'Active'");
             $lapsed = $countOf("Member eq true AND Status eq 'Lapsed'");
 
-            // ── Level breakdown — one count per level (11 levels × ~1s) ─────────
-            $individual = 0;
-            $checkmatic = 0;
-            $lifetime   = 0;
+            // ── Level breakdown — active members only, one count per level ─────────
+            $individual     = 0;
+            $checkmatic     = 0;
+            $lifetime       = 0;
+            $levelBreakdown = []; // [{name, count}] for all levels
             foreach ($this->getMembershipLevels() as $level) {
-                $n   = strtolower($level['Name'] ?? '');
-                $cnt = $countOf('Member eq true AND MembershipLevelId eq ' . (int) $level['Id']);
+                $name = $level['Name'] ?? 'Unknown';
+                $n    = strtolower($name);
+                $cnt  = $countOf("Member eq true AND Status eq 'Active' AND MembershipLevelId eq " . (int) $level['Id']);
+                $levelBreakdown[] = ['name' => $name, 'count' => $cnt];
                 if (str_contains($n, 'lifetime'))                                          $lifetime   += $cnt;
                 elseif (str_contains($n, 'checkomatic') || str_contains($n, 'checkmatic')) $checkmatic += $cnt;
                 else                                                                        $individual += $cnt;
@@ -1151,49 +1155,51 @@ class WildApricotService
             };
 
             foreach ($zoneChoices as $label => $choiceId) {
-                // Fast count first — skip empty zones without fetching contacts
-                $cnt = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId}");
-                if ($cnt === 0) continue;
+                // Active-only count — skip centers with no active members
+                $centerActive = $countOf("Member eq true AND Status eq 'Active' AND 'Zone / Center' eq {$choiceId}");
+                if ($centerActive === 0) continue;
 
                 [$zoneName, $centerName] = $parseZoneName($label);
 
-                // Per-center status and level breakdown (3 fast count calls)
-                $centerActive     = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId} AND Status eq 'Active'");
-                $centerLapsed     = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId} AND Status eq 'Lapsed'");
+                $centerLapsed = $countOf("Member eq true AND Status eq 'Lapsed' AND 'Zone / Center' eq {$choiceId}");
 
-                $centerIndividual = 0;
-                $centerCheckmatic = 0;
-                $centerLifetime   = 0;
+                $centerIndividual     = 0;
+                $centerCheckmatic     = 0;
+                $centerLifetime       = 0;
+                $centerLevelBreakdown = [];
                 foreach ($this->getMembershipLevels() as $level) {
-                    $n    = strtolower($level['Name'] ?? '');
-                    $lcnt = $countOf("Member eq true AND 'Zone / Center' eq {$choiceId} AND MembershipLevelId eq " . (int) $level['Id']);
+                    $name = $level['Name'] ?? 'Unknown';
+                    $n    = strtolower($name);
+                    $lcnt = $countOf("Member eq true AND Status eq 'Active' AND 'Zone / Center' eq {$choiceId} AND MembershipLevelId eq " . (int) $level['Id']);
+                    $centerLevelBreakdown[] = ['name' => $name, 'count' => $lcnt];
                     if (str_contains($n, 'lifetime'))                                          $centerLifetime   += $lcnt;
                     elseif (str_contains($n, 'checkomatic') || str_contains($n, 'checkmatic')) $centerCheckmatic += $lcnt;
                     else                                                                        $centerIndividual += $lcnt;
                 }
 
                 $zoneMap[$zoneName] ??= ['members' => 0, 'centers' => []];
-                $zoneMap[$zoneName]['members'] += $cnt;
+                $zoneMap[$zoneName]['members'] += $centerActive + $centerLapsed;
                 $zoneMap[$zoneName]['centers'][$centerName] ??= [
                     'total' => 0, 'active' => 0, 'lapsed' => 0,
                     'individual' => 0, 'checkmatic' => 0, 'lifetime' => 0,
-                    'zips' => [], 'zipCities' => [],
+                    'level_breakdown' => [], 'zips' => [], 'zipCities' => [],
                 ];
-                $zoneMap[$zoneName]['centers'][$centerName]['total']      = $cnt;
-                $zoneMap[$zoneName]['centers'][$centerName]['active']      = $centerActive;
-                $zoneMap[$zoneName]['centers'][$centerName]['lapsed']      = $centerLapsed;
-                $zoneMap[$zoneName]['centers'][$centerName]['individual']  = $centerIndividual;
-                $zoneMap[$zoneName]['centers'][$centerName]['checkmatic']  = $centerCheckmatic;
-                $zoneMap[$zoneName]['centers'][$centerName]['lifetime']    = $centerLifetime;
+                $zoneMap[$zoneName]['centers'][$centerName]['total']          = $centerActive + $centerLapsed;
+                $zoneMap[$zoneName]['centers'][$centerName]['active']         = $centerActive;
+                $zoneMap[$zoneName]['centers'][$centerName]['lapsed']         = $centerLapsed;
+                $zoneMap[$zoneName]['centers'][$centerName]['individual']      = $centerIndividual;
+                $zoneMap[$zoneName]['centers'][$centerName]['checkmatic']      = $centerCheckmatic;
+                $zoneMap[$zoneName]['centers'][$centerName]['lifetime']        = $centerLifetime;
+                $zoneMap[$zoneName]['centers'][$centerName]['level_breakdown'] = $centerLevelBreakdown;
 
-                // Page through all contacts for this center to collect ZIP distribution
+                // Page through active contacts only to collect ZIP distribution
                 $skip     = 0;
                 $pageSize = 100;
                 do {
                     $r = $this->apiGet(
                         "/accounts/{$accountId}/contacts?" . http_build_query([
                             '$async'  => 'false',
-                            '$filter' => "Member eq true AND 'Zone / Center' eq {$choiceId}",
+                            '$filter' => "Member eq true AND Status eq 'Active' AND 'Zone / Center' eq {$choiceId}",
                             '$top'    => $pageSize,
                             '$skip'   => $skip,
                         ])
@@ -1229,28 +1235,22 @@ class WildApricotService
         // ── Write to DB (truncate + re-insert for atomicity) ─────────────────
         DB::transaction(function () use (
             $total, $active, $lapsed, $individual, $checkmatic, $lifetime,
-            $zoneMap, $globalZipCount
+            $levelBreakdown, $zoneMap, $globalZipCount
         ) {
+            $statData = [
+                'total_members'      => $total,
+                'active_members'     => $active,
+                'lapsed_members'     => $lapsed,
+                'individual_members' => $individual,
+                'checkmatic_members' => $checkmatic,
+                'lifetime_members'   => $lifetime,
+                'level_breakdown'    => json_encode($levelBreakdown),
+                'total_zips'         => count($globalZipCount),
+                'last_synced_at'     => now(),
+            ];
             // Stats — update existing row or create if first run
-            \App\Models\DashboardStat::query()->update([
-                'total_members'      => $total,
-                'active_members'     => $active,
-                'lapsed_members'     => $lapsed,
-                'individual_members' => $individual,
-                'checkmatic_members' => $checkmatic,
-                'lifetime_members'   => $lifetime,
-                'total_zips'         => count($globalZipCount),
-                'last_synced_at'     => now(),
-            ]) || \App\Models\DashboardStat::create([
-                'total_members'      => $total,
-                'active_members'     => $active,
-                'lapsed_members'     => $lapsed,
-                'individual_members' => $individual,
-                'checkmatic_members' => $checkmatic,
-                'lifetime_members'   => $lifetime,
-                'total_zips'         => count($globalZipCount),
-                'last_synced_at'     => now(),
-            ]);
+            \App\Models\DashboardStat::query()->update($statData)
+                || \App\Models\DashboardStat::create($statData);
 
             // Delete child rows first to respect the FK constraint, then parent
             \App\Models\DashboardCenterZip::query()->delete();
@@ -1262,11 +1262,12 @@ class WildApricotService
                         'zone_name'          => $zoneName,
                         'center_name'        => $centerName,
                         'member_count'       => $centerData['total'],
-                        'active_members'     => $centerData['active']      ?? 0,
-                        'lapsed_members'     => $centerData['lapsed']      ?? 0,
-                        'individual_members' => $centerData['individual']  ?? 0,
-                        'checkmatic_members' => $centerData['checkmatic']  ?? 0,
-                        'lifetime_members'   => $centerData['lifetime']    ?? 0,
+                        'active_members'     => $centerData['active']           ?? 0,
+                        'lapsed_members'     => $centerData['lapsed']           ?? 0,
+                        'individual_members' => $centerData['individual']       ?? 0,
+                        'checkmatic_members' => $centerData['checkmatic']       ?? 0,
+                        'lifetime_members'   => $centerData['lifetime']         ?? 0,
+                        'level_breakdown'    => json_encode($centerData['level_breakdown'] ?? []),
                     ]);
 
                     $zipRows = [];
@@ -1393,6 +1394,17 @@ class WildApricotService
                 } else {
                     $orParts = array_map(fn($id) => "'Zone / Center' eq {$id}", $matchedIds);
                     $filterParts[] = '(' . implode(' OR ', $orParts) . ')';
+                }
+            }
+        }
+
+        // Level filter — exact level name match against cached WA levels
+        if (!empty($filters['level'])) {
+            $wantedLevel = $filters['level'];
+            foreach ($this->getMembershipLevels() as $lvl) {
+                if (strcasecmp($lvl['Name'] ?? '', $wantedLevel) === 0) {
+                    $filterParts[] = 'MembershipLevelId eq ' . (int) $lvl['Id'];
+                    break;
                 }
             }
         }

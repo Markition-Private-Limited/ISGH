@@ -71,7 +71,7 @@ class PortalController extends Controller
         if ($data === null) {
             $data = [
                 'stats'          => ['total' => 0, 'active' => 0, 'lapsed' => 0],
-                'levelBreakdown' => ['individual' => 0, 'checkmatic' => 0, 'lifetime' => 0],
+                'levelBreakdown' => [],
                 'profileStatus'  => ['active' => 0, 'lapsed' => 0, 'active_pct' => 0, 'lapsed_pct' => 0],
                 'zipStats'       => ['total' => 0],
                 'zipData'        => collect(),
@@ -150,11 +150,22 @@ class PortalController extends Controller
             'lapsed' => array_sum(array_column($visibleCenters, 'lapsed')),
         ];
 
-        $data['levelBreakdown'] = [
-            'individual' => array_sum(array_column($visibleCenters, 'individual')),
-            'checkmatic' => array_sum(array_column($visibleCenters, 'checkmatic')),
-            'lifetime'   => array_sum(array_column($visibleCenters, 'lifetime')),
-        ];
+        // Aggregate per-level counts across visible centers
+        $levelTotals = [];
+        foreach ($visibleCenters as $c) {
+            $breakdown = $c['level_breakdown'] ?? [];
+            if (is_string($breakdown)) {
+                $breakdown = json_decode($breakdown, true) ?? [];
+            }
+            foreach ($breakdown as $row) {
+                $levelTotals[$row['name']] = ($levelTotals[$row['name']] ?? 0) + ($row['count'] ?? 0);
+            }
+        }
+        $data['levelBreakdown'] = array_values(array_map(
+            fn($name, $count) => ['name' => $name, 'count' => $count],
+            array_keys($levelTotals),
+            array_values($levelTotals)
+        ));
 
         $scopedTotal     = $data['stats']['total'];
         $scopedActive    = $data['stats']['active'];
@@ -202,6 +213,7 @@ class PortalController extends Controller
             'center' => $request->input('center', ''),
             'zip'    => $request->input('zip', ''),
             'type'   => $request->input('type', ''),
+            'level'  => $request->input('level', ''),
         ]);
 
         // Always enforce zone/center from the user's authorised scope —
@@ -318,6 +330,7 @@ class PortalController extends Controller
             'center' => $request->input('center', ''),
             'zip'    => $request->input('zip', ''),
             'type'   => $request->input('type', ''),
+            'level'  => $request->input('level', ''),
         ]);
 
         if ($user->isZoneLevel()) {

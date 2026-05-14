@@ -8,6 +8,14 @@
 @section('page-title', 'Welcome to ISGH – ' . auth()->user()->roleLabel())
 @section('user-role', auth()->user()->roleLabel())
 
+@push('styles')
+<style>
+  .drill-link:hover { opacity: .72; text-decoration: underline !important; cursor: pointer; }
+  .stat-card-inner { display:flex; }
+  .stat-card a.stat-card-inner:hover .stat-card-value { text-decoration: underline; }
+</style>
+@endpush
+
 @section('content')
 
   @if (!empty($warming))
@@ -28,7 +36,7 @@
 
       {{-- Total Members --}}
       <div class="stat-card" data-slide="0">
-        <div class="stat-card-inner">
+        <a href="{{ route('portal.members') }}" class="stat-card-inner" style="text-decoration:none;color:inherit;">
           <div class="stat-card-text">
             <div class="stat-card-label">Total Members</div>
             <div class="stat-card-value">{{ number_format($stats['total'] ?? 55432) }}</div>
@@ -36,12 +44,12 @@
           <div class="stat-sparkline-wrap" aria-hidden="true">
             <canvas class="sparkline-canvas" id="spark-total"></canvas>
           </div>
-        </div>
+        </a>
       </div>
 
       {{-- Active Members --}}
       <div class="stat-card" data-slide="1">
-        <div class="stat-card-inner">
+        <a href="{{ route('portal.members', ['status' => 'active']) }}" class="stat-card-inner" style="text-decoration:none;color:inherit;">
           <div class="stat-card-text">
             <div class="stat-card-label">Active Members</div>
             <div class="stat-card-value">{{ number_format($stats['active'] ?? 1986) }}</div>
@@ -49,12 +57,12 @@
           <div class="stat-sparkline-wrap" aria-hidden="true">
             <canvas class="sparkline-canvas" id="spark-active"></canvas>
           </div>
-        </div>
+        </a>
       </div>
 
       {{-- Lapsed Members --}}
       <div class="stat-card" data-slide="2">
-        <div class="stat-card-inner">
+        <a href="{{ route('portal.members', ['status' => 'lapsed']) }}" class="stat-card-inner" style="text-decoration:none;color:inherit;">
           <div class="stat-card-text">
             <div class="stat-card-label">Lapsed Members</div>
             <div class="stat-card-value" style="color:var(--clr-danger);">{{ number_format($stats['lapsed'] ?? 2) }}</div>
@@ -62,7 +70,7 @@
           <div class="stat-sparkline-wrap" aria-hidden="true">
             <canvas class="sparkline-canvas" id="spark-lapsed"></canvas>
           </div>
-        </div>
+        </a>
       </div>
 
     </div>
@@ -89,40 +97,33 @@
       </div>
       <div class="card-body" style="display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;">
 
+        @php
+          $levelPalette = ['#1a5c42','#f59e0b','#3aab7b','#6366f1','#ec4899','#0ea5e9','#f97316','#a855f7','#14b8a6','#84cc16','#ef4444','#64748b'];
+          $levels = $levelBreakdown ?? [];
+        @endphp
+
         {{-- Legend table (left) --}}
-        <div style="flex:1;min-width:180px;">
+        <div style="flex:1;min-width:180px;max-height:260px;overflow-y:auto;">
           <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--clr-text-3);margin-bottom:var(--sp-4);display:flex;justify-content:space-between;">
-            <span>Category</span><span>Count (N)</span>
+            <span>Membership Level</span><span>Count (N)</span>
           </div>
-          <table class="level-table" aria-label="Membership category breakdown">
+          <table class="level-table" aria-label="Membership level breakdown">
             <tbody>
+              @forelse ($levels as $i => $level)
               <tr>
                 <td>
-                  <span class="level-dot" style="background:#1a5c42;" aria-hidden="true"></span>
-                  Individual Membership
+                  <span class="level-dot" style="background:{{ $levelPalette[$i % count($levelPalette)] }};" aria-hidden="true"></span>
+                  {{ $level['name'] }}
                 </td>
                 <td style="font-weight:700;text-align:right;padding-left:1rem;">
-                  {{ number_format($levelBreakdown['individual'] ?? 31743) }}
+                  <a href="{{ route('portal.members', ['status' => 'active', 'level' => $level['name']]) }}" style="color:inherit;text-decoration:none;font-weight:700;" class="drill-link">
+                    {{ number_format($level['count']) }}
+                  </a>
                 </td>
               </tr>
-              <tr>
-                <td>
-                  <span class="level-dot" style="background:#f59e0b;" aria-hidden="true"></span>
-                  Checkomatic Membership
-                </td>
-                <td style="font-weight:700;text-align:right;padding-left:1rem;">
-                  {{ number_format($levelBreakdown['checkmatic'] ?? 54438) }}
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <span class="level-dot" style="background:#3aab7b;" aria-hidden="true"></span>
-                  Lifetime Membership
-                </td>
-                <td style="font-weight:700;text-align:right;padding-left:1rem;">
-                  {{ number_format($levelBreakdown['lifetime'] ?? 52434) }}
-                </td>
-              </tr>
+              @empty
+              <tr><td colspan="2" style="color:var(--clr-text-3);font-size:.85rem;">No data yet</td></tr>
+              @endforelse
             </tbody>
           </table>
         </div>
@@ -152,7 +153,7 @@
           <div class="progress-item">
             <div class="progress-label-row">
               <span class="progress-label" style="color:rgba(255,255,255,.85);">Active</span>
-              <span class="progress-value"  style="color:rgba(255,255,255,.55);">{{ number_format($profileStatus['active'] ?? 98539) }}</span>
+              <a href="{{ route('portal.members', ['status' => 'active']) }}" class="progress-value drill-link" style="color:rgba(255,255,255,.55);text-decoration:none;">{{ number_format($profileStatus['active'] ?? 98539) }}</a>
             </div>
             <div class="progress-track" style="background:rgba(255,255,255,.15);">
               <div class="progress-fill" style="width:{{ $profileStatus['active_pct'] ?? 99 }}%;background:linear-gradient(90deg,#3aab7b,#6fcfa3);"></div>
@@ -161,7 +162,7 @@
           <div class="progress-item">
             <div class="progress-label-row">
               <span class="progress-label" style="color:rgba(255,255,255,.85);">Lapsed</span>
-              <span class="progress-value"  style="color:rgba(255,255,255,.55);">{{ number_format($profileStatus['lapsed'] ?? 796) }}</span>
+              <a href="{{ route('portal.members', ['status' => 'lapsed']) }}" class="progress-value drill-link" style="color:rgba(255,255,255,.55);text-decoration:none;">{{ number_format($profileStatus['lapsed'] ?? 796) }}</a>
             </div>
             <div class="progress-track" style="background:rgba(255,255,255,.15);">
               <div class="progress-fill" style="width:{{ $profileStatus['lapsed_pct'] ?? 1 }}%;background:linear-gradient(90deg,#f59e0b,#fcd34d);"></div>
@@ -246,9 +247,13 @@
             @foreach ($zipData as $i => $row)
               <tr>
                 <td class="col-num">{{ $i + 1 }}</td>
-                <td style="font-weight:600;">{{ $row['zip'] }}</td>
+                <td style="font-weight:600;">
+                  <a href="{{ route('portal.members', ['status' => 'active', 'zip' => $row['zip']]) }}" style="color:inherit;text-decoration:none;" class="drill-link">{{ $row['zip'] }}</a>
+                </td>
                 <td class="text-muted">{{ $row['city'] }}</td>
-                <td style="font-weight:700;">{{ $row['count'] }}</td>
+                <td style="font-weight:700;">
+                  <a href="{{ route('portal.members', ['status' => 'active', 'zip' => $row['zip']]) }}" style="color:inherit;text-decoration:none;font-weight:700;" class="drill-link">{{ $row['count'] }}</a>
+                </td>
               </tr>
             @endforeach
           </tbody>
@@ -285,7 +290,18 @@
       </h2>
       <div style="display:flex;flex-direction:column;gap:var(--sp-3);" id="zone-accordion">
 
+        @php
+          // Convert "North Zone" → "north", "Northwest Zone" → "northwest", etc.
+          $zoneSlug = fn(string $name): string => strtolower(str_replace(' Zone', '', $name));
+          // Extract the short center name from the full WA label, e.g. "Masjid Bilal - Adel Road" → "Adel Road"
+          $centerSlug = function(string $name): string {
+              if (preg_match('/\s*-\s*(.+)$/', $name, $m)) return trim($m[1]);
+              return $name;
+          };
+        @endphp
+
         @foreach ($zones as $zi => $zone)
+          @php $zSlug = $zoneSlug($zone['name']); @endphp
           <div class="zone-accordion-item" id="zone-item-{{ $zi }}">
 
             {{-- Zone header (click to toggle) --}}
@@ -308,7 +324,10 @@
               <div class="zone-accordion-stats">
                 <div class="zone-accordion-stat">
                   <span class="zone-accordion-stat-label">Total<br>Members</span>
-                  <span class="zone-accordion-stat-value">{{ $zone['members'] }}</span>
+                  <a href="{{ route('portal.members', ['status' => 'active', 'zone' => $zSlug]) }}"
+                     class="zone-accordion-stat-value drill-link"
+                     style="text-decoration:none;color:inherit;"
+                     onclick="event.stopPropagation()">{{ $zone['members'] }}</a>
                 </div>
                 <div class="zone-accordion-stat">
                   <span class="zone-accordion-stat-label">Total<br>Masjids</span>
@@ -320,6 +339,7 @@
             {{-- Zone body (masjid list, hidden by default) --}}
             <div class="zone-accordion-body" id="zone-body-{{ $zi }}" hidden>
               @foreach ($zone['centers'] as $ci => $center)
+                @php $cSlug = $centerSlug($center['name']); @endphp
                 <div class="masjid-item" id="masjid-item-{{ $zi }}-{{ $ci }}">
 
                   {{-- Masjid row --}}
@@ -338,7 +358,10 @@
                       <span class="masjid-name">{{ $center['name'] }}</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:var(--sp-3);">
-                      <span class="masjid-total-badge">Total Members {{ $center['total'] }}</span>
+                      <a href="{{ route('portal.members', ['status' => 'active', 'zone' => $zSlug, 'center' => $cSlug]) }}"
+                         class="masjid-total-badge drill-link"
+                         style="text-decoration:none;"
+                         onclick="event.stopPropagation()">Total Members {{ $center['total'] }}</a>
                       <svg class="masjid-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                            aria-hidden="true">
@@ -356,8 +379,10 @@
                       </div>
                       @foreach ($center['zips'] as $zip)
                         <div class="masjid-zip-row">
-                          <span>{{ $zip['code'] }}</span>
-                          <span>{{ $zip['count'] }}</span>
+                          <a href="{{ route('portal.members', ['status' => 'active', 'zone' => $zSlug, 'center' => $cSlug, 'zip' => $zip['code']]) }}"
+                             class="drill-link" style="color:inherit;text-decoration:none;">{{ $zip['code'] }}</a>
+                          <a href="{{ route('portal.members', ['status' => 'active', 'zone' => $zSlug, 'center' => $cSlug, 'zip' => $zip['code']]) }}"
+                             class="drill-link" style="color:inherit;text-decoration:none;font-weight:700;">{{ $zip['count'] }}</a>
                         </div>
                       @endforeach
                     </div>
@@ -417,15 +442,16 @@ makeSparkline('spark-lapsed', [1,2,1,3,2,3,2,4,3,5], { solid:'#c4b5a0', faded:'r
 (function () {
   var canvas = document.getElementById('membership-pie');
   if (!canvas || typeof Chart === 'undefined') return;
+  var palette = {!! json_encode($levelPalette) !!};
+  var levels  = {!! json_encode(array_values($levels)) !!};
+  if (!levels.length) return;
   new Chart(canvas, {
     type: 'pie',
     data: {
-      labels: ['Individual', 'Checkomatic', 'Lifetime'],
+      labels: levels.map(function(l){ return l.name; }),
       datasets: [{
-        data: [{{ $levelBreakdown['individual'] ?? 31743 }},
-               {{ $levelBreakdown['checkmatic'] ?? 54438 }},
-               {{ $levelBreakdown['lifetime']   ?? 52434 }}],
-        backgroundColor: ['#1a5c42', '#f59e0b', '#3aab7b'],
+        data: levels.map(function(l){ return l.count; }),
+        backgroundColor: levels.map(function(_, i){ return palette[i % palette.length]; }),
         borderWidth: 0,
         hoverOffset: 6,
       }],

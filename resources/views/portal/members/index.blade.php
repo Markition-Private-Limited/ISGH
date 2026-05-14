@@ -138,6 +138,15 @@
 
       </div>
 
+      {{-- Hidden level param — passed through from dashboard drill-down links --}}
+      @if (request('level'))
+        <input type="hidden" name="level" value="{{ request('level') }}">
+        <div style="margin-top:.5rem;font-size:.78rem;color:var(--clr-text-3);">
+          Filtered by level: <strong style="color:var(--clr-text-1);">{{ request('level') }}</strong>
+          <a href="{{ route('portal.members', array_diff_key(request()->query(), ['level' => ''])) }}" style="margin-left:.5rem;color:var(--clr-danger);text-decoration:none;" aria-label="Clear level filter">&#x2715;</a>
+        </div>
+      @endif
+
     </form>
   </div>
 
