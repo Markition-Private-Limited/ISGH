@@ -70,6 +70,32 @@ class MemberProfile
                 $this->family[] = new MemberProfile(['contact' => $fam]);
             }
         }
+
+        // Invoices — normalized to a predictable shape.
+        foreach (($bundle['invoices'] ?? []) as $inv) {
+            if (! is_array($inv)) {
+                continue;
+            }
+            $this->invoices[] = [
+                'id'     => $inv['Id'] ?? null,
+                'number' => (string) ($inv['DocumentNumber'] ?? ('INV-' . ($inv['Id'] ?? ''))),
+                'date'   => $this->isoToDate($inv['CreatedDate'] ?? ''),
+                'amount' => (float) ($inv['Value'] ?? 0),
+                'isPaid' => (bool) ($inv['IsPaid'] ?? false),
+                'url'    => (string) ($inv['Url'] ?? '#'),
+            ];
+        }
+
+        // Payments — normalized.
+        foreach (($bundle['payments'] ?? []) as $pay) {
+            if (! is_array($pay)) {
+                continue;
+            }
+            $this->payments[] = [
+                'date'   => $this->isoToDate($pay['CreatedDate'] ?? ''),
+                'amount' => (float) ($pay['Value'] ?? 0),
+            ];
+        }
     }
 
     /**
@@ -178,5 +204,62 @@ class MemberProfile
     public function spouse(): ?MemberProfile
     {
         return $this->family[0] ?? null;
+    }
+
+    /** True when the member has at least one invoice. */
+    public function hasInvoices(): bool
+    {
+        return $this->invoices !== [];
+    }
+
+    /** Earliest unpaid invoice as ['amount'=>float,'date'=>string], or null. */
+    public function nextPayment(): ?array
+    {
+        $unpaid = array_values(array_filter($this->invoices, fn ($i) => ! $i['isPaid']));
+        if ($unpaid === []) {
+            return null;
+        }
+        usort($unpaid, fn ($a, $b) => strcmp($a['date'], $b['date']));
+        return ['amount' => $unpaid[0]['amount'], 'date' => $unpaid[0]['date']];
+    }
+
+    /** Most recent payment as ['amount'=>float,'date'=>string], or null. */
+    public function lastPayment(): ?array
+    {
+        if ($this->payments === []) {
+            return null;
+        }
+        $sorted = $this->payments;
+        usort($sorted, fn ($a, $b) => strcmp($b['date'], $a['date']));
+        return ['amount' => $sorted[0]['amount'], 'date' => $sorted[0]['date']];
+    }
+
+    /** Sum of payment amounts in the current calendar year. */
+    public function paidThisYear(): float
+    {
+        $year = (string) now()->year;
+        return array_sum(array_map(
+            fn ($p) => str_starts_with($p['date'], $year) ? $p['amount'] : 0.0,
+            $this->payments
+        ));
+    }
+
+    /** Sum of all payment amounts. */
+    public function paidAllTime(): float
+    {
+        return array_sum(array_column($this->payments, 'amount'));
+    }
+
+    /** ISO datetime to "YYYY-MM-DD", or '' if unparseable. */
+    private function isoToDate(string $iso): string
+    {
+        if ($iso === '') {
+            return '';
+        }
+        try {
+            return Carbon::parse($iso)->format('Y-m-d');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }

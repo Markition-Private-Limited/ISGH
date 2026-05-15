@@ -156,4 +156,73 @@ class MemberProfileTest extends TestCase
         $this->assertNull($p->spouse());
         $this->assertFalse($p->hasFamily());
     }
+
+    public function test_invoices_are_normalized(): void
+    {
+        $p = new MemberProfile($this->bundle());
+
+        $this->assertCount(2, $p->invoices);
+        $this->assertTrue($p->hasInvoices());
+        $inv = $p->invoices[0];
+        $this->assertSame('INV-2026-0001', $inv['number']);
+        $this->assertSame('2026-01-15', $inv['date']);
+        $this->assertSame(20.0, $inv['amount']);
+        $this->assertTrue($inv['isPaid']);
+    }
+
+    public function test_no_invoices_reports_false(): void
+    {
+        $b = $this->bundle();
+        $b['invoices'] = [];
+        $this->assertFalse((new MemberProfile($b))->hasInvoices());
+    }
+
+    public function test_next_payment_is_earliest_unpaid_invoice(): void
+    {
+        $p = new MemberProfile($this->bundle());
+        $next = $p->nextPayment();
+        $this->assertNotNull($next);
+        $this->assertSame(20.0, $next['amount']);
+        $this->assertSame('2026-06-15', $next['date']);
+    }
+
+    public function test_next_payment_null_when_all_paid(): void
+    {
+        $b = $this->bundle();
+        foreach ($b['invoices'] as &$inv) { $inv['IsPaid'] = true; }
+        unset($inv);
+        $this->assertNull((new MemberProfile($b))->nextPayment());
+    }
+
+    public function test_last_payment_is_most_recent_payment(): void
+    {
+        $p = new MemberProfile($this->bundle());
+        $last = $p->lastPayment();
+        $this->assertNotNull($last);
+        $this->assertSame(20.0, $last['amount']);
+        $this->assertSame('2026-01-15', $last['date']);
+    }
+
+    public function test_paid_this_year_sums_current_year_payments(): void
+    {
+        $b = $this->bundle();
+        // One payment in the current year, one a year earlier.
+        $b['payments'] = [
+            ['Id' => 1, 'Value' => 20.0, 'CreatedDate' => now()->startOfYear()->addDays(5)->toIso8601String()],
+            ['Id' => 2, 'Value' => 60.0, 'CreatedDate' => now()->subYears(1)->toIso8601String()],
+        ];
+        $p = new MemberProfile($b);
+        $this->assertSame(20.0, $p->paidThisYear());
+        $this->assertSame(80.0, $p->paidAllTime());
+    }
+
+    public function test_payment_totals_zero_when_no_payments(): void
+    {
+        $b = $this->bundle();
+        $b['payments'] = [];
+        $p = new MemberProfile($b);
+        $this->assertSame(0.0, $p->paidThisYear());
+        $this->assertSame(0.0, $p->paidAllTime());
+        $this->assertNull($p->lastPayment());
+    }
 }
