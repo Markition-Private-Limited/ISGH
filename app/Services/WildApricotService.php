@@ -47,6 +47,11 @@ class WildApricotService
         });
     }
 
+    public function baseUrl(): string
+    {
+        return $this->baseUrl;
+    }
+
     public function getAccountId(): string
     {
         if ($this->configuredAccountId) return $this->configuredAccountId;
@@ -399,6 +404,64 @@ class WildApricotService
         }
 
         return false;
+    }
+
+    // ─── MEMBER PORTAL ───────────────────────────────────────────────────────
+
+    public function getContactById(int $contactId): ?array
+    {
+        try {
+            $accountId = $this->getAccountId();
+            $r = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+            return $r->successful() ? $r->json() : null;
+        } catch (\Throwable $e) {
+            Log::error('WA getContactById exception', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    // ─── MEMBER PORTAL — FIND MEMBER BY EMAIL ───────────────────────────────
+    // Looks up a WA contact by email only (no name/phone required).
+    // Returns the contact array on success, or null if not found / API error.
+
+    public function findMemberByEmail(string $email): ?array
+    {
+        try {
+            $accountId = $this->getAccountId();
+            $safe      = str_replace("'", "''", strtolower(trim($email)));
+
+            $r = $this->apiGet(
+                "/accounts/{$accountId}/contacts?" . http_build_query([
+                    '$filter' => "Email eq '{$safe}'",
+                    '$async'  => 'false',
+                    '$top'    => 1,
+                ])
+            );
+
+            if (! $r->successful()) {
+                Log::warning('WA findMemberByEmail: API error', ['status' => $r->status()]);
+                return null;
+            }
+
+            $body     = $r->json();
+            $contacts = $body['Contacts'] ?? (is_array($body) ? array_filter($body, 'is_array') : []);
+
+            if (empty($contacts)) {
+                return null;
+            }
+
+            $contact   = reset($contacts);
+            $contactId = $contact['Id'] ?? null;
+            if (! $contactId) return null;
+
+            // Fetch full contact record so FieldValues / membership details are present
+            $full = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+            return $full->successful() ? $full->json() : $contact;
+
+        } catch (\Throwable $e) {
+            Log::error('WA findMemberByEmail exception', ['email' => $email, 'error' => $e->getMessage()]);
+            return null;
+        }
     }
 
     // ─── MEMBERSHIP VERIFICATION — SEARCH CONTACT ───────────────────────────
@@ -1539,6 +1602,87 @@ class WildApricotService
             str_contains($type, 'checkomatic') => now()->addMonth()->toIso8601String(),
             default                            => now()->endOfYear()->toIso8601String(),
         };
+    }
+
+    // ─── MEMBER PORTAL — INVOICES ───────────────────────────────────────────
+    // GET /accounts/{accountId}/invoices?contactId={contactId}
+    // Returns the contact's invoices, or [] on failure.
+
+    public function getInvoicesForContact(int $contactId): array
+    {
+        try {
+            $accountId = $this->getAccountId();
+            $r = $this->apiGet("/accounts/{$accountId}/invoices?" . http_build_query([
+                'contactId' => $contactId,
+                'idsOnly'   => 'false',
+            ]));
+            if (! $r->successful()) {
+                Log::warning('WA getInvoicesForContact: API error', ['status' => $r->status(), 'contact_id' => $contactId]);
+                return [];
+            }
+            $body = $r->json();
+            return $body['Invoices'] ?? (is_array($body) ? array_values(array_filter($body, 'is_array')) : []);
+        } catch (\Throwable $e) {
+            Log::error('WA getInvoicesForContact exception', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    // ─── MEMBER PORTAL — PAYMENTS ───────────────────────────────────────────
+    // GET /accounts/{accountId}/payments?contactId={contactId}
+    // Returns the contact's payments, or [] on failure.
+
+    public function getPaymentsForContact(int $contactId): array
+    {
+        try {
+            $accountId = $this->getAccountId();
+            $r = $this->apiGet("/accounts/{$accountId}/payments?" . http_build_query([
+                'contactId' => $contactId,
+            ]));
+            if (! $r->successful()) {
+                Log::warning('WA getPaymentsForContact: API error', ['status' => $r->status(), 'contact_id' => $contactId]);
+                return [];
+            }
+            $body = $r->json();
+            return $body['Payments'] ?? (is_array($body) ? array_values(array_filter($body, 'is_array')) : []);
+        } catch (\Throwable $e) {
+            Log::error('WA getPaymentsForContact exception', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    // ─── MEMBER PORTAL — FAMILY MEMBERS ─────────────────────────────────────
+    // Finds related contacts that store this primary's contact ID in the
+    // custom "Member Identifier" field. Returns [] if none / on failure.
+
+    public function getFamilyMembers(int $primaryContactId): array
+    {
+        try {
+            $accountId  = $this->getAccountId();
+            $systemCode = $this->getFieldSystemCode('Member Identifier');
+            if (! $systemCode) {
+                Log::warning('WA getFamilyMembers: Member Identifier field not found');
+                return [];
+            }
+
+            $r = $this->apiGet("/accounts/{$accountId}/contacts?" . http_build_query([
+                '$filter' => "'{$systemCode}' eq '{$primaryContactId}'",
+                '$async'  => 'false',
+                '$top'    => 50,
+            ]));
+            if (! $r->successful()) {
+                Log::warning('WA getFamilyMembers: API error', ['status' => $r->status(), 'primary' => $primaryContactId]);
+                return [];
+            }
+            $body     = $r->json();
+            $contacts = $body['Contacts'] ?? (is_array($body) ? array_values(array_filter($body, 'is_array')) : []);
+
+            // Exclude the primary contact itself if it matches the filter.
+            return array_values(array_filter($contacts, fn ($c) => ($c['Id'] ?? null) !== $primaryContactId));
+        } catch (\Throwable $e) {
+            Log::error('WA getFamilyMembers exception', ['primary' => $primaryContactId, 'error' => $e->getMessage()]);
+            return [];
+        }
     }
 
     private function apiGet(string $path): \Illuminate\Http\Client\Response
