@@ -1440,23 +1440,7 @@
 
     {{-- ── Profile page (hidden by default, shown via sidebar Profile click) ── --}}
     <section class="content hidden" id="profilePage" data-page="profile">
-      @include('member-portal.partials.profile-content', [
-        'status'         => $profile->status,
-        'level'          => $profile->level,
-        'memberSince'    => $profile->memberSinceFormatted() ?: '—',
-        'renewalDueText' => $profile->renewalFormatted() ?: '—',
-        'txid'           => $profile->txId ?: '—',
-        'firstName'      => $profile->firstName,
-        'lastName'       => $profile->lastName,
-        'fullName'       => $profile->fullName ?: 'Member',
-        'memberEmail'    => $profile->email,
-        'memberPhone'    => $profile->phone,
-        'street'         => $profile->street,
-        'city'           => $profile->city,
-        'state'          => $profile->state,
-        'zip'            => $profile->zip,
-        'dob'            => $profile->dobFormatted(),
-      ])
+      @include('member-portal.partials.profile-content')
     </section>
 
   </div>

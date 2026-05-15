@@ -66,7 +66,9 @@ class MemberPortalIntegrationTest extends TestCase
 
         $this->get('/member-portal/profile')
             ->assertOk()
-            ->assertSee('Tauqeer');
+            ->assertSee('Tauqeer Alam')
+            ->assertSee('tauqeer@example.com')
+            ->assertSee('Individual Membership');
     }
 
     public function test_update_profile_persists_and_invalidates_cache(): void
