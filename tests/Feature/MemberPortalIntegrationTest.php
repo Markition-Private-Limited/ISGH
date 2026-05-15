@@ -149,4 +149,59 @@ class MemberPortalIntegrationTest extends TestCase
         $this->get('/member-portal/payments')
             ->assertRedirect('/member-portal/login');
     }
+
+    public function test_payments_page_shows_empty_state_when_no_invoices(): void
+    {
+        // Seed the cache with a bundle that has no invoices.
+        Cache::put('member_portal_bundle_999', [
+            'contact'  => [
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => [],
+            ],
+            'family'   => [],
+            'invoices' => [],
+            'payments' => [],
+        ], now()->addMinutes(10));
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        $this->get('/member-portal/payments')
+            ->assertOk()
+            ->assertSee('No invoices yet');
+    }
+
+    public function test_payments_page_renders_disabled_view_link_when_invoice_url_missing(): void
+    {
+        // Invoice has no 'Url' key — MemberProfile defaults url to '#', so the
+        // view must render a disabled <span> instead of an <a> link.
+        Cache::put('member_portal_bundle_999', [
+            'contact'  => [
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => [],
+            ],
+            'family'   => [],
+            'invoices' => [
+                ['Id' => 7, 'DocumentNumber' => 'INV-NOURL', 'Value' => 25.0,
+                 'IsPaid' => true, 'CreatedDate' => '2026-02-01T00:00:00'],
+            ],
+            'payments' => [],
+        ], now()->addMinutes(10));
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        $this->get('/member-portal/payments')
+            ->assertOk()
+            ->assertSee('INV-NOURL')
+            ->assertSee('inv-view disabled', false);
+    }
 }
