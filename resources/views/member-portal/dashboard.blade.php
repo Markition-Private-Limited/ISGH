@@ -1838,6 +1838,7 @@
 
     const summaryUrl   = '{{ route('member-portal.renew.summary') }}';
     const renewUrl     = '{{ route('member-portal.renew') }}';
+    const finalizeUrl  = '{{ route('member-portal.renew.finalize') }}';
     const statusUrlBase = '{{ url('/member-portal/renew/status') }}';
     const dashboardUrl = '{{ route('member-portal.dashboard') }}';
 
@@ -1902,6 +1903,8 @@
     function openModal() {
       hideError(confirmError);
       hideError(payError);
+      if (monthlyInput) monthlyInput.value = '';
+      if (invoiceLabel) invoiceLabel.textContent = '';
       showScreen('confirm');
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
@@ -1946,7 +1949,8 @@
 
         _isCheckomatic = !!data.isCheckomatic;
         const feeLabel = (data.fee && data.fee.label) ? data.fee.label : '—';
-        amountLabel.textContent = _isCheckomatic ? (feeLabel || 'Enter amount') : feeLabel;
+        // Checkomatic fee is member-entered — don't show a misleading $0.00/mo.
+        amountLabel.textContent = _isCheckomatic ? 'Enter your monthly amount below' : feeLabel;
         monthlyWrap.style.display = _isCheckomatic ? 'block' : 'none';
 
         hideError(payError);
@@ -2017,7 +2021,7 @@
           return;
         }
 
-        // 3DS — mirrors signup confirmCardPayment then re-submit pattern
+        // 3DS — confirm the card, then finalize the EXISTING renewal (no second charge).
         if (data && data.requires_action) {
           const authResult = await _stripe.confirmCardPayment(data.client_secret);
           if (authResult.error) {
@@ -2028,14 +2032,25 @@
             showError(payError, 'Card authentication did not complete successfully.');
             return;
           }
-          // renewal_id was returned with the first response; re-post to finalize.
-          const renewalId = data.renewal_id;
-          const finalData = await postRenewal();
-          if (finalData && finalData.success === false) {
-            showError(payError, finalData.message || 'Renewal could not be finalized.');
+          // 3DS passed — finalize the EXISTING renewal via the dedicated endpoint.
+          const finRes = await fetch(finalizeUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': renewCsrf,
+            },
+            body: JSON.stringify({
+              renewal_id: data.renewal_id,
+              payment_intent_id: data.payment_intent_id,
+            }),
+          });
+          const finData = await finRes.json();
+          if (!finData || finData.success === false) {
+            showError(payError, (finData && finData.message) || 'Renewal could not be finalized.');
             return;
           }
-          await goToSuccess(finalData.renewal_id || renewalId);
+          await goToSuccess(finData.renewal_id);
           return;
         }
 

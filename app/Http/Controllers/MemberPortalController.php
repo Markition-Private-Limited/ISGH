@@ -394,6 +394,30 @@ class MemberPortalController extends Controller
         return response()->json($result, $status);
     }
 
+    /** Finalize a renewal after a 3DS challenge — no new charge. */
+    public function finalizeRenewal(Request $request, RenewalService $renewal)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Session expired. Please sign in again.'], 401);
+        }
+
+        $validated = $request->validate([
+            'renewal_id'        => ['required', 'integer'],
+            'payment_intent_id' => ['required', 'string'],
+        ]);
+
+        // Ownership guard — the renewal must belong to this member.
+        $row = Renewal::find($validated['renewal_id']);
+        if (! $row || (int) $row->contact_id !== (int) $contactId) {
+            return response()->json(['success' => false, 'message' => 'Renewal not found.'], 404);
+        }
+
+        $result = $renewal->finalize((int) $validated['renewal_id'], $validated['payment_intent_id']);
+        $status = ($result['success'] ?? false) ? 200 : 402;
+        return response()->json($result, $status);
+    }
+
     /** Renewal status for the success screen. */
     public function renewStatus(Request $request, Renewal $renewal)
     {

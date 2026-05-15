@@ -74,6 +74,7 @@ Route::prefix('member-portal')->name('member-portal.')->group(function () {
         // Membership renewal
         Route::get('/renew/summary',          [MemberPortalController::class, 'renewSummary'])->name('renew.summary');
         Route::post('/renew',                 [MemberPortalController::class, 'processRenewal'])->name('renew');
+        Route::post('/renew/finalize',        [MemberPortalController::class, 'finalizeRenewal'])->name('renew.finalize');
         Route::get('/renew/status/{renewal}', [MemberPortalController::class, 'renewStatus'])->name('renew.status');
 
         // Static content pages

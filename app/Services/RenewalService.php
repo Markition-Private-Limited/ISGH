@@ -259,6 +259,53 @@ class RenewalService
     }
 
     /**
+     * Finalize a renewal whose payment required 3DS authentication.
+     * Re-checks the PaymentIntent and, if it succeeded, marks the EXISTING
+     * renewal paid and dispatches the WildApricot job — no new charge.
+     *
+     * @return array{success:bool, renewal_id?:int, message?:string}
+     */
+    public function finalize(int $renewalId, string $paymentIntentId): array
+    {
+        $renewal = Renewal::find($renewalId);
+        if (! $renewal) {
+            return ['success' => false, 'message' => 'Renewal not found.'];
+        }
+
+        // Already finalized — idempotent no-op (job already dispatched/done).
+        if ($renewal->processed || $renewal->status === 'paid') {
+            return ['success' => true, 'renewal_id' => $renewal->id];
+        }
+
+        try {
+            $intent = $this->stripe->getPaymentIntent($paymentIntentId);
+        } catch (\Throwable $e) {
+            $renewal->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            Log::error('RenewalService::finalize intent retrieval failed', [
+                'renewal_id' => $renewal->id, 'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => 'Could not verify payment. Please try again.'];
+        }
+
+        if (($intent->status ?? null) !== 'succeeded') {
+            return [
+                'success' => false,
+                'message' => 'Payment is not complete. Status: ' . ($intent->status ?? 'unknown'),
+            ];
+        }
+
+        $renewal->update([
+            'status'           => 'paid',
+            'stripe_charge_id' => $intent->latest_charge ?? null,
+            'paid_at'          => now(),
+        ]);
+
+        ProcessMembershipRenewal::dispatch($renewal);
+
+        return ['success' => true, 'renewal_id' => $renewal->id];
+    }
+
+    /**
      * Extract structured Stripe error fields from any Throwable.
      * Mirrors MembershipController's signup-flow error handling.
      *
