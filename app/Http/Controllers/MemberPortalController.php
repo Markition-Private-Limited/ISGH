@@ -210,6 +210,82 @@ class MemberPortalController extends Controller
         return view('member-portal.profile', compact('profile', 'email'));
     }
 
+    public function payments(Request $request, MemberPortalService $portal)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        $email     = $request->session()->get('member_portal_email');
+
+        if (! $contactId) {
+            return redirect()->route('member-portal.login');
+        }
+
+        if ($request->boolean('refresh')) {
+            $portal->invalidate((int) $contactId);
+        }
+
+        $bundle  = $portal->getBundle((int) $contactId);
+        $profile = new MemberProfile($bundle);
+
+        return view('member-portal.payments', compact('profile', 'email'));
+    }
+
+    // ── Static content pages ──────────────────────────────────────────────
+    // These pages render hardcoded content; the bundle is loaded only so the
+    // topbar can display the member's name.
+
+    public function records(Request $request, MemberPortalService $portal)
+    {
+        return $this->staticPage($request, $portal, 'member-portal.isgh-records');
+    }
+
+    public function newsletter(Request $request, MemberPortalService $portal)
+    {
+        return $this->staticPage($request, $portal, 'member-portal.newsletter');
+    }
+
+    public function financialReport(Request $request, MemberPortalService $portal)
+    {
+        return $this->staticPage($request, $portal, 'member-portal.financial-report');
+    }
+
+    public function updates(Request $request, MemberPortalService $portal)
+    {
+        return $this->staticPage($request, $portal, 'member-portal.updates');
+    }
+
+    public function nomineesTraining(Request $request, MemberPortalService $portal)
+    {
+        return $this->staticPage($request, $portal, 'member-portal.nominees-training');
+    }
+
+    /**
+     * Render a static member-portal page, loading the member bundle so the
+     * view can show the member's name. Falls back gracefully if the bundle
+     * cannot be assembled.
+     */
+    private function staticPage(Request $request, MemberPortalService $portal, string $view)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        $email     = $request->session()->get('member_portal_email');
+
+        if (! $contactId) {
+            return redirect()->route('member-portal.login');
+        }
+
+        $profile = null;
+
+        try {
+            $bundle  = $portal->getBundle((int) $contactId);
+            $profile = new MemberProfile($bundle);
+        } catch (\Throwable $e) {
+            Log::error('MemberPortal: bundle load failed for static page', [
+                'contact_id' => $contactId, 'view' => $view, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        return view($view, compact('profile', 'email'));
+    }
+
     // ── Save profile edits back to WildApricot ────────────────────────────
 
     public function updateProfile(Request $request, MemberPortalService $portal)

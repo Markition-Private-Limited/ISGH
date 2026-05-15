@@ -69,6 +69,14 @@ Route::prefix('member-portal')->name('member-portal.')->group(function () {
         Route::get('/dashboard', [MemberPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/profile',   [MemberPortalController::class, 'profile'])->name('profile');
         Route::post('/profile/update', [MemberPortalController::class, 'updateProfile'])->name('profile.update');
+        Route::get('/payments', [MemberPortalController::class, 'payments'])->name('payments');
+
+        // Static content pages
+        Route::get('/records',            [MemberPortalController::class, 'records'])->name('records');
+        Route::get('/newsletter',         [MemberPortalController::class, 'newsletter'])->name('newsletter');
+        Route::get('/financial-report',   [MemberPortalController::class, 'financialReport'])->name('financial-report');
+        Route::get('/updates',            [MemberPortalController::class, 'updates'])->name('updates');
+        Route::get('/nominees-training',  [MemberPortalController::class, 'nomineesTraining'])->name('nominees-training');
     });
 });
 

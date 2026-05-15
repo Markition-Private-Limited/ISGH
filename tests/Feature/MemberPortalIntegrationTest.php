@@ -113,4 +113,41 @@ class MemberPortalIntegrationTest extends TestCase
             ])
             ->assertStatus(422);
     }
+
+    public function test_payments_page_renders_invoice_history(): void
+    {
+        Http::fake([
+            'api.wildapricot.org/v2.3/accounts/12345/contacts/999' => Http::response([
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => [],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contactfields' => Http::response([
+                ['FieldName' => 'Member Identifier', 'SystemCode' => 'custom-member-id'],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contacts?*' => Http::response(['Contacts' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/invoices*'  => Http::response(['Invoices' => [
+                ['Id' => 1, 'DocumentNumber' => 'INV-2026-0001', 'Value' => 20.0,
+                 'IsPaid' => true, 'CreatedDate' => '2026-01-15T00:00:00', 'Url' => 'https://wa.test/inv/1'],
+            ]], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/payments*'  => Http::response(['Payments' => []], 200),
+        ]);
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        $this->get('/member-portal/payments')
+            ->assertOk()
+            ->assertSee('Payments and Invoice')
+            ->assertSee('INV-2026-0001');
+    }
+
+    public function test_payments_page_requires_authentication(): void
+    {
+        $this->get('/member-portal/payments')
+            ->assertRedirect('/member-portal/login');
+    }
 }
