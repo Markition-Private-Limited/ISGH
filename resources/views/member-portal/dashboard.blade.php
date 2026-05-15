@@ -1604,6 +1604,7 @@
       });
 
       saveBtn.addEventListener('click', async () => {
+        if (saveBtn.disabled) return;
         // Light email validation
         let valid = true;
         inputs().forEach(el => {
@@ -1629,6 +1630,7 @@
             dob:        document.getElementById('p-dob')?.value || '',
             tx_dl:      document.getElementById('p-tx')?.value || '',
           };
+          saveBtn.disabled = true;
           try {
             const res = await fetch('{{ route('member-portal.profile.update') }}', {
               method: 'POST',
@@ -1647,6 +1649,8 @@
           } catch {
             alert('Network error. Please try again.');
             return;
+          } finally {
+            saveBtn.disabled = false;
           }
         }
 
