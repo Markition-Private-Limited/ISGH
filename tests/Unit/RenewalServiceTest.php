@@ -2,13 +2,20 @@
 
 namespace Tests\Unit;
 
+use App\Jobs\ProcessMembershipRenewal;
+use App\Models\Renewal;
 use App\Services\RenewalService;
 use App\Support\MemberProfile;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Mockery;
 use RuntimeException;
 use Tests\TestCase;
 
 class RenewalServiceTest extends TestCase
 {
+    use RefreshDatabase;
+
     private function profileWithLevel(string $levelName): MemberProfile
     {
         return new MemberProfile(['contact' => [
@@ -129,5 +136,70 @@ class RenewalServiceTest extends TestCase
         $expected = now()->addMonth()->format('F d, Y');
 
         $this->assertSame($expected, $svc->newRenewalDate('checkomatic_individual'));
+    }
+
+    public function test_charge_success_creates_paid_renewal_and_dispatches_job(): void
+    {
+        Queue::fake();
+
+        // Mock StripeService so no real Stripe calls happen.
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('createCustomer')->andReturn((object) ['id' => 'cus_test']);
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            (object) ['type' => 'card', 'card' => (object) ['brand' => 'visa', 'last4' => '4242']]
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn((object) ['id' => 'pi_test']);
+        $stripe->shouldReceive('processPayment')->andReturn(
+            (object) ['status' => 'succeeded', 'latest_charge' => 'ch_test']
+        );
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $svc = app(RenewalService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999, 'Email' => 'tauqeer@example.com',
+            'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
+        ]]);
+
+        $result = $svc->charge(999, $profile, 'pm_test_123', null);
+
+        $this->assertTrue($result['success']);
+        $this->assertArrayHasKey('renewal_id', $result);
+        $this->assertDatabaseHas('renewals', ['id' => $result['renewal_id'], 'status' => 'paid']);
+        Queue::assertPushed(ProcessMembershipRenewal::class);
+    }
+
+    public function test_charge_requires_action_returns_client_secret(): void
+    {
+        Queue::fake();
+
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('createCustomer')->andReturn((object) ['id' => 'cus_test']);
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            (object) ['type' => 'card', 'card' => (object) ['brand' => 'visa', 'last4' => '4242']]
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn((object) ['id' => 'pi_test']);
+        $stripe->shouldReceive('processPayment')->andReturn(
+            (object) ['status' => 'requires_action', 'client_secret' => 'pi_test_secret']
+        );
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $svc = app(RenewalService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999, 'Email' => 'tauqeer@example.com',
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
+        ]]);
+
+        $result = $svc->charge(999, $profile, 'pm_test_123', null);
+
+        $this->assertTrue($result['requires_action']);
+        $this->assertSame('pi_test_secret', $result['client_secret']);
+        Queue::assertNotPushed(ProcessMembershipRenewal::class);
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
     }
 }

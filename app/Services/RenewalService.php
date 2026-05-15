@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Jobs\ProcessMembershipRenewal;
+use App\Models\Renewal;
 use App\Support\MemberProfile;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -26,6 +29,8 @@ class RenewalService
     ];
 
     private const LIFETIME_SLUGS = ['lifetime_family', 'lifetime_individual'];
+
+    public function __construct(private StripeService $stripe) {}
 
     /**
      * Resolve the member's membership-type slug from their WA level name.
@@ -143,5 +148,98 @@ class RenewalService
             return now()->addMonth()->toIso8601String();
         }
         return now()->addYear()->endOfYear()->toIso8601String();
+    }
+
+    /**
+     * Run the Stripe charge sequence for a renewal. On success, persists a
+     * 'paid' Renewal and dispatches ProcessMembershipRenewal.
+     *
+     * @return array{
+     *   success:bool, renewal_id?:int, requires_action?:bool,
+     *   client_secret?:string, payment_intent_id?:string, message?:string
+     * }
+     */
+    public function charge(int $contactId, MemberProfile $profile, string $paymentMethodId, ?float $checkomaticAmount): array
+    {
+        $type        = $this->resolveTypeSlug($profile); // throws for lifetime
+        $familyCount = count($profile->family);
+        $fee         = $this->resolveFee($type, $familyCount, $checkomaticAmount);
+
+        $renewal = Renewal::create([
+            'contact_id'               => $contactId,
+            'member_email'             => $profile->email,
+            'membership_type'          => $type,
+            'amount_cents'             => $fee['cents'],
+            'currency'                 => 'usd',
+            'status'                   => 'pending',
+            'stripe_payment_method_id' => $paymentMethodId,
+        ]);
+
+        $description = ucwords(str_replace('_', ' ', $type)) . ' Membership Renewal — ISGH';
+
+        try {
+            // ── Customer ──────────────────────────────────────────────────
+            $customer = $this->stripe->createCustomer([
+                'name'  => trim($profile->fullName) ?: $profile->email,
+                'email' => $profile->email,
+                'phone' => $profile->phone ?: null,
+            ]);
+            $renewal->update(['stripe_customer_id' => $customer->id]);
+
+            // ── Payment method ───────────────────────────────────────────
+            $pm   = $this->stripe->addPaymentMethodToCustomer($paymentMethodId, $customer->id);
+            $card = $pm->card ?? null;
+            $renewal->update([
+                'payment_method' => $pm->type ?? null,
+                'card_brand'     => $card->brand ?? null,
+                'card_last4'     => $card->last4 ?? null,
+            ]);
+
+            // ── Payment intent ───────────────────────────────────────────
+            $intent = $this->stripe->createPaymentIntent([
+                'amount_cents' => $fee['cents'],
+                'currency'     => 'usd',
+                'customer_id'  => $customer->id,
+                'description'  => $description,
+                'metadata'     => [
+                    'contact_id'      => $contactId,
+                    'renewal_id'      => $renewal->id,
+                    'membership_type' => $type,
+                ],
+            ]);
+            $renewal->update(['stripe_payment_intent_id' => $intent->id]);
+
+            // ── Confirm / charge ─────────────────────────────────────────
+            $confirmed = $this->stripe->processPayment($intent->id, $paymentMethodId);
+            $succeeded = ($confirmed->status ?? null) === 'succeeded';
+
+            if (! $succeeded) {
+                if (($confirmed->status ?? null) === 'requires_action') {
+                    return [
+                        'success'           => true,
+                        'requires_action'   => true,
+                        'client_secret'     => $confirmed->client_secret ?? '',
+                        'payment_intent_id' => $intent->id,
+                        'renewal_id'        => $renewal->id,
+                    ];
+                }
+                $renewal->update(['status' => 'failed', 'error_message' => 'Payment status: ' . ($confirmed->status ?? 'unknown')]);
+                return ['success' => false, 'message' => 'Payment could not be completed. Please try another card.'];
+            }
+
+            $renewal->update([
+                'status'           => 'paid',
+                'stripe_charge_id' => $confirmed->latest_charge ?? null,
+                'paid_at'          => now(),
+            ]);
+
+            ProcessMembershipRenewal::dispatch($renewal);
+
+            return ['success' => true, 'renewal_id' => $renewal->id];
+        } catch (\Throwable $e) {
+            $renewal->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            Log::error('RenewalService::charge failed', ['renewal_id' => $renewal->id, 'error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'Payment failed: ' . $e->getMessage()];
+        }
     }
 }
