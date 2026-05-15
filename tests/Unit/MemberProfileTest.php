@@ -101,9 +101,15 @@ class MemberProfileTest extends TestCase
     public function test_days_left_positive_for_future_renewal(): void
     {
         $b = $this->bundle();
-        $b['contact']['FieldValues'][] = ['SystemCode' => 'RenewalDue', 'FieldName' => 'Renewal due', 'Value' => now()->addDays(30)->toIso8601String()];
+        // Replace RenewalDue in place — field() returns the FIRST match, so appending would be ignored.
+        foreach ($b['contact']['FieldValues'] as &$fv) {
+            if (($fv['SystemCode'] ?? '') === 'RenewalDue') {
+                $fv['Value'] = now()->addDays(30)->toIso8601String();
+            }
+        }
+        unset($fv);
         $p = new MemberProfile($b);
-        $this->assertGreaterThan(0, $p->daysLeft());
+        $this->assertSame(30, $p->daysLeft());
         $this->assertNull($p->daysOverdue());
     }
 
