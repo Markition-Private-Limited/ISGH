@@ -33,36 +33,43 @@ class RenewalService
      */
     public function resolveTypeSlug(MemberProfile $profile): string
     {
-        $levelName = trim($profile->level);
-        $slug = self::LEVEL_NAME_TO_SLUG[$levelName] ?? null;
-
-        // Fallback: a level name containing "lifetime"/"checkomatic"/"family"/"flat".
-        if ($slug === null) {
-            $lower = strtolower($levelName);
-            $slug = match (true) {
-                str_contains($lower, 'lifetime')   => 'lifetime_individual',
-                str_contains($lower, 'checkomatic')=> str_contains($lower, 'family') ? 'checkomatic_family' : 'checkomatic_individual',
-                str_contains($lower, 'flat')       => 'flat',
-                str_contains($lower, 'family')     => 'family',
-                default                            => 'individual',
-            };
-        }
+        $slug = $this->resolveSlug($profile);
 
         if (in_array($slug, self::LIFETIME_SLUGS, true)) {
-            throw new RuntimeException("Lifetime membership ({$levelName}) is not renewable.");
+            throw new RuntimeException(
+                'Lifetime membership (' . trim($profile->level) . ') is not renewable.'
+            );
         }
 
         return $slug;
     }
 
-    /** True when a membership-type slug is a non-renewable lifetime plan. */
+    /** True when the member's WA level is a non-renewable lifetime plan. */
     public function isLifetimeLevel(MemberProfile $profile): bool
+    {
+        return in_array($this->resolveSlug($profile), self::LIFETIME_SLUGS, true);
+    }
+
+    /**
+     * Map the member's WA membership-level name to a membership-type slug.
+     * Uses the LEVEL_NAME_TO_SLUG table, with a substring-based fallback for
+     * level names not in the table.
+     */
+    private function resolveSlug(MemberProfile $profile): string
     {
         $levelName = trim($profile->level);
         $slug = self::LEVEL_NAME_TO_SLUG[$levelName] ?? null;
-        if ($slug === null) {
-            return str_contains(strtolower($levelName), 'lifetime');
+        if ($slug !== null) {
+            return $slug;
         }
-        return in_array($slug, self::LIFETIME_SLUGS, true);
+
+        $lower = strtolower($levelName);
+        return match (true) {
+            str_contains($lower, 'lifetime')    => 'lifetime_individual',
+            str_contains($lower, 'checkomatic') => str_contains($lower, 'family') ? 'checkomatic_family' : 'checkomatic_individual',
+            str_contains($lower, 'flat')        => 'flat',
+            str_contains($lower, 'family')      => 'family',
+            default                             => 'individual',
+        };
     }
 }
