@@ -60,8 +60,11 @@ class MemberProfile
         $this->dob         = $this->field('Date of Birth', 'custom-10694881');
         $this->txId        = $this->field('TX DL/ID Number', 'custom-17846913');
         $this->zone        = $this->field('Zone / Center', 'custom-9967573');
-        $this->memberSince = $this->field('Member since', 'MemberSince');
-        $this->renewalDue  = $this->field('Renewal due', 'RenewalDue');
+        // MemberSince / RenewalDue are returned by WildApricot as TOP-LEVEL contact
+        // properties (see WildApricotService::createActiveMember). Prefer those;
+        // fall back to FieldValues only if the top-level key is absent.
+        $this->memberSince = $this->topLevelOrField('MemberSince', 'Member since', 'MemberSince');
+        $this->renewalDue  = $this->topLevelOrField('RenewalDue', 'Renewal due', 'RenewalDue');
         $this->yearlyFee   = $this->field('Membership fee', 'MembershipFee');
 
         // Family members — each wrapped in its own MemberProfile.
@@ -127,6 +130,23 @@ class MemberProfile
             }
         }
         return '';
+    }
+
+    /**
+     * Read a value that WildApricot may return as a top-level contact key
+     * (e.g. MemberSince, RenewalDue) OR inside FieldValues. The top-level key
+     * wins; FieldValues is the fallback. Returns '' when neither is present.
+     */
+    private function topLevelOrField(string $topKey, string $fieldName, string $systemCode = ''): string
+    {
+        $top = $this->contact[$topKey] ?? null;
+        if (is_array($top)) {
+            $top = $top['Value'] ?? ($top['Label'] ?? null);
+        }
+        if ($top !== null && $top !== '' && strtolower((string) $top) !== 'null') {
+            return (string) $top;
+        }
+        return $this->field($fieldName, $systemCode);
     }
 
     /** True when the membership status indicates a lapsed membership. */

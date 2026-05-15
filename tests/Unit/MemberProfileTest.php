@@ -91,6 +91,35 @@ class MemberProfileTest extends TestCase
         $this->assertSame('November 09, 2005', $p->dobFormatted());
     }
 
+    public function test_member_since_and_renewal_read_from_top_level_contact_keys(): void
+    {
+        // WildApricot returns MemberSince / RenewalDue as top-level contact
+        // properties, not inside FieldValues. The DTO must read them there.
+        $p = new MemberProfile(['contact' => [
+            'Id'          => 1,
+            'MemberSince' => '2021-08-22T00:00:00',
+            'RenewalDue'  => '2027-01-15T00:00:00',
+            'FieldValues' => [],
+        ]]);
+
+        $this->assertSame('August 22, 2021', $p->memberSinceFormatted());
+        $this->assertSame('January 15, 2027', $p->renewalFormatted());
+    }
+
+    public function test_top_level_key_takes_precedence_over_field_value(): void
+    {
+        // When both exist, the top-level contact key wins.
+        $p = new MemberProfile(['contact' => [
+            'Id'          => 1,
+            'MemberSince' => '2020-01-01T00:00:00',
+            'FieldValues' => [
+                ['SystemCode' => 'MemberSince', 'FieldName' => 'Member since', 'Value' => '1999-12-31T00:00:00'],
+            ],
+        ]]);
+
+        $this->assertSame('January 01, 2020', $p->memberSinceFormatted());
+    }
+
     public function test_formatted_helpers_return_empty_for_blank(): void
     {
         $p = new MemberProfile(['contact' => ['Id' => 1, 'FieldValues' => []]]);
