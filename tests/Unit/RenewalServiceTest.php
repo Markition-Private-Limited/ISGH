@@ -259,6 +259,29 @@ class RenewalServiceTest extends TestCase
         Queue::assertNotPushed(\App\Jobs\ProcessMembershipRenewal::class);
     }
 
+    public function test_charge_rejects_checkomatic_renewal_with_no_amount(): void
+    {
+        Queue::fake();
+
+        // Stripe must never be called — a mock with no expectations would fail
+        // loudly if charge() proceeded past the guard.
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $svc = app(RenewalService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999, 'Email' => 'cm@example.com',
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Checkomatic'], 'FieldValues' => [],
+        ]]);
+
+        $result = $svc->charge(999, $profile, 'pm_test', null);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Please enter your monthly contribution amount.', $result['message']);
+        $this->assertDatabaseCount('renewals', 0);
+        Queue::assertNotPushed(\App\Jobs\ProcessMembershipRenewal::class);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();

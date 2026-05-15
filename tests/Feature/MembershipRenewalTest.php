@@ -96,6 +96,24 @@ class MembershipRenewalTest extends TestCase
           ->assertJson(['processed' => true, 'wa_invoice_id' => 555]);
     }
 
+    public function test_member_cannot_read_another_members_renewal_status(): void
+    {
+        // A renewal that belongs to contact 999.
+        $renewal = Renewal::create([
+            'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
+            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'currency' => 'usd', 'status' => 'processed', 'processed' => true,
+            'wa_invoice_id' => 555,
+        ]);
+
+        // A different member (contact 888) must not be able to read it.
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 888,
+        ])->getJson("/member-portal/renew/status/{$renewal->id}")
+          ->assertStatus(404);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();

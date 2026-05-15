@@ -161,7 +161,17 @@ class RenewalService
      */
     public function charge(int $contactId, MemberProfile $profile, string $paymentMethodId, ?float $checkomaticAmount): array
     {
-        $type        = $this->resolveTypeSlug($profile); // throws for lifetime
+        $type = $this->resolveTypeSlug($profile); // throws for lifetime
+
+        // Checkomatic renewals require a positive member-entered monthly amount.
+        // Without this guard a missing amount would resolve to a $0 charge.
+        if (str_starts_with($type, 'checkomatic') && (float) ($checkomaticAmount ?? 0) <= 0) {
+            return [
+                'success' => false,
+                'message' => 'Please enter your monthly contribution amount.',
+            ];
+        }
+
         $familyCount = count($profile->family);
         $fee         = $this->resolveFee($type, $familyCount, $checkomaticAmount);
 
