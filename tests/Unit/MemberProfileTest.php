@@ -329,4 +329,13 @@ class MemberProfileTest extends TestCase
         $this->assertSame('', $p->billingPeriod(['date' => '']));
         $this->assertSame('', $p->billingPeriod([]));
     }
+
+    public function test_billing_period_blank_for_unparseable_date(): void
+    {
+        $b = $this->bundle();
+        $b['contact']['MembershipLevel'] = ['Name' => 'Individual Membership'];
+        $p = new MemberProfile($b);
+
+        $this->assertSame('', $p->billingPeriod(['date' => 'not-a-date']));
+    }
 }
