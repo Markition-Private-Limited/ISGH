@@ -76,13 +76,15 @@ class MemberProfile
             if (! is_array($inv)) {
                 continue;
             }
+            $iso = $this->isoToDate($inv['CreatedDate'] ?? '');
             $this->invoices[] = [
-                'id'     => $inv['Id'] ?? null,
-                'number' => (string) ($inv['DocumentNumber'] ?? ('INV-' . ($inv['Id'] ?? ''))),
-                'date'   => $this->isoToDate($inv['CreatedDate'] ?? ''),
-                'amount' => (float) ($inv['Value'] ?? 0),
-                'isPaid' => (bool) ($inv['IsPaid'] ?? false),
-                'url'    => (string) ($inv['Url'] ?? '#'),
+                'id'        => $inv['Id'] ?? null,
+                'number'    => (string) ($inv['DocumentNumber'] ?? ('INV-' . ($inv['Id'] ?? ''))),
+                'date'      => $iso,
+                'dateLabel' => $this->formatDate($iso),
+                'amount'    => (float) ($inv['Value'] ?? 0),
+                'isPaid'    => (bool) ($inv['IsPaid'] ?? false),
+                'url'       => (string) ($inv['Url'] ?? '#'),
             ];
         }
 
@@ -91,9 +93,11 @@ class MemberProfile
             if (! is_array($pay)) {
                 continue;
             }
+            $payIso = $this->isoToDate($pay['CreatedDate'] ?? '');
             $this->payments[] = [
-                'date'   => $this->isoToDate($pay['CreatedDate'] ?? ''),
-                'amount' => (float) ($pay['Value'] ?? 0),
+                'date'      => $payIso,
+                'dateLabel' => $this->formatDate($payIso),
+                'amount'    => (float) ($pay['Value'] ?? 0),
             ];
         }
     }
@@ -223,7 +227,7 @@ class MemberProfile
             return null;
         }
         usort($unpaid, fn ($a, $b) => strcmp($a['date'], $b['date']));
-        return ['amount' => $unpaid[0]['amount'], 'date' => $unpaid[0]['date']];
+        return ['amount' => $unpaid[0]['amount'], 'date' => $unpaid[0]['date'], 'dateLabel' => $unpaid[0]['dateLabel']];
     }
 
     /** Most recent payment as ['amount'=>float,'date'=>string], or null. */
@@ -234,7 +238,7 @@ class MemberProfile
         }
         $sorted = $this->payments;
         usort($sorted, fn ($a, $b) => strcmp($b['date'], $a['date']));
-        return ['amount' => $sorted[0]['amount'], 'date' => $sorted[0]['date']];
+        return ['amount' => $sorted[0]['amount'], 'date' => $sorted[0]['date'], 'dateLabel' => $sorted[0]['dateLabel']];
     }
 
     /** Sum of payment amounts in the current calendar year. */

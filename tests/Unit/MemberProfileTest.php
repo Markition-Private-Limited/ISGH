@@ -166,6 +166,7 @@ class MemberProfileTest extends TestCase
         $inv = $p->invoices[0];
         $this->assertSame('INV-2026-0001', $inv['number']);
         $this->assertSame('2026-01-15', $inv['date']);
+        $this->assertSame('January 15, 2026', $inv['dateLabel']);
         $this->assertSame(20.0, $inv['amount']);
         $this->assertTrue($inv['isPaid']);
     }

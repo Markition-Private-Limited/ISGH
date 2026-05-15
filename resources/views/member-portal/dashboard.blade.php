@@ -1240,7 +1240,7 @@
                   </div>
                   <div class="invoice-meta">
                     <div class="invoice-id">{{ $inv['number'] }}</div>
-                    <div class="invoice-date">{{ $inv['date'] ?: '—' }}</div>
+                    <div class="invoice-date">{{ $inv['dateLabel'] ?: '—' }}</div>
                   </div>
                   <div class="invoice-right">
                     <div class="invoice-amount">${{ number_format($inv['amount'], 2) }}</div>
@@ -1263,6 +1263,7 @@
                 <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
               </a>
             </div>
+            @php $next = $profile->nextPayment(); $last = $profile->lastPayment(); @endphp
             <div class="payment-grid">
               <div class="pay-tile next">
                 <div class="pay-tile-head">
@@ -1274,8 +1275,8 @@
                   </span>
                 </div>
                 <div>
-                  <div class="pay-tile-amount">{{ $profile->nextPayment() ? '$' . number_format($profile->nextPayment()['amount'], 2) : '$0.00' }}</div>
-                  <div class="pay-tile-date">{{ $profile->nextPayment()['date'] ?? '—' }}</div>
+                  <div class="pay-tile-amount">{{ $next ? '$' . number_format($next['amount'], 2) : '$0.00' }}</div>
+                  <div class="pay-tile-date">{{ $next['dateLabel'] ?? '—' }}</div>
                 </div>
               </div>
 
@@ -1289,8 +1290,8 @@
                   </span>
                 </div>
                 <div>
-                  <div class="pay-tile-amount">{{ $profile->lastPayment() ? '$' . number_format($profile->lastPayment()['amount'], 2) : '$0.00' }}</div>
-                  <div class="pay-tile-date">{{ $profile->lastPayment()['date'] ?? '—' }}</div>
+                  <div class="pay-tile-amount">{{ $last ? '$' . number_format($last['amount'], 2) : '$0.00' }}</div>
+                  <div class="pay-tile-date">{{ $last['dateLabel'] ?? '—' }}</div>
                 </div>
               </div>
 
