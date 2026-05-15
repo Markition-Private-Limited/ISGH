@@ -210,6 +210,46 @@ class MemberPortalController extends Controller
         return view('member-portal.profile', compact('profile', 'email'));
     }
 
+    // ── Save profile edits back to WildApricot ────────────────────────────
+
+    public function updateProfile(Request $request, MemberPortalService $portal)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Session expired. Please sign in again.'], 401);
+        }
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name'  => ['required', 'string', 'max:100'],
+            'email'      => ['required', 'email'],
+            'phone'      => ['nullable', 'string', 'max:30'],
+            'street'     => ['nullable', 'string', 'max:255'],
+            'city'       => ['nullable', 'string', 'max:100'],
+            'state'      => ['nullable', 'string', 'max:100'],
+            'zip'        => ['nullable', 'string', 'max:20'],
+            'dob'        => ['nullable', 'date'],
+            'tx_dl'      => ['nullable', 'string', 'max:50'],
+        ]);
+
+        try {
+            $portal->updateProfile((int) $contactId, $validated);
+        } catch (\Throwable $e) {
+            Log::error('MemberPortal: profile update failed', [
+                'contact_id' => $contactId, 'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not save changes. Please try again.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Changes saved successfully.',
+        ]);
+    }
+
     // ── Logout ────────────────────────────────────────────────────────────
 
     public function logout(Request $request)

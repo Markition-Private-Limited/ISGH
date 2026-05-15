@@ -68,4 +68,38 @@ class MemberPortalIntegrationTest extends TestCase
             ->assertOk()
             ->assertSee('Tauqeer');
     }
+
+    public function test_update_profile_persists_and_invalidates_cache(): void
+    {
+        Http::fake([
+            'api.wildapricot.org/v2.3/accounts/12345/contacts/999' => Http::sequence()
+                ->push(['Id' => 999, 'FirstName' => 'Tauqeer', 'Status' => 'Active', 'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => []], 200)
+                ->push(['Id' => 999, 'FirstName' => 'Tauqeer', 'Status' => 'Active', 'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => []], 200)
+                ->push(['Id' => 999, 'FirstName' => 'Tariq', 'Status' => 'Active', 'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contacts?*' => Http::response(['Contacts' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/invoices*'  => Http::response(['Invoices' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/payments*'  => Http::response(['Payments' => []], 200),
+        ]);
+
+        Cache::put('member_portal_bundle_999', ['contact' => ['Id' => 999], 'family' => [], 'invoices' => [], 'payments' => []], now()->addMinutes(10));
+
+        $this->withSession(['member_portal_authenticated' => true, 'member_portal_contact_id' => 999])
+            ->postJson('/member-portal/profile/update', [
+                'first_name' => 'Tariq', 'last_name' => 'Alam',
+                'email' => 'tariq@example.com', 'phone' => '2154389281',
+            ])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->assertFalse(Cache::has('member_portal_bundle_999'));
+    }
+
+    public function test_update_profile_rejects_invalid_email(): void
+    {
+        $this->withSession(['member_portal_authenticated' => true, 'member_portal_contact_id' => 999])
+            ->postJson('/member-portal/profile/update', [
+                'first_name' => 'Tariq', 'last_name' => 'Alam', 'email' => 'not-an-email',
+            ])
+            ->assertStatus(422);
+    }
 }

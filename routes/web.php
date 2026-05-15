@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MemberPortalController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\OtpController;
 use App\Http\Controllers\PortalController;
@@ -52,6 +53,22 @@ Route::prefix('admin')->name('portal.')->group(function () {
         Route::get('/members', [PortalController::class, 'members'])->name('members');
         Route::get('/members/export/csv', [PortalController::class, 'exportCsv'])->name('members.export.csv');
         Route::get('/members/export/pdf', [PortalController::class, 'exportPdf'])->name('members.export.pdf');
+    });
+});
+
+// ── Member Portal ─────────────────────────────────────────────────────────────
+Route::prefix('member-portal')->name('member-portal.')->group(function () {
+    Route::get('/', fn() => redirect()->route('member-portal.login'));
+    Route::get('/login',      [MemberPortalController::class, 'showLogin'])->name('login');
+    Route::post('/send-otp',  [MemberPortalController::class, 'sendOtp'])->name('send-otp');
+    Route::post('/verify-otp',[MemberPortalController::class, 'verifyOtp'])->name('verify-otp');
+    Route::post('/resend-otp',[MemberPortalController::class, 'resendOtp'])->name('resend-otp');
+    Route::post('/logout',    [MemberPortalController::class, 'logout'])->name('logout');
+    
+    Route::middleware('member.portal.auth')->group(function () {
+        Route::get('/dashboard', [MemberPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/profile',   [MemberPortalController::class, 'profile'])->name('profile');
+        Route::post('/profile/update', [MemberPortalController::class, 'updateProfile'])->name('profile.update');
     });
 });
 

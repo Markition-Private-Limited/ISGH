@@ -1036,7 +1036,11 @@ class WildApricotService
             }
         }
 
-        $fields[] = ['FieldName' => 'Renewal due', 'SystemCode' => 'RenewalDue', 'Value' => $this->calcRenewalDate($data['membership_type'])];
+        // Renewal due — only set when a membership type is provided (e.g. signup /
+        // level change). Profile edits omit membership_type and must not touch it.
+        if (! empty($data['membership_type'])) {
+            $fields[] = ['FieldName' => 'Renewal due', 'SystemCode' => 'RenewalDue', 'Value' => $this->calcRenewalDate($data['membership_type'])];
+        }
 
         return $fields;
     }
