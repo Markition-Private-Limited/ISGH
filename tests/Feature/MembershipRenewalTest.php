@@ -1,0 +1,104 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Jobs\ProcessMembershipRenewal;
+use App\Models\Renewal;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Mockery;
+use Tests\TestCase;
+
+class MembershipRenewalTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::put('wa_access_token', 'test-token', 1500);
+        config(['services.wild_apricot.account_id' => '12345']);
+        Http::fake([
+            'api.wildapricot.org/v2.3/accounts/12345/contacts/999' => Http::response([
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Lapsed',
+                'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contactfields' => Http::response([
+                ['FieldName' => 'Member Identifier', 'SystemCode' => 'custom-member-id'],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contacts?*' => Http::response(['Contacts' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/invoices*'  => Http::response(['Invoices' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/payments*'  => Http::response(['Payments' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/membershiplevels' => Http::response([
+                ['Id' => 1, 'Name' => 'Individual', 'MembershipFee' => 25.0],
+            ], 200),
+        ]);
+    }
+
+    public function test_renew_summary_returns_fee_and_renewal_date(): void
+    {
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+        ])->getJson('/member-portal/renew/summary')
+          ->assertOk()
+          ->assertJson(['renewable' => true, 'type' => 'individual'])
+          ->assertJsonPath('fee.cents', 2500);
+    }
+
+    public function test_process_renewal_charges_and_creates_renewal(): void
+    {
+        Queue::fake();
+
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('createCustomer')->andReturn(
+            \Stripe\Customer::constructFrom(['id' => 'cus_test'])
+        );
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            \Stripe\PaymentMethod::constructFrom(['type' => 'card', 'card' => ['brand' => 'visa', 'last4' => '4242']])
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn(
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test'])
+        );
+        $stripe->shouldReceive('processPayment')->andReturn(
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test', 'status' => 'succeeded', 'latest_charge' => 'ch_test'])
+        );
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+        ])->postJson('/member-portal/renew', ['payment_method_id' => 'pm_test_123'])
+          ->assertOk()
+          ->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('renewals', ['contact_id' => 999, 'status' => 'paid']);
+        Queue::assertPushed(ProcessMembershipRenewal::class);
+    }
+
+    public function test_renew_status_reflects_renewal_state(): void
+    {
+        $renewal = Renewal::create([
+            'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
+            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'currency' => 'usd', 'status' => 'processed', 'processed' => true,
+            'wa_invoice_id' => 555,
+        ]);
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+        ])->getJson("/member-portal/renew/status/{$renewal->id}")
+          ->assertOk()
+          ->assertJson(['processed' => true, 'wa_invoice_id' => 555]);
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
+    }
+}

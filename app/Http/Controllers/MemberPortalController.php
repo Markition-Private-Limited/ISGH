@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Mail\OtpMail;
+use App\Models\Renewal;
 use App\Services\MemberPortalService;
+use App\Services\RenewalService;
 use App\Services\WildApricotService;
 use App\Support\MemberProfile;
 use Illuminate\Http\Request;
@@ -333,6 +335,78 @@ class MemberPortalController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Changes saved successfully.',
+        ]);
+    }
+
+    // ── Membership Renewal ────────────────────────────────────────────────
+
+    /** Renewal modal data: fee, projected renewal date, family count. */
+    public function renewSummary(Request $request, MemberPortalService $portal, RenewalService $renewal)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Session expired.'], 401);
+        }
+
+        $profile = new MemberProfile($portal->getBundle((int) $contactId));
+
+        if ($renewal->isLifetimeLevel($profile)) {
+            return response()->json(['renewable' => false, 'message' => 'Lifetime memberships do not require renewal.']);
+        }
+
+        $summary = $renewal->buildSummary($profile);
+
+        return response()->json(array_merge(['renewable' => true], $summary));
+    }
+
+    /** Run the Stripe charge for a renewal. */
+    public function processRenewal(Request $request, MemberPortalService $portal, RenewalService $renewal)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Session expired. Please sign in again.'], 401);
+        }
+
+        $validated = $request->validate([
+            'payment_method_id' => ['required', 'string'],
+            'monthly_amount'    => ['nullable', 'numeric', 'min:1'],
+        ]);
+
+        $profile = new MemberProfile($portal->getBundle((int) $contactId));
+
+        if ($renewal->isLifetimeLevel($profile)) {
+            return response()->json(['success' => false, 'message' => 'Lifetime memberships are not renewable.'], 422);
+        }
+
+        try {
+            $result = $renewal->charge(
+                (int) $contactId,
+                $profile,
+                $validated['payment_method_id'],
+                isset($validated['monthly_amount']) ? (float) $validated['monthly_amount'] : null
+            );
+        } catch (\Throwable $e) {
+            Log::error('MemberPortal: renewal failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Could not process the renewal. Please try again.'], 422);
+        }
+
+        $status = ($result['success'] ?? false) ? 200 : 402;
+        return response()->json($result, $status);
+    }
+
+    /** Renewal status for the success screen. */
+    public function renewStatus(Request $request, Renewal $renewal)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId || (int) $renewal->contact_id !== (int) $contactId) {
+            return response()->json(['success' => false, 'message' => 'Not found.'], 404);
+        }
+
+        return response()->json([
+            'success'       => true,
+            'status'        => $renewal->status,
+            'processed'     => $renewal->processed,
+            'wa_invoice_id' => $renewal->wa_invoice_id,
         ]);
     }
 

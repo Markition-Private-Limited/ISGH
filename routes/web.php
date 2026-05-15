@@ -71,6 +71,11 @@ Route::prefix('member-portal')->name('member-portal.')->group(function () {
         Route::post('/profile/update', [MemberPortalController::class, 'updateProfile'])->name('profile.update');
         Route::get('/payments', [MemberPortalController::class, 'payments'])->name('payments');
 
+        // Membership renewal
+        Route::get('/renew/summary',          [MemberPortalController::class, 'renewSummary'])->name('renew.summary');
+        Route::post('/renew',                 [MemberPortalController::class, 'processRenewal'])->name('renew');
+        Route::get('/renew/status/{renewal}', [MemberPortalController::class, 'renewStatus'])->name('renew.status');
+
         // Static content pages
         Route::get('/records',            [MemberPortalController::class, 'records'])->name('records');
         Route::get('/newsletter',         [MemberPortalController::class, 'newsletter'])->name('newsletter');
