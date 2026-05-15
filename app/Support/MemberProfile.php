@@ -65,7 +65,10 @@ class MemberProfile
         // fall back to FieldValues only if the top-level key is absent.
         $this->memberSince = $this->topLevelOrField('MemberSince', 'Member since', 'MemberSince');
         $this->renewalDue  = $this->topLevelOrField('RenewalDue', 'Renewal due', 'RenewalDue');
-        $this->yearlyFee   = $this->field('Membership fee', 'MembershipFee');
+
+        // Yearly fee — prefer the membership-level fee resolved by
+        // MemberPortalService; fall back to a 'Membership fee' FieldValue.
+        $this->yearlyFee = $this->resolveYearlyFee($bundle['membershipFee'] ?? null);
 
         // Family members — each wrapped in its own MemberProfile.
         foreach (($bundle['family'] ?? []) as $fam) {
@@ -147,6 +150,24 @@ class MemberProfile
             return (string) $top;
         }
         return $this->field($fieldName, $systemCode);
+    }
+
+    /**
+     * Resolve the yearly fee as a formatted currency string.
+     * Uses the membership-level fee when available, else a 'Membership fee'
+     * FieldValue, else '' (the view renders a placeholder).
+     */
+    private function resolveYearlyFee(?float $levelFee): string
+    {
+        if ($levelFee !== null) {
+            return '$' . number_format($levelFee, 2);
+        }
+        $fv = $this->field('Membership fee', 'MembershipFee');
+        if ($fv === '') {
+            return '';
+        }
+        // FieldValue may already include a currency symbol; normalise numerics.
+        return is_numeric($fv) ? '$' . number_format((float) $fv, 2) : $fv;
     }
 
     /** True when the membership status indicates a lapsed membership. */

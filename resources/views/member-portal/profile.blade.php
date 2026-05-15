@@ -660,7 +660,7 @@
                   <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </span>
               </div>
-              <div class="tile-value">{{ $profile->yearlyFee ?: '$200.00' }}</div>
+              <div class="tile-value">{{ $profile->yearlyFee ?: '—' }}</div>
             </div>
 
             <div class="info-tile">

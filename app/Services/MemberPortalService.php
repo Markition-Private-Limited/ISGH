@@ -34,11 +34,16 @@ class MemberPortalService
         $invoices = $this->wa->getInvoicesForContact($contactId);
         $payments = $this->wa->getPaymentsForContact($contactId);
 
+        // Resolve the annual membership fee from the contact's level.
+        $levelId       = (int) ($contact['MembershipLevel']['Id'] ?? 0);
+        $membershipFee = $levelId > 0 ? $this->wa->getMembershipLevelFee($levelId) : null;
+
         $bundle = [
-            'contact'  => $contact,
-            'family'   => $family,
-            'invoices' => $invoices,
-            'payments' => $payments,
+            'contact'       => $contact,
+            'family'        => $family,
+            'invoices'      => $invoices,
+            'payments'      => $payments,
+            'membershipFee' => $membershipFee,
         ];
 
         Cache::put($this->cacheKey($contactId), $bundle, now()->addMinutes(self::CACHE_TTL_MINUTES));

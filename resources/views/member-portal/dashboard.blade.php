@@ -1203,7 +1203,7 @@
                   </svg>
                 </span>
               </div>
-              <div class="tile-value">{{ $profile->yearlyFee ?: '$200.00' }}</div>
+              <div class="tile-value">{{ $profile->yearlyFee ?: '—' }}</div>
             </div>
 
             <div class="status-tile">

@@ -47,4 +47,6 @@ return [
         ['Id' => 5, 'Value' => 20.0, 'CreatedDate' => '2026-01-15T00:00:00'],
         ['Id' => 6, 'Value' => 60.0, 'CreatedDate' => '2025-03-10T00:00:00'],
     ],
+    // Annual membership fee resolved from the contact's membership level.
+    'membershipFee' => 200.0,
 ];

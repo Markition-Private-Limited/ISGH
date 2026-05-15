@@ -120,6 +120,30 @@ class MemberProfileTest extends TestCase
         $this->assertSame('January 01, 2020', $p->memberSinceFormatted());
     }
 
+    public function test_yearly_fee_from_resolved_membership_level_fee(): void
+    {
+        // assembleBundle resolves the level fee into bundle['membershipFee'].
+        $p = new MemberProfile($this->bundle());
+        $this->assertSame('$200.00', $p->yearlyFee);
+    }
+
+    public function test_yearly_fee_falls_back_to_field_value(): void
+    {
+        $p = new MemberProfile(['contact' => [
+            'Id'          => 1,
+            'FieldValues' => [
+                ['SystemCode' => 'MembershipFee', 'FieldName' => 'Membership fee', 'Value' => '150'],
+            ],
+        ]]);
+        $this->assertSame('$150.00', $p->yearlyFee);
+    }
+
+    public function test_yearly_fee_blank_when_unknown(): void
+    {
+        $p = new MemberProfile(['contact' => ['Id' => 1, 'FieldValues' => []]]);
+        $this->assertSame('', $p->yearlyFee);
+    }
+
     public function test_formatted_helpers_return_empty_for_blank(): void
     {
         $p = new MemberProfile(['contact' => ['Id' => 1, 'FieldValues' => []]]);

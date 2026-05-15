@@ -26,7 +26,7 @@ class MemberPortalServiceTest extends TestCase
             ], 200),
             'api.wildapricot.org/v2.3/accounts/12345/contacts/999' => Http::response([
                 'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
-                'Status' => 'Active', 'MembershipLevel' => ['Name' => 'Individual Membership'],
+                'Status' => 'Active', 'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual Membership'],
                 'FieldValues' => [],
             ], 200),
             'api.wildapricot.org/v2.3/accounts/12345/contacts?*' => Http::response([
@@ -37,6 +37,10 @@ class MemberPortalServiceTest extends TestCase
             ], 200),
             'api.wildapricot.org/v2.3/accounts/12345/payments*' => Http::response([
                 'Payments' => [['Id' => 5, 'Value' => 20.0, 'CreatedDate' => '2026-01-15T00:00:00']],
+            ], 200),
+            // Membership levels — assembleBundle resolves the contact's yearly fee.
+            'api.wildapricot.org/v2.3/accounts/12345/membershiplevels' => Http::response([
+                ['Id' => 1, 'Name' => 'Individual Membership', 'MembershipFee' => 200.0],
             ], 200),
         ]);
     }
@@ -51,6 +55,15 @@ class MemberPortalServiceTest extends TestCase
         $this->assertCount(1, $bundle['family']);
         $this->assertCount(1, $bundle['invoices']);
         $this->assertCount(1, $bundle['payments']);
+    }
+
+    public function test_assemble_bundle_resolves_membership_fee_from_level(): void
+    {
+        $this->fakeWaSuccess();
+
+        $bundle = app(MemberPortalService::class)->assembleBundle(999);
+
+        $this->assertSame(200.0, $bundle['membershipFee']);
     }
 
     public function test_assemble_bundle_caches_result(): void

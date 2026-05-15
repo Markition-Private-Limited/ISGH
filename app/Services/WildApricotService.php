@@ -142,6 +142,30 @@ class WildApricotService
         );
     }
 
+    // ─── MEMBER PORTAL — MEMBERSHIP LEVEL FEE ───────────────────────────────
+    // Returns the annual fee for a membership level, or null if unknown.
+    // WildApricot exposes the fee on the membership-level record (the contact's
+    // embedded MembershipLevel object only carries Id/Name), so we resolve it
+    // from the cached /membershiplevels list.
+
+    public function getMembershipLevelFee(int $levelId): ?float
+    {
+        try {
+            foreach ($this->getMembershipLevels() as $level) {
+                if (! is_array($level)) {
+                    continue;
+                }
+                if ((int) ($level['Id'] ?? 0) === $levelId) {
+                    $fee = $level['MembershipFee'] ?? null;
+                    return $fee !== null ? (float) $fee : null;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('WA getMembershipLevelFee exception', ['level_id' => $levelId, 'error' => $e->getMessage()]);
+        }
+        return null;
+    }
+
     public function resolveLevelId(string $type): int
     {
         $nameMap = [
