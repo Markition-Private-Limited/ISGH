@@ -668,7 +668,11 @@ class WildApricotService
         if (! empty($data['membership_type'])) {
             $levelId = $this->resolveLevelId($data['membership_type']);
             $payload['MembershipLevel'] = ['Id' => $levelId];
-            $payload['RenewalDue']      = $this->calcRenewalDate($data['membership_type']);
+            // An explicit renewal_due (used by the renewal flow) wins; otherwise
+            // fall back to calcRenewalDate (used by signup).
+            $payload['RenewalDue']      = ! empty($data['renewal_due'])
+                ? $data['renewal_due']
+                : $this->calcRenewalDate($data['membership_type']);
         } else {
             // Preserve existing level and renewal date
             if (! empty($existing['MembershipLevel'])) {

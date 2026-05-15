@@ -85,7 +85,8 @@ class RenewalService
     public function resolveFee(string $type, int $familyCount, ?float $checkomaticAmount): array
     {
         if ($type === 'flat') {
-            $cents = (1 + max(0, $familyCount)) * 2000;
+            $perMember = (int) (config('membership.fees')['flat']['cents'] ?? 2000);
+            $cents = (1 + max(0, $familyCount)) * $perMember;
             return ['cents' => $cents, 'label' => '$' . number_format($cents / 100, 2)];
         }
 
@@ -129,5 +130,18 @@ class RenewalService
             return now()->addMonth()->format('F d, Y');
         }
         return now()->addYear()->endOfYear()->format('F d, Y');
+    }
+
+    /**
+     * The renewal date a successful renewal will set, in ISO 8601 — the format
+     * WildApricot expects for the RenewalDue field. Must represent the same
+     * calendar date as newRenewalDate().
+     */
+    public function newRenewalDateIso(string $type): string
+    {
+        if (str_starts_with($type, 'checkomatic')) {
+            return now()->addMonth()->toIso8601String();
+        }
+        return now()->addYear()->endOfYear()->toIso8601String();
     }
 }
