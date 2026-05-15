@@ -69,6 +69,13 @@ class ProcessMembershipRenewalTest extends TestCase
         $this->assertSame('done', $renewal->wa_step);
         $this->assertSame(555, $renewal->wa_invoice_id);
         $this->assertSame('processed', $renewal->status);
+
+        // The job must have sent a PUT to the primary contact carrying a RenewalDue.
+        Http::assertSent(function ($request) {
+            return $request->method() === 'PUT'
+                && str_contains($request->url(), '/contacts/999')
+                && ! empty($request['RenewalDue']);
+        });
     }
 
     public function test_job_is_idempotent_when_already_processed(): void

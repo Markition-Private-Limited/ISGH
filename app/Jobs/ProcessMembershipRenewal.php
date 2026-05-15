@@ -148,4 +148,22 @@ class ProcessMembershipRenewal implements ShouldQueue
             ]);
         }
     }
+
+    /**
+     * Called by the queue when all retry attempts are exhausted.
+     * Marks the renewal as failed so the status endpoint reflects reality —
+     * the member's card was charged, but the WildApricot side did not complete.
+     */
+    public function failed(Throwable $e): void
+    {
+        $this->renewal->fresh()?->update([
+            'status'        => 'failed',
+            'error_message' => $e->getMessage(),
+        ]);
+
+        Log::error('ProcessMembershipRenewal: permanently failed after retries', [
+            'renewal_id' => $this->renewal->id,
+            'error'      => $e->getMessage(),
+        ]);
+    }
 }
