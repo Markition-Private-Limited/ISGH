@@ -64,7 +64,12 @@ class MemberProfile
         $this->renewalDue  = $this->field('Renewal due', 'RenewalDue');
         $this->yearlyFee   = $this->field('Membership fee', 'MembershipFee');
 
-        // Filled by later tasks (family, invoices, payments). Defaults keep this task green.
+        // Family members — each wrapped in its own MemberProfile.
+        foreach (($bundle['family'] ?? []) as $fam) {
+            if (is_array($fam)) {
+                $this->family[] = new MemberProfile(['contact' => $fam]);
+            }
+        }
     }
 
     /**
@@ -155,5 +160,23 @@ class MemberProfile
         } catch (\Throwable) {
             return '';
         }
+    }
+
+    /** True when the member has at least one family member. */
+    public function hasFamily(): bool
+    {
+        return $this->family !== [];
+    }
+
+    /** True when the member has a spouse (first family member). */
+    public function hasSpouse(): bool
+    {
+        return isset($this->family[0]);
+    }
+
+    /** The spouse (first family member), or null. */
+    public function spouse(): ?MemberProfile
+    {
+        return $this->family[0] ?? null;
     }
 }

@@ -127,4 +127,33 @@ class MemberProfileTest extends TestCase
         $this->assertGreaterThan(0, $p->daysOverdue());
         $this->assertNull($p->daysLeft());
     }
+
+    public function test_family_members_are_wrapped_as_member_profiles(): void
+    {
+        $p = new MemberProfile($this->bundle());
+
+        $this->assertCount(1, $p->family);
+        $this->assertInstanceOf(MemberProfile::class, $p->family[0]);
+        $this->assertSame('Sarah Alam', $p->family[0]->fullName);
+    }
+
+    public function test_spouse_is_first_family_member(): void
+    {
+        $p = new MemberProfile($this->bundle());
+
+        $this->assertTrue($p->hasSpouse());
+        $this->assertInstanceOf(MemberProfile::class, $p->spouse());
+        $this->assertSame('Sarah Alam', $p->spouse()->fullName);
+    }
+
+    public function test_no_spouse_when_family_empty(): void
+    {
+        $b = $this->bundle();
+        $b['family'] = [];
+        $p = new MemberProfile($b);
+
+        $this->assertFalse($p->hasSpouse());
+        $this->assertNull($p->spouse());
+        $this->assertFalse($p->hasFamily());
+    }
 }
