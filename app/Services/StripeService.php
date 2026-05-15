@@ -28,10 +28,8 @@ class StripeService
      * Create a new Stripe Customer.
      *
      * @param  array{email: string, name?: string, phone?: string, address?: array, metadata?: array}  $data
-     *
-     * @return Customer
      */
-    public function createCustomer(array $data): object
+    public function createCustomer(array $data): Customer
     {
         return Customer::create(array_filter([
             'email'    => $data['email'],
@@ -75,14 +73,12 @@ class StripeService
     /**
      * Attach a payment method to a customer and optionally set it as the
      * default for future invoices and payments.
-     *
-     * @return PaymentMethod
      */
     public function addPaymentMethodToCustomer(
         string $paymentMethodId,
         string $customerId,
         bool   $setAsDefault = true
-    ): object {
+    ): PaymentMethod {
         $pm = PaymentMethod::retrieve($paymentMethodId);
         $pm->attach(['customer' => $customerId]);
 
@@ -145,10 +141,8 @@ class StripeService
      *     metadata?: array,
      *     receipt_email?: string,
      * }  $data
-     *
-     * @return PaymentIntent
      */
-    public function createPaymentIntent(array $data): object
+    public function createPaymentIntent(array $data): PaymentIntent
     {
         return PaymentIntent::create(array_filter([
             'amount'               => $data['amount_cents'],
@@ -168,15 +162,13 @@ class StripeService
      *
      * Status will be 'succeeded' on success, or 'requires_action' if the
      * card needs 3DS authentication.
-     *
-     * @return PaymentIntent
      */
     public function processPayment(
         string $paymentIntentId,
         string $paymentMethodId,
         bool   $returnUrl = false,
         string $returnUrlValue = ''
-    ): object {
+    ): PaymentIntent {
         $params = ['payment_method' => $paymentMethodId];
 
         if ($returnUrl && $returnUrlValue) {

@@ -144,13 +144,20 @@ class RenewalServiceTest extends TestCase
 
         // Mock StripeService so no real Stripe calls happen.
         $stripe = Mockery::mock(\App\Services\StripeService::class);
-        $stripe->shouldReceive('createCustomer')->andReturn((object) ['id' => 'cus_test']);
-        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
-            (object) ['type' => 'card', 'card' => (object) ['brand' => 'visa', 'last4' => '4242']]
+        $stripe->shouldReceive('createCustomer')->andReturn(
+            \Stripe\Customer::constructFrom(['id' => 'cus_test'])
         );
-        $stripe->shouldReceive('createPaymentIntent')->andReturn((object) ['id' => 'pi_test']);
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            \Stripe\PaymentMethod::constructFrom([
+                'type' => 'card',
+                'card' => ['brand' => 'visa', 'last4' => '4242'],
+            ])
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn(
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test'])
+        );
         $stripe->shouldReceive('processPayment')->andReturn(
-            (object) ['status' => 'succeeded', 'latest_charge' => 'ch_test']
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test', 'status' => 'succeeded', 'latest_charge' => 'ch_test'])
         );
         $this->app->instance(\App\Services\StripeService::class, $stripe);
 
@@ -174,13 +181,20 @@ class RenewalServiceTest extends TestCase
         Queue::fake();
 
         $stripe = Mockery::mock(\App\Services\StripeService::class);
-        $stripe->shouldReceive('createCustomer')->andReturn((object) ['id' => 'cus_test']);
-        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
-            (object) ['type' => 'card', 'card' => (object) ['brand' => 'visa', 'last4' => '4242']]
+        $stripe->shouldReceive('createCustomer')->andReturn(
+            \Stripe\Customer::constructFrom(['id' => 'cus_test'])
         );
-        $stripe->shouldReceive('createPaymentIntent')->andReturn((object) ['id' => 'pi_test']);
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            \Stripe\PaymentMethod::constructFrom([
+                'type' => 'card',
+                'card' => ['brand' => 'visa', 'last4' => '4242'],
+            ])
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn(
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test'])
+        );
         $stripe->shouldReceive('processPayment')->andReturn(
-            (object) ['status' => 'requires_action', 'client_secret' => 'pi_test_secret']
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test', 'status' => 'requires_action', 'client_secret' => 'pi_test_secret'])
         );
         $this->app->instance(\App\Services\StripeService::class, $stripe);
 
