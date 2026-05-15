@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>Member Dashboard — ISGH</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -1602,7 +1603,8 @@
         editBtn.querySelector('span').textContent = editing ? 'Cancel' : 'Edit Profile';
       });
 
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', async () => {
+        // Light email validation
         let valid = true;
         inputs().forEach(el => {
           if (el.type === 'email' && el.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) {
@@ -1612,6 +1614,43 @@
           }
         });
         if (!valid) return;
+
+        // Only the primary form persists to WildApricot.
+        if (formId === 'formPrimary') {
+          const payload = {
+            first_name: document.getElementById('p-first')?.value || '',
+            last_name:  document.getElementById('p-last')?.value || '',
+            email:      document.getElementById('p-email')?.value || '',
+            phone:      document.getElementById('p-phone')?.value || '',
+            street:     document.getElementById('p-street')?.value || '',
+            city:       document.getElementById('p-city')?.value || '',
+            state:      document.getElementById('p-state')?.value || '',
+            zip:        document.getElementById('p-zip')?.value || '',
+            dob:        document.getElementById('p-dob')?.value || '',
+            tx_dl:      document.getElementById('p-tx')?.value || '',
+          };
+          try {
+            const res = await fetch('{{ route('member-portal.profile.update') }}', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+              },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!data.success) {
+              editBtn.querySelector('span').textContent = 'Edit Profile';
+              alert(data.message || 'Could not save changes.');
+              return;
+            }
+          } catch {
+            alert('Network error. Please try again.');
+            return;
+          }
+        }
+
+        // Success (or non-primary form): lock inputs, reset button, show banner.
         editing = false;
         inputs().forEach(el => { el.readOnly = true; });
         editBtn.querySelector('span').textContent = 'Edit Profile';
