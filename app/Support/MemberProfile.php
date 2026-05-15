@@ -93,4 +93,67 @@ class MemberProfile
         }
         return '';
     }
+
+    /** True when the membership status indicates a lapsed membership. */
+    public function isExpired(): bool
+    {
+        $s = strtolower($this->status);
+        return in_array($s, ['expired', 'lapsed', 'overdue'], true);
+    }
+
+    /** Renewal date as "January 15, 2027", or '' if unparseable. */
+    public function renewalFormatted(): string
+    {
+        return $this->formatDate($this->renewalDue);
+    }
+
+    /** Member-since date as "August 22, 2021", or '' if unparseable. */
+    public function memberSinceFormatted(): string
+    {
+        return $this->formatDate($this->memberSince);
+    }
+
+    /** Date of birth as "November 09, 2005", or '' if unparseable. */
+    public function dobFormatted(): string
+    {
+        return $this->formatDate($this->dob);
+    }
+
+    /** Whole days until renewal; null when renewal is in the past or unknown. */
+    public function daysLeft(): ?int
+    {
+        $diff = $this->renewalDiffDays();
+        return ($diff !== null && $diff >= 0) ? $diff : null;
+    }
+
+    /** Whole days a renewal is overdue; null when not overdue or unknown. */
+    public function daysOverdue(): ?int
+    {
+        $diff = $this->renewalDiffDays();
+        return ($diff !== null && $diff < 0) ? abs($diff) : null;
+    }
+
+    private function renewalDiffDays(): ?int
+    {
+        if ($this->renewalDue === '') {
+            return null;
+        }
+        try {
+            return (int) now()->startOfDay()->diffInDays(Carbon::parse($this->renewalDue)->startOfDay(), false);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function formatDate(string $value): string
+    {
+        if ($value === '' || strtolower($value) === 'null' || strtolower($value) === 'never') {
+            return '';
+        }
+        try {
+            return Carbon::parse($value)->format('F d, Y');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
 }

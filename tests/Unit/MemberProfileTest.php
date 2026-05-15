@@ -58,4 +58,67 @@ class MemberProfileTest extends TestCase
         $p = new MemberProfile(['contact' => ['Id' => 1, 'FieldValues' => 'broken']]);
         $this->assertSame('', $p->city);
     }
+
+    public function test_is_expired_true_for_expired_statuses(): void
+    {
+        foreach (['Expired', 'Lapsed', 'Overdue'] as $status) {
+            $b = $this->bundle();
+            $b['contact']['Status'] = $status;
+            $this->assertTrue((new MemberProfile($b))->isExpired(), "$status should be expired");
+        }
+    }
+
+    public function test_is_expired_false_for_active(): void
+    {
+        $this->assertFalse((new MemberProfile($this->bundle()))->isExpired());
+    }
+
+    public function test_renewal_formatted_returns_human_date(): void
+    {
+        $p = new MemberProfile($this->bundle());
+        $this->assertSame('January 15, 2027', $p->renewalFormatted());
+    }
+
+    public function test_member_since_formatted_returns_human_date(): void
+    {
+        $p = new MemberProfile($this->bundle());
+        $this->assertSame('August 22, 2021', $p->memberSinceFormatted());
+    }
+
+    public function test_dob_formatted_returns_human_date(): void
+    {
+        $p = new MemberProfile($this->bundle());
+        $this->assertSame('November 09, 2005', $p->dobFormatted());
+    }
+
+    public function test_formatted_helpers_return_empty_for_blank(): void
+    {
+        $p = new MemberProfile(['contact' => ['Id' => 1, 'FieldValues' => []]]);
+        $this->assertSame('', $p->renewalFormatted());
+        $this->assertSame('', $p->dobFormatted());
+    }
+
+    public function test_days_left_positive_for_future_renewal(): void
+    {
+        $b = $this->bundle();
+        $b['contact']['FieldValues'][] = ['SystemCode' => 'RenewalDue', 'FieldName' => 'Renewal due', 'Value' => now()->addDays(30)->toIso8601String()];
+        $p = new MemberProfile($b);
+        $this->assertGreaterThan(0, $p->daysLeft());
+        $this->assertNull($p->daysOverdue());
+    }
+
+    public function test_days_overdue_positive_for_past_renewal(): void
+    {
+        $b = $this->bundle();
+        // Replace RenewalDue with a past date.
+        foreach ($b['contact']['FieldValues'] as &$fv) {
+            if (($fv['SystemCode'] ?? '') === 'RenewalDue') {
+                $fv['Value'] = now()->subDays(12)->toIso8601String();
+            }
+        }
+        unset($fv);
+        $p = new MemberProfile($b);
+        $this->assertGreaterThan(0, $p->daysOverdue());
+        $this->assertNull($p->daysLeft());
+    }
 }
