@@ -211,6 +211,54 @@ class RenewalServiceTest extends TestCase
         Queue::assertNotPushed(ProcessMembershipRenewal::class);
     }
 
+    public function test_charge_declined_card_marks_renewal_failed_with_decline_code(): void
+    {
+        Queue::fake();
+
+        // Build a real Stripe CardException carrying a decline code.
+        $stripeError = \Stripe\ErrorObject::constructFrom([
+            'type'         => 'card_error',
+            'code'         => 'card_declined',
+            'decline_code' => 'insufficient_funds',
+            'message'      => 'Your card has insufficient funds.',
+        ]);
+        $cardException = new \Stripe\Exception\CardException('Your card has insufficient funds.');
+        $cardException->setError($stripeError);
+
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('createCustomer')->andReturn(
+            \Stripe\Customer::constructFrom(['id' => 'cus_test'])
+        );
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            \Stripe\PaymentMethod::constructFrom([
+                'type' => 'card',
+                'card' => ['brand' => 'visa', 'last4' => '4242'],
+            ])
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn(
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test'])
+        );
+        $stripe->shouldReceive('processPayment')->andThrow($cardException);
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $svc = app(RenewalService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999, 'Email' => 'tauqeer@example.com',
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
+        ]]);
+
+        $result = $svc->charge(999, $profile, 'pm_test_123', null);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Your card has insufficient funds.', $result['message']);
+        $this->assertDatabaseHas('renewals', [
+            'contact_id'         => 999,
+            'status'             => 'failed',
+            'error_decline_code' => 'insufficient_funds',
+        ]);
+        Queue::assertNotPushed(\App\Jobs\ProcessMembershipRenewal::class);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();

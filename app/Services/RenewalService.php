@@ -237,9 +237,56 @@ class RenewalService
 
             return ['success' => true, 'renewal_id' => $renewal->id];
         } catch (\Throwable $e) {
-            $renewal->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
-            Log::error('RenewalService::charge failed', ['renewal_id' => $renewal->id, 'error' => $e->getMessage()]);
-            return ['success' => false, 'message' => 'Payment failed: ' . $e->getMessage()];
+            $errorFields = $this->stripeErrorFields($e);
+            $renewal->update(['status' => 'failed'] + $errorFields);
+            Log::error('RenewalService::charge failed', [
+                'renewal_id'   => $renewal->id,
+                'decline_code' => $errorFields['error_decline_code'],
+                'error'        => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => $this->declineMessage($errorFields['error_decline_code'])];
         }
+    }
+
+    /**
+     * Extract structured Stripe error fields from any Throwable.
+     * Mirrors MembershipController's signup-flow error handling.
+     *
+     * @return array{error_type:string,error_code:?string,error_decline_code:?string,error_message:string}
+     */
+    private function stripeErrorFields(\Throwable $e): array
+    {
+        if (! ($e instanceof \Stripe\Exception\ApiErrorException)) {
+            return [
+                'error_type'         => 'api_error',
+                'error_code'         => null,
+                'error_decline_code' => null,
+                'error_message'      => $e->getMessage(),
+            ];
+        }
+
+        $err = $e->getError();
+
+        return [
+            'error_type'         => $err->type ?? 'api_error',
+            'error_code'         => $err->code ?? null,
+            'error_decline_code' => $err->decline_code ?? null,
+            'error_message'      => $e->getMessage(),
+        ];
+    }
+
+    /**
+     * Map a Stripe decline code to a member-facing message.
+     */
+    private function declineMessage(?string $declineCode): string
+    {
+        return match ($declineCode) {
+            'insufficient_funds'      => 'Your card has insufficient funds.',
+            'card_declined'           => 'Your card was declined. Please try a different card.',
+            'expired_card'            => 'Your card has expired.',
+            'incorrect_cvc'           => 'The card security code is incorrect.',
+            'lost_card', 'stolen_card'=> 'This card cannot be used. Please contact your bank.',
+            default                  => 'Payment failed. Please try a different card.',
+        };
     }
 }
