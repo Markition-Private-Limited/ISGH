@@ -271,6 +271,39 @@ class MemberProfile
         return ['amount' => $unpaid[0]['amount'], 'date' => $unpaid[0]['date'], 'dateLabel' => $unpaid[0]['dateLabel']];
     }
 
+    /**
+     * Billing-period label for an invoice row, derived from the membership level:
+     *  - lifetime levels never renew → '' (blank)
+     *  - checkomatic levels bill monthly → invoice month + 1 month
+     *  - all other (annual) levels → invoice month + 1 year
+     * Expects an invoice array as produced in the constructor (uses 'date').
+     * Returns '' when the invoice date is missing or unparseable.
+     */
+    public function billingPeriod(array $invoice): string
+    {
+        $date = (string) ($invoice['date'] ?? '');
+        if ($date === '') {
+            return '';
+        }
+
+        $level = strtolower($this->level);
+        if (str_contains($level, 'lifetime')) {
+            return '';
+        }
+
+        try {
+            $start = Carbon::parse($date);
+        } catch (\Throwable) {
+            return '';
+        }
+
+        $end = str_contains($level, 'checkomatic')
+            ? $start->copy()->addMonth()
+            : $start->copy()->addYear();
+
+        return $start->format('M Y') . ' – ' . $end->format('M Y');
+    }
+
     /** Most recent payment as ['amount'=>float,'date'=>string], or null. */
     public function lastPayment(): ?array
     {

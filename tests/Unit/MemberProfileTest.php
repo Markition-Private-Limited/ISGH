@@ -293,4 +293,40 @@ class MemberProfileTest extends TestCase
         $this->assertSame('2026-06-15', $next['date']);
         $this->assertSame(20.0, $next['amount']);
     }
+
+    public function test_billing_period_annual_adds_one_year(): void
+    {
+        $b = $this->bundle();
+        $b['contact']['MembershipLevel'] = ['Name' => 'Individual Membership'];
+        $p = new MemberProfile($b);
+
+        $period = $p->billingPeriod(['date' => '2026-01-15']);
+        $this->assertSame('Jan 2026 – Jan 2027', $period);
+    }
+
+    public function test_billing_period_checkomatic_adds_one_month(): void
+    {
+        $b = $this->bundle();
+        $b['contact']['MembershipLevel'] = ['Name' => 'Checkomatic'];
+        $p = new MemberProfile($b);
+
+        $period = $p->billingPeriod(['date' => '2026-01-15']);
+        $this->assertSame('Jan 2026 – Feb 2026', $period);
+    }
+
+    public function test_billing_period_lifetime_is_blank(): void
+    {
+        $b = $this->bundle();
+        $b['contact']['MembershipLevel'] = ['Name' => 'Lifetime'];
+        $p = new MemberProfile($b);
+
+        $this->assertSame('', $p->billingPeriod(['date' => '2026-01-15']));
+    }
+
+    public function test_billing_period_blank_for_missing_date(): void
+    {
+        $p = new MemberProfile($this->bundle());
+        $this->assertSame('', $p->billingPeriod(['date' => '']));
+        $this->assertSame('', $p->billingPeriod([]));
+    }
 }
