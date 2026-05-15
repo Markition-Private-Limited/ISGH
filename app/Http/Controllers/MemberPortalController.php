@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Mail\OtpMail;
-use App\Services\WildApricotService;
 use App\Services\MemberPortalService;
+use App\Services\WildApricotService;
+use App\Support\MemberProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -185,7 +186,7 @@ class MemberPortalController extends Controller
         }
 
         $bundle  = $portal->getBundle((int) $contactId);
-        $profile = new \App\Support\MemberProfile($bundle);
+        $profile = new MemberProfile($bundle);
 
         return view('member-portal.dashboard', compact('profile', 'email'));
     }
@@ -204,7 +205,7 @@ class MemberPortalController extends Controller
         }
 
         $bundle  = $portal->getBundle((int) $contactId);
-        $profile = new \App\Support\MemberProfile($bundle);
+        $profile = new MemberProfile($bundle);
 
         return view('member-portal.profile', compact('profile', 'email'));
     }
