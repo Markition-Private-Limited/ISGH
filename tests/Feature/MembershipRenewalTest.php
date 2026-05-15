@@ -146,6 +146,58 @@ class MembershipRenewalTest extends TestCase
           ->assertStatus(422);
     }
 
+    public function test_finalize_renewal_marks_paid_and_dispatches_job(): void
+    {
+        Queue::fake();
+
+        // A pending renewal awaiting 3DS, owned by the session member (999).
+        $renewal = Renewal::create([
+            'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
+            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'currency' => 'usd', 'status' => 'pending',
+            'stripe_payment_intent_id' => 'pi_3ds',
+        ]);
+
+        // Mock Stripe: the intent is now succeeded after the 3DS challenge.
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('getPaymentIntent')->with('pi_3ds')->andReturn(
+            \Stripe\PaymentIntent::constructFrom([
+                'id' => 'pi_3ds', 'status' => 'succeeded', 'latest_charge' => 'ch_3ds',
+            ])
+        );
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+        ])->postJson('/member-portal/renew/finalize', [
+            'renewal_id'        => $renewal->id,
+            'payment_intent_id' => 'pi_3ds',
+        ])->assertOk()->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('renewals', ['id' => $renewal->id, 'status' => 'paid']);
+        Queue::assertPushed(ProcessMembershipRenewal::class);
+    }
+
+    public function test_finalize_renewal_rejects_another_members_renewal(): void
+    {
+        $renewal = Renewal::create([
+            'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
+            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'currency' => 'usd', 'status' => 'pending',
+            'stripe_payment_intent_id' => 'pi_3ds',
+        ]);
+
+        // A different member (888) must not be able to finalize contact 999's renewal.
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 888,
+        ])->postJson('/member-portal/renew/finalize', [
+            'renewal_id'        => $renewal->id,
+            'payment_intent_id' => 'pi_3ds',
+        ])->assertStatus(404);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();
