@@ -195,6 +195,7 @@
 
   {{-- Spouse Profile card --}}
   @if($profile->hasSpouse())
+  @php $spouse = $profile->spouse(); @endphp
   <div class="profile-card spouse-profile">
     <div class="profile-card-title">Spouse Information</div>
     <div class="avatar-circle">
@@ -202,7 +203,7 @@
         <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z"/>
       </svg>
     </div>
-    <div class="profile-name" id="spouseNameLabel">{{ $profile->spouse()->fullName }}</div>
+    <div class="profile-name" id="spouseNameLabel">{{ $spouse->fullName }}</div>
     <div class="profile-sub">Individual Member of ISGH</div>
     <button type="button" class="mobile-edit-link" onclick="document.getElementById('btnEditSpouse')?.click(); document.getElementById('formSpouse')?.scrollIntoView({behavior:'smooth', block:'start'});">
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
