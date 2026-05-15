@@ -2095,6 +2095,10 @@
               : 'Invoice generated successfully.';
             return;
           }
+          if (data && data.status === 'failed') {
+            invoiceLabel.textContent = 'Your payment was received, but we could not finalize your membership automatically. Please contact ISGH support.';
+            return;
+          }
         } catch (err) {
           console.warn('[Renew] status poll error:', err);
         }
