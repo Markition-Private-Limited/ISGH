@@ -88,4 +88,58 @@ class ProcessMembershipRenewalTest extends TestCase
 
         $this->assertTrue($renewal->fresh()->processed);
     }
+
+    public function test_job_updates_family_members_renewal_dates(): void
+    {
+        Cache::put('wa_access_token', 'test-token', 1500);
+        config(['services.wild_apricot.account_id' => '12345']);
+
+        Http::fake([
+            'api.wildapricot.org/v2.3/accounts/12345/invoices' => Http::response(['Id' => 555], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/payments' => Http::response(['Id' => 777], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/paymentsystemtenders*' => Http::response([
+                ['Id' => 3, 'Name' => 'Stripe'],
+            ], 200),
+            // The level name must match WildApricotService::resolveLevelId's name map for 'family'.
+            'api.wildapricot.org/v2.3/accounts/12345/membershiplevels' => Http::response([
+                ['Id' => 1, 'Name' => 'Family Membership (Primary and Spouse only)', 'MembershipFee' => 40.0],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contactfields' => Http::response([
+                ['FieldName' => 'Member Identifier', 'SystemCode' => 'custom-member-id'],
+            ], 200),
+            // family lookup → one spouse
+            'api.wildapricot.org/v2.3/accounts/12345/contacts?*' => Http::response([
+                'Contacts' => [['Id' => 1001, 'FirstName' => 'Sarah', 'FieldValues' => []]],
+            ], 200),
+            // both the primary and the spouse contact GET/PUT
+            'api.wildapricot.org/v2.3/accounts/12345/contacts/999' => Http::response([
+                'Id' => 999, 'Status' => 'Active',
+                'MembershipLevel' => ['Id' => 1, 'Name' => 'Family Membership (Primary and Spouse only)'], 'FieldValues' => [],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contacts/1001' => Http::response([
+                'Id' => 1001, 'Status' => 'Active',
+                'MembershipLevel' => ['Id' => 1, 'Name' => 'Family Membership (Primary and Spouse only)'], 'FieldValues' => [],
+            ], 200),
+        ]);
+
+        $renewal = Renewal::create([
+            'contact_id'      => 999,
+            'member_email'    => 'tauqeer@example.com',
+            'membership_type' => 'family',
+            'amount_cents'    => 4000,
+            'currency'        => 'usd',
+            'status'          => 'paid',
+            'stripe_charge_id'=> 'ch_test_456',
+        ]);
+
+        (new ProcessMembershipRenewal($renewal))->handle(app(WildApricotService::class));
+
+        $renewal->refresh();
+        $this->assertTrue($renewal->processed);
+
+        // The spouse contact (1001) must have received a PUT (updateMember).
+        Http::assertSent(fn ($request) =>
+            $request->method() === 'PUT' && str_contains($request->url(), '/contacts/1001')
+        );
+    }
 }
