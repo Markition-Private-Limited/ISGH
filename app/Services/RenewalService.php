@@ -72,4 +72,62 @@ class RenewalService
             default                             => 'individual',
         };
     }
+
+    /**
+     * Resolve the renewal fee for a membership type.
+     *
+     * - flat:        $20 * (1 primary + $familyCount).
+     * - checkomatic: the member-entered monthly amount.
+     * - else:        the flat fee from config/membership.php.
+     *
+     * @return array{cents:int,label:string}
+     */
+    public function resolveFee(string $type, int $familyCount, ?float $checkomaticAmount): array
+    {
+        if ($type === 'flat') {
+            $cents = (1 + max(0, $familyCount)) * 2000;
+            return ['cents' => $cents, 'label' => '$' . number_format($cents / 100, 2)];
+        }
+
+        if ($type === 'checkomatic_family' || $type === 'checkomatic_individual') {
+            $amount = (float) ($checkomaticAmount ?? 0);
+            $cents  = (int) round($amount * 100);
+            return ['cents' => $cents, 'label' => '$' . number_format($amount, 2) . '/mo'];
+        }
+
+        $fees = config('membership.fees');
+        $entry = $fees[$type] ?? ['cents' => 0, 'label' => '$0.00'];
+        return ['cents' => (int) $entry['cents'], 'label' => (string) $entry['label']];
+    }
+
+    /**
+     * Build the data the renewal modal needs.
+     * For checkomatic the fee cents are 0 until the member enters an amount.
+     *
+     * @return array{type:string,isCheckomatic:bool,fee:array,newRenewalDate:string,familyCount:int}
+     */
+    public function buildSummary(MemberProfile $profile): array
+    {
+        $type          = $this->resolveTypeSlug($profile);
+        $isCheckomatic = str_starts_with($type, 'checkomatic');
+        $familyCount   = count($profile->family);
+        $fee           = $this->resolveFee($type, $familyCount, $isCheckomatic ? null : 0.0);
+
+        return [
+            'type'           => $type,
+            'isCheckomatic'  => $isCheckomatic,
+            'fee'            => $fee,
+            'newRenewalDate' => $this->newRenewalDate($type),
+            'familyCount'    => $familyCount,
+        ];
+    }
+
+    /** The renewal date a successful renewal will set: end of next calendar year. */
+    public function newRenewalDate(string $type): string
+    {
+        if (str_starts_with($type, 'checkomatic')) {
+            return now()->addMonth()->format('F d, Y');
+        }
+        return now()->addYear()->endOfYear()->format('F d, Y');
+    }
 }

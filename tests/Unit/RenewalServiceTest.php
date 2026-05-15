@@ -57,4 +57,50 @@ class RenewalServiceTest extends TestCase
             $this->profileWithLevel('Checkomatic Family Plan 2026')
         ));
     }
+
+    public function test_fee_for_standard_individual_plan(): void
+    {
+        $svc = app(RenewalService::class);
+        $fee = $svc->resolveFee('individual', 0, null);
+
+        $this->assertSame(2500, $fee['cents']);
+        $this->assertSame('$25.00', $fee['label']);
+    }
+
+    public function test_fee_for_flat_plan_multiplies_by_member_count(): void
+    {
+        $svc = app(RenewalService::class);
+        // 1 primary + 3 family members = 4 * $20 = $80.
+        $fee = $svc->resolveFee('flat', 3, null);
+
+        $this->assertSame(8000, $fee['cents']);
+        $this->assertSame('$80.00', $fee['label']);
+    }
+
+    public function test_fee_for_checkomatic_uses_monthly_amount(): void
+    {
+        $svc = app(RenewalService::class);
+        $fee = $svc->resolveFee('checkomatic_individual', 0, 15.50);
+
+        $this->assertSame(1550, $fee['cents']);
+        $this->assertSame('$15.50/mo', $fee['label']);
+    }
+
+    public function test_build_summary_shape(): void
+    {
+        $svc = app(RenewalService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999,
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'],
+            'FieldValues' => [],
+        ]]);
+
+        $summary = $svc->buildSummary($profile);
+
+        $this->assertSame('individual', $summary['type']);
+        $this->assertFalse($summary['isCheckomatic']);
+        $this->assertSame(2500, $summary['fee']['cents']);
+        $this->assertArrayHasKey('newRenewalDate', $summary);
+        $this->assertSame(0, $summary['familyCount']);
+    }
 }
