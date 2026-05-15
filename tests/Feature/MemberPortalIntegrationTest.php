@@ -71,9 +71,9 @@ class MemberPortalIntegrationTest extends TestCase
 
     public function test_update_profile_persists_and_invalidates_cache(): void
     {
+        // updateMember() does one GET (fetch current) then one PUT (update) — 2 hits.
         Http::fake([
             'api.wildapricot.org/v2.3/accounts/12345/contacts/999' => Http::sequence()
-                ->push(['Id' => 999, 'FirstName' => 'Tauqeer', 'Status' => 'Active', 'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => []], 200)
                 ->push(['Id' => 999, 'FirstName' => 'Tauqeer', 'Status' => 'Active', 'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => []], 200)
                 ->push(['Id' => 999, 'FirstName' => 'Tariq', 'Status' => 'Active', 'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => []], 200),
             'api.wildapricot.org/v2.3/accounts/12345/contacts?*' => Http::response(['Contacts' => []], 200),
@@ -92,6 +92,15 @@ class MemberPortalIntegrationTest extends TestCase
             ->assertJson(['success' => true]);
 
         $this->assertFalse(Cache::has('member_portal_bundle_999'));
+
+        // The edited name must have reached WildApricot in the PUT body.
+        Http::assertSent(function ($request) {
+            return $request->method() === 'PUT'
+                && str_contains($request->url(), '/contacts/999')
+                && collect($request['FieldValues'] ?? [])->contains(
+                    fn ($fv) => ($fv['FieldName'] ?? '') === 'FirstName' && ($fv['Value'] ?? '') === 'Tariq'
+                );
+        });
     }
 
     public function test_update_profile_rejects_invalid_email(): void

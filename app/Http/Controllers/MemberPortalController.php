@@ -222,7 +222,7 @@ class MemberPortalController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name'  => ['required', 'string', 'max:100'],
-            'email'      => ['required', 'email'],
+            'email'      => ['required', 'email', 'max:255'],
             'phone'      => ['nullable', 'string', 'max:30'],
             'street'     => ['nullable', 'string', 'max:255'],
             'city'       => ['nullable', 'string', 'max:100'],
@@ -234,14 +234,24 @@ class MemberPortalController extends Controller
 
         try {
             $portal->updateProfile((int) $contactId, $validated);
-        } catch (\Throwable $e) {
-            Log::error('MemberPortal: profile update failed', [
+        } catch (\RuntimeException $e) {
+            // Expected: WildApricot rejected the update (e.g. validation, duplicate).
+            Log::error('MemberPortal: profile update rejected by WildApricot', [
                 'contact_id' => $contactId, 'error' => $e->getMessage(),
             ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Could not save changes. Please try again.',
             ], 422);
+        } catch (\Throwable $e) {
+            // Unexpected: a real bug — log loudly and surface a generic error.
+            Log::error('MemberPortal: profile update failed unexpectedly', [
+                'contact_id' => $contactId, 'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong. Please try again later.',
+            ], 500);
         }
 
         return response()->json([
