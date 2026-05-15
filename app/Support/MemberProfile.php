@@ -212,10 +212,13 @@ class MemberProfile
         return $this->invoices !== [];
     }
 
-    /** Earliest unpaid invoice as ['amount'=>float,'date'=>string], or null. */
+    /** Earliest unpaid invoice with a known date as ['amount'=>float,'date'=>string], or null. */
     public function nextPayment(): ?array
     {
-        $unpaid = array_values(array_filter($this->invoices, fn ($i) => ! $i['isPaid']));
+        $unpaid = array_values(array_filter(
+            $this->invoices,
+            fn ($i) => ! $i['isPaid'] && $i['date'] !== ''
+        ));
         if ($unpaid === []) {
             return null;
         }

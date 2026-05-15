@@ -225,4 +225,18 @@ class MemberProfileTest extends TestCase
         $this->assertSame(0.0, $p->paidAllTime());
         $this->assertNull($p->lastPayment());
     }
+
+    public function test_next_payment_skips_unpaid_invoice_with_missing_date(): void
+    {
+        $b = $this->bundle();
+        // An unpaid invoice with no CreatedDate must not be chosen as next payment.
+        $b['invoices'] = [
+            ['Id' => 9, 'DocumentNumber' => 'INV-NODATE', 'Value' => 99.0, 'IsPaid' => false],
+            ['Id' => 2, 'DocumentNumber' => 'INV-2026-0002', 'Value' => 20.0, 'IsPaid' => false, 'CreatedDate' => '2026-06-15T00:00:00'],
+        ];
+        $next = (new MemberProfile($b))->nextPayment();
+        $this->assertNotNull($next);
+        $this->assertSame('2026-06-15', $next['date']);
+        $this->assertSame(20.0, $next['amount']);
+    }
 }
