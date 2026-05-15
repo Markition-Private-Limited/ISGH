@@ -114,6 +114,38 @@ class MembershipRenewalTest extends TestCase
           ->assertStatus(404);
     }
 
+    public function test_lifetime_member_cannot_renew(): void
+    {
+        Http::fake([
+            'api.wildapricot.org/v2.3/accounts/12345/contacts/888' => Http::response([
+                'Id' => 888, 'FirstName' => 'Life', 'LastName' => 'Member',
+                'Email' => 'life@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Id' => 9, 'Name' => 'Lifetime'], 'FieldValues' => [],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contactfields' => Http::response([
+                ['FieldName' => 'Member Identifier', 'SystemCode' => 'custom-member-id'],
+            ], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/contacts?*' => Http::response(['Contacts' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/invoices*'  => Http::response(['Invoices' => []], 200),
+            'api.wildapricot.org/v2.3/accounts/12345/payments*'  => Http::response(['Payments' => []], 200),
+        ]);
+
+        // Summary reports not-renewable.
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 888,
+        ])->getJson('/member-portal/renew/summary')
+          ->assertOk()
+          ->assertJson(['renewable' => false]);
+
+        // The charge endpoint rejects it with 422.
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 888,
+        ])->postJson('/member-portal/renew', ['payment_method_id' => 'pm_test'])
+          ->assertStatus(422);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();
