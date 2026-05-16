@@ -1066,8 +1066,14 @@ class WildApricotService
 
         // Renewal due — only set when a membership type is provided (e.g. signup /
         // level change). Profile edits omit membership_type and must not touch it.
+        // Lifetime levels have no renewal date — calcRenewalDate yields 'Never',
+        // which WA rejects as a FieldValue DateTime, so the field is omitted
+        // entirely (WA derives "never expires" from the membership level itself).
         if (! empty($data['membership_type'])) {
-            $fields[] = ['FieldName' => 'Renewal due', 'SystemCode' => 'RenewalDue', 'Value' => $this->calcRenewalDate($data['membership_type'])];
+            $renewalDue = $this->calcRenewalDate($data['membership_type']);
+            if ($renewalDue !== 'Never') {
+                $fields[] = ['FieldName' => 'Renewal due', 'SystemCode' => 'RenewalDue', 'Value' => $renewalDue];
+            }
         }
 
         return $fields;
