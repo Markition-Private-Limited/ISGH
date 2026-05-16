@@ -1603,6 +1603,7 @@
 
 
 
-
+@include('member-portal.partials.renew-modal')
+@include('member-portal.partials.level-modal')
 </body>
 </html>
