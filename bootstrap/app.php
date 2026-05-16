@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.token'          => \App\Http\Middleware\AdminToken::class,
             'portal.auth'          => \App\Http\Middleware\PortalAuth::class,
             'active.user'          => \App\Http\Middleware\CheckActiveUser::class,
+            'member.portal.auth'   => \App\Http\Middleware\MemberPortalAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

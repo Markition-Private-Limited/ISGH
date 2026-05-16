@@ -14,7 +14,7 @@
           <a href="/verify" class="text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-white/10 transition-colors duration-200 whitespace-nowrap">Verify Membership Status</a>
         </div>
         <div class="flex items-center gap-2 ml-2">
-          <a href="https://isgh.wildapricot.org/Sys/Login" target="_blank" rel="noopener noreferrer" class="bg-[#9ca3af] hover:bg-[#6b7280] text-white text-sm font-semibold px-5 py-2 rounded-full transition-colors duration-200 whitespace-nowrap">Sign in</a>
+          <a href="{{ route('member-portal.login') }}" target="_blank" rel="noopener noreferrer" class="bg-[#9ca3af] hover:bg-[#6b7280] text-white text-sm font-semibold px-5 py-2 rounded-full transition-colors duration-200 whitespace-nowrap">Sign in</a>
           <a href="/join" class="bg-[#00d084] hover:bg-[#00b870] text-white text-sm font-bold px-5 py-2 rounded-full transition-colors duration-200 whitespace-nowrap shadow-md">Join Now</a>
         </div>
       </nav>
@@ -53,7 +53,7 @@
       </nav>
 
       <div class="mt-4 flex flex-col gap-3">
-        <a href="https://isgh.wildapricot.org/Sys/Login" target="_blank" rel="noopener noreferrer" class="rounded-full bg-[#9ca3af] px-6 py-2.5 text-center font-semibold text-white transition-colors hover:bg-[#6b7280]">Sign in</a>
+        <a href="{{ route('member-portal.login') }}" target="_blank" rel="noopener noreferrer" class="rounded-full bg-[#9ca3af] px-6 py-2.5 text-center font-semibold text-white transition-colors hover:bg-[#6b7280]">Sign in</a>
         <a href="/join" class="rounded-full bg-[#00d084] px-6 py-2.5 text-center font-bold text-white transition-colors hover:bg-[#00b870]">Join Now</a>
       </div>
     </div>
