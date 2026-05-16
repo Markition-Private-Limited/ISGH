@@ -136,6 +136,25 @@
     .sidebar-overlay { position:fixed; inset:0; background:rgba(15,23,42,.45);
                        opacity:0; visibility:hidden; transition:opacity .25s; z-index:39; }
     .sidebar-overlay.open { opacity:1; visibility:visible; }
+    .bottom-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 45;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 8px 6px; justify-content: space-around;
+    }
+    .bn-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+      flex: 1; padding: 4px 2px;
+    }
+    .bn-icon svg { width: 20px; height: 20px; stroke-width: 1.8; }
+    .bn-item.active { color: var(--green); }
+    .nav-logout-form { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .nav-item.nav-logout {
+      width: 100%; border: none; background: none; cursor: pointer;
+      font-family: inherit; font-size: 14px; text-align: left;
+    }
+    .nav-item.nav-logout:hover { background: #fef2f2; color: #dc2626; }
 
     /* ── Responsive ── */
     @media (max-width:980px) {
@@ -149,6 +168,7 @@
       .content { padding:18px; }
       .summary-pair { grid-template-columns:1fr; }
       .inv-table { display:block; overflow-x:auto; white-space:nowrap; }
+      .bottom-nav { display: flex; }
     }
   </style>
 </head>
@@ -272,6 +292,8 @@
     </section>
   </div>
 </div>
+
+@include('member-portal.partials.bottom-nav', ['active' => 'payments', 'mode' => 'links'])
 
 <script>
   // ── Sidebar drawer ──────────────────────────────────────────────────────
