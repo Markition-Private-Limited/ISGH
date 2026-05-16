@@ -127,6 +127,12 @@
       box-shadow: 0 6px 16px rgba(13, 122, 82, 0.25);
     }
     .nav-item.active:hover { color: #fff; }
+    .nav-logout-form { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .nav-item.nav-logout {
+      width: 100%; border: none; background: none; cursor: pointer;
+      font-family: inherit; font-size: 14px; text-align: left;
+    }
+    .nav-item.nav-logout:hover { background: #fef2f2; color: #dc2626; }
 
     /* ── Main ── */
     .main { display: flex; flex-direction: column; min-width: 0; }
@@ -1631,7 +1637,7 @@
               </span>
             </a>
             @endunless
-            <a href="#" class="ql-item">
+            <a href="{{ route('member-portal.payments') }}" class="ql-item">
               <span class="ql-icon">
                 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
@@ -1642,7 +1648,7 @@
                 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
               </span>
             </a>
-            <a href="#" class="ql-item">
+            <a href="{{ route('member-portal.payments') }}" class="ql-item">
               <span class="ql-icon">
                 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -1664,7 +1670,7 @@
                 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
               </span>
             </a>
-            <a href="#" class="ql-item">
+            <a href="#" class="ql-item" onclick="event.preventDefault(); showPage('profile')">
               <span class="ql-icon">
                 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -1691,48 +1697,7 @@
 </div>
 
 {{-- ── Bottom Nav (mobile only) ── --}}
-<nav class="bottom-nav" aria-label="Bottom navigation">
-  <a href="#" class="bn-item active" data-page-link="dashboard" onclick="event.preventDefault(); showPage('dashboard')">
-    <span class="bn-icon">
-      <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-    </span>
-    Dashboard
-  </a>
-  <a href="#" class="bn-item" data-page-link="profile" onclick="event.preventDefault(); showPage('profile')">
-    <span class="bn-icon">
-      <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-    </span>
-    Profile
-  </a>
-  <a href="{{ route('member-portal.payments') }}" class="bn-item">
-    <span class="bn-icon">
-      <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/>
-      </svg>
-    </span>
-    Payments
-  </a>
-  <a href="#" class="bn-item">
-    <span class="bn-icon">
-      <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-      </svg>
-    </span>
-    Records
-  </a>
-  <a href="#" class="bn-item">
-    <span class="bn-icon">
-      <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 14l2 2 4-4"/>
-      </svg>
-    </span>
-    Reports
-  </a>
-</nav>
+@include('member-portal.partials.bottom-nav', ['active' => 'dashboard', 'mode' => 'spa'])
 
 <script>
   (function () {
