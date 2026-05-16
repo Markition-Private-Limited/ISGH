@@ -1053,19 +1053,23 @@
     .renew-modal p.renew-sub { font-size: 13px; color: var(--text-muted); margin-top: 6px; line-height: 1.55; }
     .renew-pay-row {
       display: flex; align-items: center; justify-content: space-between;
-      background: #f6f8f9;
+      background: linear-gradient(135deg, #0d7a55 0%, #064e36 100%);
       border-radius: var(--radius-sm);
-      padding: 12px 14px;
+      padding: 16px 18px;
       margin: 16px 0 14px;
+      box-shadow: 0 6px 18px rgba(6,78,54,0.25);
     }
-    .renew-pay-row .label { font-size: 13px; font-weight: 500; color: #334155; }
-    .renew-pay-row .amount { font-size: 16px; font-weight: 700; color: var(--text); }
+    .renew-pay-row .pay-info { display: flex; flex-direction: column; gap: 3px; }
+    .renew-pay-row .label { font-size: 15px; font-weight: 700; color: #ffffff; }
+    .renew-pay-row .pay-sub { font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.8); }
+    .renew-pay-row .amount { font-size: 20px; font-weight: 800; color: #ffffff; }
     .renew-field { margin-bottom: 14px; }
     .renew-field label {
       display: block; font-size: 12px; font-weight: 500;
       color: #475569; margin-bottom: 6px;
     }
-    .renew-field input[type="number"] {
+    .renew-field input[type="number"],
+    .renew-field input[type="text"] {
       width: 100%;
       background: #f4f6f8;
       border: 1px solid transparent;
@@ -1075,7 +1079,8 @@
       font-family: inherit; outline: none;
       transition: border-color .15s, background .15s, box-shadow .15s;
     }
-    .renew-field input[type="number"]:focus {
+    .renew-field input[type="number"]:focus,
+    .renew-field input[type="text"]:focus {
       background: #fff; border-color: var(--green);
       box-shadow: 0 0 0 3px rgba(13,122,82,0.12);
     }
@@ -1872,13 +1877,21 @@
       <p class="renew-sub">Enter your card details to complete your membership renewal securely.</p>
 
       <div class="renew-pay-row">
-        <span class="label">Pending Payment</span>
+        <div class="pay-info">
+          <span class="label">Pending Payment</span>
+          <span class="pay-sub">Renew Membership</span>
+        </div>
         <span class="amount" id="renewAmountLabel">—</span>
       </div>
 
       <div class="renew-field" id="renewMonthlyWrap" style="display:none;">
         <label for="renewMonthlyInput">Monthly contribution amount</label>
         <input id="renewMonthlyInput" type="number" min="1" step="0.01" placeholder="Monthly amount" />
+      </div>
+
+      <div class="renew-field">
+        <label for="renewCardholderName">Cardholder Name</label>
+        <input id="renewCardholderName" type="text" autocomplete="cc-name" placeholder="Name on card" />
       </div>
 
       <label class="renew-card-label" for="renew-card-element">Card details</label>
@@ -1939,6 +1952,7 @@
     const amountLabel = document.getElementById('renewAmountLabel');
     const monthlyWrap = document.getElementById('renewMonthlyWrap');
     const monthlyInput = document.getElementById('renewMonthlyInput');
+    const cardholderInput = document.getElementById('renewCardholderName');
     const payError    = document.getElementById('renewPayError');
     const confirmError = document.getElementById('renewConfirmError');
     const invoiceLabel = document.getElementById('renewInvoiceLabel');
@@ -2071,10 +2085,18 @@
           return;
         }
 
+        const cardholderName = (cardholderInput?.value || '').trim();
+        if (!cardholderName) {
+          showError(payError, 'Please enter the cardholder name.');
+          cardholderInput?.focus();
+          return;
+        }
+
         // Stripe createPaymentMethod — mirrors signup page
         const { paymentMethod, error: pmError } = await _stripe.createPaymentMethod({
           type: 'card',
           card: _cardElement,
+          billing_details: { name: cardholderName },
         });
         if (pmError) {
           showError(payError, pmError.message);
