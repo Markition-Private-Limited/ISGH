@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Jobs\ProcessMembershipRenewal;
 use App\Models\Renewal;
 use App\Support\MemberProfile;
+use App\Support\MembershipFee;
+use App\Support\MembershipTypes;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -15,19 +17,6 @@ use RuntimeException;
  */
 class RenewalService
 {
-    /**
-     * Maps a WildApricot membership-level NAME to a membership-type slug.
-     * This is the inverse of WildApricotService::resolveLevelId()'s name map.
-     */
-    private const LEVEL_NAME_TO_SLUG = [
-        'Family Membership (Primary and Spouse only)'              => 'family',
-        'Individual'                                               => 'individual',
-        'Flat Membership'                                          => 'flat',
-        'Checkomatic Membership (Primary and Spouse only)'         => 'checkomatic_family',
-        'Checkomatic'                                              => 'checkomatic_individual',
-        'Lifetime'                                                 => 'lifetime_individual',
-    ];
-
     private const LIFETIME_SLUGS = ['lifetime_family', 'lifetime_individual'];
 
     public function __construct(private StripeService $stripe) {}
@@ -62,20 +51,7 @@ class RenewalService
      */
     private function resolveSlug(MemberProfile $profile): string
     {
-        $levelName = trim($profile->level);
-        $slug = self::LEVEL_NAME_TO_SLUG[$levelName] ?? null;
-        if ($slug !== null) {
-            return $slug;
-        }
-
-        $lower = strtolower($levelName);
-        return match (true) {
-            str_contains($lower, 'lifetime')    => 'lifetime_individual',
-            str_contains($lower, 'checkomatic') => str_contains($lower, 'family') ? 'checkomatic_family' : 'checkomatic_individual',
-            str_contains($lower, 'flat')        => 'flat',
-            str_contains($lower, 'family')      => 'family',
-            default                             => 'individual',
-        };
+        return MembershipTypes::slugFromLevelName($profile->level);
     }
 
     /**
@@ -89,21 +65,7 @@ class RenewalService
      */
     public function resolveFee(string $type, int $familyCount, ?float $checkomaticAmount): array
     {
-        if ($type === 'flat') {
-            $perMember = (int) (config('membership.fees')['flat']['cents'] ?? 2000);
-            $cents = (1 + max(0, $familyCount)) * $perMember;
-            return ['cents' => $cents, 'label' => '$' . number_format($cents / 100, 2)];
-        }
-
-        if ($type === 'checkomatic_family' || $type === 'checkomatic_individual') {
-            $amount = (float) ($checkomaticAmount ?? 0);
-            $cents  = (int) round($amount * 100);
-            return ['cents' => $cents, 'label' => '$' . number_format($amount, 2) . '/mo'];
-        }
-
-        $fees = config('membership.fees');
-        $entry = $fees[$type] ?? ['cents' => 0, 'label' => '$0.00'];
-        return ['cents' => (int) $entry['cents'], 'label' => (string) $entry['label']];
+        return MembershipFee::resolve($type, $familyCount, $checkomaticAmount);
     }
 
     /**
