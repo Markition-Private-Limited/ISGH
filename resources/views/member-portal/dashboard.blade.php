@@ -2678,7 +2678,8 @@
           });
           const data = await res.json();
           if (data && data.processed === true) {
-            const plan = (data.to_type || (_selected && _selected.label) || 'new');
+            // Prefer the human label from the picked card; to_type is a raw slug.
+            const plan = ((_selected && _selected.label) || data.to_type || 'new');
             let msg = 'You are now on the ' + plan + ' plan.';
             if (data.wa_invoice_id) msg += ' Invoice Generated: INV-' + data.wa_invoice_id;
             successLabel.textContent = msg;
