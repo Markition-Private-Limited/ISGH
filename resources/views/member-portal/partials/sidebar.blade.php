@@ -1,6 +1,7 @@
 {{--
   Member-portal sidebar.
-  @param string $active  'dashboard' | 'profile' | 'payments'
+  @param string $active  dashboard | profile | payments | records | newsletter
+                         | financial-report | updates | nominees-training
   @param string $mode    'spa'   — Dashboard/Profile switch via showPage() (dashboard view)
                          'links' — every item is a real href (other pages)
 --}}
@@ -37,7 +38,7 @@
     @if($mode === 'spa')
       <a href="#" class="nav-item {{ $active === 'profile' ? 'active' : '' }}" data-page-link="profile" onclick="event.preventDefault(); showPage('profile')">
     @else
-      <a href="{{ route('member-portal.dashboard') }}#profile" class="nav-item {{ $active === 'profile' ? 'active' : '' }}">
+      <a href="{{ route('member-portal.profile') }}" class="nav-item {{ $active === 'profile' ? 'active' : '' }}">
     @endif
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -53,36 +54,55 @@
       Payment &amp; Invoice
     </a>
 
-    {{-- Remaining items — not yet wired (dead links, unchanged from original) --}}
-    <a href="#" class="nav-item">
+    {{-- ISGH Records --}}
+    <a href="{{ route('member-portal.records') }}" class="nav-item {{ $active === 'records' ? 'active' : '' }}">
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
       </svg>
       ISGH Records
     </a>
-    <a href="#" class="nav-item">
+
+    {{-- Isgh Newsletter --}}
+    <a href="{{ route('member-portal.newsletter') }}" class="nav-item {{ $active === 'newsletter' ? 'active' : '' }}">
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8z"/>
       </svg>
       Isgh Newsletter
     </a>
-    <a href="#" class="nav-item">
+
+    {{-- Financial Report --}}
+    <a href="{{ route('member-portal.financial-report') }}" class="nav-item {{ $active === 'financial-report' ? 'active' : '' }}">
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 14l2 2 4-4"/>
       </svg>
       Financial Report
     </a>
-    <a href="#" class="nav-item">
+
+    {{-- Updates --}}
+    <a href="{{ route('member-portal.updates') }}" class="nav-item {{ $active === 'updates' ? 'active' : '' }}">
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
       </svg>
       Updates
     </a>
-    <a href="#" class="nav-item">
+
+    {{-- Nominees Training & Orientation --}}
+    <a href="{{ route('member-portal.nominees-training') }}" class="nav-item {{ $active === 'nominees-training' ? 'active' : '' }}">
       <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
       Nominees Training &amp; Orientation
     </a>
+
+    {{-- Logout --}}
+    <form method="POST" action="{{ route('member-portal.logout') }}" class="nav-logout-form">
+      @csrf
+      <button type="submit" class="nav-item nav-logout">
+        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Logout
+      </button>
+    </form>
   </nav>
 </aside>
