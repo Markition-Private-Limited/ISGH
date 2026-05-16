@@ -593,7 +593,7 @@
                 </div>
                 <div class="tile-value">{{ $profile->level ?: '—' }}</div>
               </div>
-              <button type="button" class="btn-change">
+              <button type="button" class="btn-change ql-change-level">
                 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
                 Change Membership Level
               </button>
@@ -752,7 +752,7 @@
             <h3 class="card-title">Quick Links</h3>
           </div>
           <div class="ql-list">
-            <a href="#" class="ql-item">
+            <a href="#" class="ql-item ql-renew-link">
               <span class="ql-icon"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
               Renew Membership
               <span class="ql-arrow"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
@@ -767,7 +767,7 @@
               Payment History
               <span class="ql-arrow"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
             </a>
-            <a href="#" class="ql-item">
+            <a href="#" class="ql-item ql-change-level">
               <span class="ql-icon"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
               Change Level
               <span class="ql-arrow"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></span>
@@ -966,6 +966,9 @@
     syncSpouseName();
   })();
 </script>
+
+@include('member-portal.partials.renew-modal')
+@include('member-portal.partials.level-modal')
 
 </body>
 </html>
