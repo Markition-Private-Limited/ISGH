@@ -2485,6 +2485,12 @@
       if (_isCheckomatic) {
         amountLabel.textContent = 'Enter your monthly amount below';
         monthlyWrap.style.display = 'block';
+      } else if (_selected && _selected.type === 'flat') {
+        // Flat fee scales with member count ($20 each); the cached feeLabel was
+        // computed for one member, so recompute from the entered family blocks.
+        const memberCount = 1 + collectFamilyMembers().length;
+        amountLabel.textContent = '$' + (memberCount * 20).toFixed(2);
+        monthlyWrap.style.display = 'none';
       } else {
         amountLabel.textContent = (_selected && _selected.feeLabel) ? _selected.feeLabel : '—';
         monthlyWrap.style.display = 'none';
