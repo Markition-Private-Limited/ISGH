@@ -2420,6 +2420,12 @@
           card.querySelector('.lvl-option-label').textContent = lvl.label || lvl.type;
           card.querySelector('.lvl-option-fee').textContent = feeLabel;
           card.addEventListener('click', () => {
+            // Switching to a different level discards any family blocks entered
+            // for the previous selection so stale members can't be submitted.
+            if (! _selected || _selected.type !== card.dataset.type) {
+              familyBox.innerHTML = '';
+              addFamilyBlock();
+            }
             optionsBox.querySelectorAll('.lvl-option').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
             _selected = {
@@ -2493,6 +2499,8 @@
       hideError(payError);
       _selected = null;
       pickNext.disabled = true;
+      // Clear any stale highlight on cached option cards from a prior open.
+      optionsBox.querySelectorAll('.lvl-option.selected').forEach(c => c.classList.remove('selected'));
       if (monthlyInput) monthlyInput.value = '';
       if (successLabel) successLabel.textContent = '';
       familyBox.innerHTML = '';
