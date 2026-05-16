@@ -1211,7 +1211,7 @@
                 <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
               </a>
             </div>
-            @php $next = $profile->nextPayment(); $last = $profile->lastPayment(); @endphp
+            @php $last = $profile->lastPayment(); @endphp
             <div class="payment-grid">
               <div class="pay-tile next">
                 <div class="pay-tile-head">
@@ -1223,8 +1223,8 @@
                   </span>
                 </div>
                 <div>
-                  <div class="pay-tile-amount">{{ $next ? '$' . number_format($next['amount'], 2) : '$0.00' }}</div>
-                  <div class="pay-tile-date">{{ $next['dateLabel'] ?? '—' }}</div>
+                  <div class="pay-tile-amount">{{ $profile->yearlyFee ?: '$0.00' }}</div>
+                  <div class="pay-tile-date">{{ $profile->renewalFormatted() ?: '—' }}</div>
                 </div>
               </div>
 
