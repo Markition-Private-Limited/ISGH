@@ -258,4 +258,75 @@ class MemberPortalIntegrationTest extends TestCase
         $this->get('/member-portal/dashboard')
             ->assertRedirect('/member-portal/login');
     }
+
+    public function test_profile_page_includes_renewal_and_level_modals(): void
+    {
+        Cache::put('member_portal_bundle_999', [
+            'contact'  => [
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => [],
+            ],
+            'family' => [], 'invoices' => [], 'payments' => [],
+        ], now()->addMinutes(10));
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        $this->get('/member-portal/profile')
+            ->assertOk()
+            ->assertSee('id="renewModal"', false)
+            ->assertSee('id="levelModal"', false)
+            ->assertSee('ql-renew-link', false)
+            ->assertSee('ql-change-level', false);
+    }
+
+    public function test_dashboard_still_includes_both_modals_after_extraction(): void
+    {
+        Cache::put('member_portal_bundle_999', [
+            'contact'  => [
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => [],
+            ],
+            'family' => [], 'invoices' => [], 'payments' => [],
+        ], now()->addMinutes(10));
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        $this->get('/member-portal/dashboard')
+            ->assertOk()
+            ->assertSee('id="renewModal"', false)
+            ->assertSee('id="levelModal"', false);
+    }
+
+    public function test_lifetime_member_profile_omits_renewal_modal(): void
+    {
+        Cache::put('member_portal_bundle_999', [
+            'contact'  => [
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Name' => 'Lifetime Membership (Individual)'], 'FieldValues' => [],
+            ],
+            'family' => [], 'invoices' => [], 'payments' => [],
+        ], now()->addMinutes(10));
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        $this->get('/member-portal/profile')
+            ->assertOk()
+            ->assertSee('id="levelModal"', false)
+            ->assertDontSee('id="renewModal"', false);
+    }
 }
