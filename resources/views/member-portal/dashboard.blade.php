@@ -1134,32 +1134,123 @@
     }
 
     /* ── Level-change modal (reuses .renew-* overlay/card/button styles) ── */
-    .lvl-options {
-      display: flex; flex-direction: column; gap: 10px;
-      margin: 16px 0 4px;
-      max-height: 320px; overflow-y: auto;
-    }
-    .lvl-option {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px;
+    /* Current membership display */
+    .lvl-current {
+      display: flex; flex-direction: column; gap: 3px;
       background: #f6f8f9;
-      border: 1.5px solid transparent;
+      border: 1px solid #e6ebe8;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin: 16px 0 14px;
+    }
+    .lvl-current-tag {
+      font-size: 11px; font-weight: 600; letter-spacing: .03em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .lvl-current-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .lvl-current-fee { font-size: 13px; font-weight: 600; color: var(--green); }
+
+    /* New-level select dropdown */
+    .lvl-select-field { margin-bottom: 14px; text-align: left; }
+    .lvl-select-field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #475569; margin-bottom: 6px;
+    }
+    .lvl-select-field select {
+      width: 100%;
+      background: #fff;
+      border: 1px solid #e6ebe8;
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-size: 14px; color: var(--text);
+      font-family: inherit; outline: none;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .lvl-select-field select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(13,122,82,0.12);
+    }
+
+    /* Checkomatic amber amount box */
+    .lvl-amount-box {
+      display: flex; flex-direction: column; gap: 6px;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
       border-radius: var(--radius-sm);
       padding: 13px 14px;
-      cursor: pointer;
-      transition: border-color .15s, background .15s, box-shadow .15s;
+      margin-bottom: 14px;
+      text-align: left;
     }
-    .lvl-option:hover { background: #eef2f4; }
-    .lvl-option.selected {
-      border-color: var(--green);
+    .lvl-amount-title { font-size: 13px; font-weight: 700; color: #92400e; }
+    .lvl-amount-box input {
+      width: 100%;
       background: #fff;
-      box-shadow: 0 0 0 3px rgba(13,122,82,0.10);
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-size: 14px; color: var(--text);
+      font-family: inherit; outline: none;
+      transition: border-color .15s, box-shadow .15s;
     }
-    .lvl-option-label { font-size: 14px; font-weight: 600; color: var(--text); }
-    .lvl-option-fee { font-size: 13px; font-weight: 700; color: var(--green); white-space: nowrap; }
-    .lvl-options-empty, .lvl-options-loading {
-      font-size: 13px; color: var(--text-muted); text-align: center; padding: 16px 0;
+    .lvl-amount-box input:focus {
+      border-color: #d97706;
+      box-shadow: 0 0 0 3px rgba(217,119,6,0.15);
     }
+    .lvl-amount-hint { font-size: 11.5px; color: #b45309; }
+
+    /* Review screen — from/to cards */
+    .lvl-review-cards {
+      display: flex; align-items: stretch; gap: 8px;
+      margin: 16px 0 14px;
+    }
+    .lvl-review-card {
+      flex: 1;
+      display: flex; flex-direction: column; gap: 3px;
+      background: #f6f8f9;
+      border: 1px solid #e6ebe8;
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: left;
+    }
+    .lvl-review-card.to { border-color: var(--green); background: #f0faf5; }
+    .lvl-review-card-tag {
+      font-size: 10.5px; font-weight: 600; letter-spacing: .03em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .lvl-review-card-name { font-size: 13.5px; font-weight: 700; color: var(--text); }
+    .lvl-review-card-fee { font-size: 12.5px; font-weight: 600; color: var(--green); }
+    .lvl-review-arrow {
+      display: flex; align-items: center; color: var(--text-muted);
+    }
+    .lvl-review-arrow svg { width: 18px; height: 18px; stroke-width: 2.2; }
+
+    /* Review screen — green payment details panel */
+    .lvl-pay-panel {
+      background: #f0faf5;
+      border: 1px solid #bbe8d2;
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 6px;
+      text-align: left;
+    }
+    .lvl-pay-panel-title {
+      display: block;
+      font-size: 13px; font-weight: 700; color: var(--green);
+      margin-bottom: 10px;
+    }
+    .lvl-pay-line {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; color: var(--text);
+      padding: 5px 0;
+    }
+    .lvl-pay-line span:last-child { font-weight: 600; }
+    .lvl-pay-line-total {
+      margin-top: 4px; padding-top: 9px;
+      border-top: 1px solid #bbe8d2;
+      font-weight: 700;
+    }
+    .lvl-pay-line-total span:last-child { color: var(--green); font-size: 15px; }
     .lvl-family-block {
       background: #f6f8f9;
       border-radius: var(--radius-sm);
@@ -2233,9 +2324,27 @@
       </div>
       <h3>Change Membership Level</h3>
       <p class="renew-sub">Select the membership level you would like to switch to. You can review the fee before paying.</p>
-      <div class="lvl-options" id="lvlOptions">
-        <div class="lvl-options-loading">Loading available levels…</div>
+
+      <div class="lvl-current" id="lvlCurrentBox">
+        <span class="lvl-current-tag">Current Membership</span>
+        <span class="lvl-current-name" id="lvlCurrentName">—</span>
+        <span class="lvl-current-fee" id="lvlCurrentFee">—</span>
       </div>
+
+      <div class="lvl-select-field">
+        <label for="lvlSelect">Select New Membership Level</label>
+        <select id="lvlSelect">
+          <option value="">Loading available levels…</option>
+        </select>
+      </div>
+
+      {{-- Checkomatic amount entry — amber box, shown only for checkomatic levels --}}
+      <div class="lvl-amount-box" id="lvlAmountBox" style="display:none;">
+        <span class="lvl-amount-title">Enter Amount (Minimum $20)</span>
+        <input id="lvlMonthlyInput" type="number" min="20" step="0.01" placeholder="Minimum $20.00" />
+        <span class="lvl-amount-hint">You can add any amount above the minimum.</span>
+      </div>
+
       <div class="renew-error" id="lvlPickError"></div>
       <div class="renew-actions">
         <button type="button" class="renew-btn renew-btn-ghost" id="lvlPickCancel">Cancel</button>
@@ -2245,8 +2354,8 @@
 
     {{-- SCREEN 2 — add family members --}}
     <div class="renew-screen" id="lvlScreenFamily">
-      <h3>Add Family Members</h3>
-      <p class="renew-sub">This level includes family members. Add the people you would like covered under your membership.</p>
+      <h3 id="lvlFamilyHeading">Add Family Members</h3>
+      <p class="renew-sub" id="lvlFamilySub">This level includes family members. Add the people you would like covered under your membership.</p>
       <div id="lvlFamilyContainer"></div>
       <button type="button" class="lvl-add-member" id="lvlAddMember">+ Add Member</button>
       <div class="renew-actions">
@@ -2255,7 +2364,52 @@
       </div>
     </div>
 
-    {{-- SCREEN 3 — payment --}}
+    {{-- SCREEN 3 — confirm / review --}}
+    <div class="renew-screen" id="lvlScreenReview">
+      <h3>Confirm Membership Change</h3>
+      <p class="renew-sub">Please review your membership change before continuing to payment.</p>
+
+      <div class="lvl-review-cards">
+        <div class="lvl-review-card">
+          <span class="lvl-review-card-tag">From</span>
+          <span class="lvl-review-card-name" id="lvlReviewFromName">—</span>
+          <span class="lvl-review-card-fee" id="lvlReviewFromFee">—</span>
+        </div>
+        <div class="lvl-review-arrow">
+          <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+        <div class="lvl-review-card to">
+          <span class="lvl-review-card-tag">To</span>
+          <span class="lvl-review-card-name" id="lvlReviewToName">—</span>
+          <span class="lvl-review-card-fee" id="lvlReviewToFee">—</span>
+        </div>
+      </div>
+
+      <div class="lvl-pay-panel">
+        <span class="lvl-pay-panel-title">Payment Details</span>
+        <div class="lvl-pay-line">
+          <span>Current Contribution</span>
+          <span id="lvlReviewCurrent">—</span>
+        </div>
+        <div class="lvl-pay-line">
+          <span>New Contribution</span>
+          <span id="lvlReviewNew">—</span>
+        </div>
+        <div class="lvl-pay-line lvl-pay-line-total">
+          <span>Amount Due Now</span>
+          <span id="lvlReviewDue">—</span>
+        </div>
+      </div>
+
+      <div class="renew-actions">
+        <button type="button" class="renew-btn renew-btn-ghost" id="lvlReviewBack">Back</button>
+        <button type="button" class="renew-btn renew-btn-primary" id="lvlReviewNext">Continue to Payment</button>
+      </div>
+    </div>
+
+    {{-- SCREEN 4 — payment --}}
     <div class="renew-screen" id="lvlScreenPay">
       <h3>Complete Payment</h3>
       <p class="renew-sub">Enter your card details to complete your level change securely.</p>
@@ -2263,11 +2417,6 @@
       <div class="renew-pay-row">
         <span class="label">Pending Payment</span>
         <span class="amount" id="lvlAmountLabel">—</span>
-      </div>
-
-      <div class="renew-field" id="lvlMonthlyWrap" style="display:none;">
-        <label for="lvlMonthlyInput">Monthly contribution amount</label>
-        <input id="lvlMonthlyInput" type="number" min="1" step="0.01" placeholder="Monthly amount" />
       </div>
 
       <label class="renew-card-label" for="lvl-card-element">Card details</label>
@@ -2281,7 +2430,7 @@
       </div>
     </div>
 
-    {{-- SCREEN 4 — success --}}
+    {{-- SCREEN 5 — success --}}
     <div class="renew-screen" id="lvlScreenSuccess">
       <div class="renew-icon-circle ok">
         <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -2349,22 +2498,36 @@
     const screens = {
       pick:    document.getElementById('lvlScreenPick'),
       family:  document.getElementById('lvlScreenFamily'),
+      review:  document.getElementById('lvlScreenReview'),
       pay:     document.getElementById('lvlScreenPay'),
       success: document.getElementById('lvlScreenSuccess'),
     };
     const closeBtn      = document.getElementById('lvlCloseBtn');
-    const optionsBox    = document.getElementById('lvlOptions');
+    const currentName   = document.getElementById('lvlCurrentName');
+    const currentFee    = document.getElementById('lvlCurrentFee');
+    const levelSelect   = document.getElementById('lvlSelect');
+    const amountBox     = document.getElementById('lvlAmountBox');
+    const monthlyInput  = document.getElementById('lvlMonthlyInput');
     const pickError     = document.getElementById('lvlPickError');
     const pickCancel    = document.getElementById('lvlPickCancel');
     const pickNext      = document.getElementById('lvlPickNext');
     const familyBox     = document.getElementById('lvlFamilyContainer');
+    const familyHeading = document.getElementById('lvlFamilyHeading');
+    const familySub     = document.getElementById('lvlFamilySub');
     const addMemberBtn  = document.getElementById('lvlAddMember');
     const familyBack    = document.getElementById('lvlFamilyBack');
     const familyNext    = document.getElementById('lvlFamilyNext');
     const familyTpl     = document.getElementById('lvlFamilyTemplate');
+    const reviewFromName = document.getElementById('lvlReviewFromName');
+    const reviewFromFee  = document.getElementById('lvlReviewFromFee');
+    const reviewToName   = document.getElementById('lvlReviewToName');
+    const reviewToFee    = document.getElementById('lvlReviewToFee');
+    const reviewCurrent  = document.getElementById('lvlReviewCurrent');
+    const reviewNew      = document.getElementById('lvlReviewNew');
+    const reviewDue      = document.getElementById('lvlReviewDue');
+    const reviewBack     = document.getElementById('lvlReviewBack');
+    const reviewNext     = document.getElementById('lvlReviewNext');
     const amountLabel   = document.getElementById('lvlAmountLabel');
-    const monthlyWrap   = document.getElementById('lvlMonthlyWrap');
-    const monthlyInput  = document.getElementById('lvlMonthlyInput');
     const payBack       = document.getElementById('lvlPayBack');
     const payBtn        = document.getElementById('lvlPayBtn');
     const payError      = document.getElementById('lvlPayError');
@@ -2375,8 +2538,11 @@
     let _cardElement = null;
     let _cardMounted = false;
     let _optionsLoaded = false;
+    let _current = null;        // {type, label, feeLabel} — member's current level
+    let _levels = [];           // available target levels
     let _selected = null;       // selected level object
     let _isCheckomatic = false;
+    let _payAmountLabel = '—';  // resolved fee label shown on review + pay screens
 
     function showError(el, msg) { if (el) { el.textContent = msg; el.classList.add('show'); } }
     function hideError(el)      { if (el) { el.textContent = ''; el.classList.remove('show'); } }
@@ -2413,69 +2579,106 @@
       _cardMounted = true;
     }
 
-    // ── SCREEN 1: load available levels ──────────────────────────────────
+    // ── SCREEN 1: load available levels into the select ──────────────────
     async function loadOptions() {
       if (_optionsLoaded) return;
-      optionsBox.innerHTML = '<div class="lvl-options-loading">Loading available levels…</div>';
+      levelSelect.innerHTML = '<option value="">Loading available levels…</option>';
+      levelSelect.disabled = true;
       try {
         const res = await fetch(optionsUrl, {
           headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': lvlCsrf },
         });
         const data = await res.json();
         if (!data || data.success !== true || !Array.isArray(data.levels) || data.levels.length === 0) {
-          optionsBox.innerHTML = '<div class="lvl-options-empty">No alternative levels are available right now.</div>';
+          levelSelect.innerHTML = '<option value="">No alternative levels are available.</option>';
           return;
         }
-        optionsBox.innerHTML = '';
-        data.levels.forEach(lvl => {
-          const card = document.createElement('div');
-          card.className = 'lvl-option';
-          card.dataset.type = lvl.type;
-          card.dataset.includesFamily = lvl.includesFamily ? '1' : '0';
-          card.dataset.checkomatic = lvl.isCheckomatic ? '1' : '0';
-          const feeLabel = (lvl.fee && lvl.fee.label) ? lvl.fee.label : '—';
-          card.dataset.label = lvl.label || lvl.type;
-          card.dataset.feeLabel = feeLabel;
-          card.innerHTML =
-            '<span class="lvl-option-label"></span>' +
-            '<span class="lvl-option-fee"></span>';
-          card.querySelector('.lvl-option-label').textContent = lvl.label || lvl.type;
-          card.querySelector('.lvl-option-fee').textContent = feeLabel;
-          card.addEventListener('click', () => {
-            // Switching to a different level discards any family blocks entered
-            // for the previous selection so stale members can't be submitted.
-            if (! _selected || _selected.type !== card.dataset.type) {
-              familyBox.innerHTML = '';
-              addFamilyBlock();
-            }
-            optionsBox.querySelectorAll('.lvl-option').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-            _selected = {
-              type: card.dataset.type,
-              label: card.dataset.label,
-              feeLabel: card.dataset.feeLabel,
-              includesFamily: card.dataset.includesFamily === '1',
-              isCheckomatic: card.dataset.checkomatic === '1',
-            };
-            pickNext.disabled = false;
-            hideError(pickError);
-          });
-          optionsBox.appendChild(card);
+
+        // Current membership display
+        _current = data.current || null;
+        if (_current) {
+          currentName.textContent = _current.label || '—';
+          currentFee.textContent  = _current.feeLabel || '—';
+        }
+
+        _levels = data.levels.map(lvl => ({
+          type:           lvl.type,
+          label:          lvl.label || lvl.type,
+          feeLabel:       (lvl.fee && lvl.fee.label) ? lvl.fee.label : '—',
+          includesFamily: !!lvl.includesFamily,
+          isCheckomatic:  !!lvl.isCheckomatic,
+        }));
+
+        levelSelect.innerHTML = '<option value="">— Choose a membership level —</option>';
+        _levels.forEach(lvl => {
+          const opt = document.createElement('option');
+          opt.value = lvl.type;
+          opt.textContent = lvl.label;
+          levelSelect.appendChild(opt);
         });
+        levelSelect.disabled = false;
         _optionsLoaded = true;
       } catch (err) {
         console.error('[Level] options error:', err);
-        optionsBox.innerHTML = '<div class="lvl-options-empty">Could not load levels. Please try again.</div>';
+        levelSelect.innerHTML = '<option value="">Could not load levels. Please try again.</option>';
       }
     }
 
+    // ── SCREEN 1: select-change handler ──────────────────────────────────
+    function onLevelSelected() {
+      const type = levelSelect.value;
+      const lvl = _levels.find(l => l.type === type) || null;
+
+      // Switching the target level discards stale family blocks.
+      _selected = lvl;
+      familyBox.innerHTML = '';
+      _isCheckomatic = !!(lvl && lvl.isCheckomatic);
+
+      // Checkomatic levels need a monthly amount entered here on Screen 1.
+      if (_isCheckomatic) {
+        amountBox.style.display = 'flex';
+      } else {
+        amountBox.style.display = 'none';
+        if (monthlyInput) monthlyInput.value = '';
+      }
+
+      pickNext.disabled = !lvl;
+      hideError(pickError);
+    }
+
     // ── Family members ───────────────────────────────────────────────────
-    function addFamilyBlock() {
+    // `fixed` blocks (the lone spouse for checkomatic-with-spouse) have no
+    // remove button so the single block can't be deleted.
+    function addFamilyBlock(fixed) {
       const node = familyTpl.content.firstElementChild.cloneNode(true);
-      node.querySelector('.lvl-family-remove').addEventListener('click', () => {
-        node.remove();
-      });
+      const removeBtn = node.querySelector('.lvl-family-remove');
+      if (fixed) {
+        removeBtn.remove();
+      } else {
+        removeBtn.addEventListener('click', () => { node.remove(); });
+      }
       familyBox.appendChild(node);
+    }
+
+    /** True when the target collects only a single spouse (checkomatic-with-spouse). */
+    function isSpouseOnly() {
+      return !!(_selected && _selected.type === 'checkomatic_family');
+    }
+
+    /** Build the family screen for the current selection. */
+    function buildFamilyScreen() {
+      familyBox.innerHTML = '';
+      if (isSpouseOnly()) {
+        familyHeading.textContent = 'Add Spouse';
+        familySub.textContent = 'This level includes your spouse. Enter their details below.';
+        addMemberBtn.style.display = 'none';
+        addFamilyBlock(true);
+      } else {
+        familyHeading.textContent = 'Add Family Members';
+        familySub.textContent = 'This level includes family members. Add the people you would like covered under your membership.';
+        addMemberBtn.style.display = '';
+        addFamilyBlock(false);
+      }
     }
 
     function collectFamilyMembers() {
@@ -2500,23 +2703,43 @@
       return members;
     }
 
-    // ── Enter the payment screen ─────────────────────────────────────────
-    function goToPay() {
-      hideError(payError);
-      _isCheckomatic = !!(_selected && _selected.isCheckomatic);
-      if (_isCheckomatic) {
-        amountLabel.textContent = 'Enter your monthly amount below';
-        monthlyWrap.style.display = 'block';
-      } else if (_selected && _selected.type === 'flat') {
+    /** Resolve the fee label to charge for the current selection. */
+    function resolvePayAmountLabel() {
+      if (!_selected) return '—';
+      if (_selected.isCheckomatic) {
+        const amt = parseFloat(monthlyInput.value);
+        return (amt && amt > 0) ? '$' + amt.toFixed(2) + '/mo' : '—';
+      }
+      if (_selected.type === 'flat') {
         // Flat fee scales with member count ($20 each); the cached feeLabel was
         // computed for one member, so recompute from the entered family blocks.
         const memberCount = 1 + collectFamilyMembers().length;
-        amountLabel.textContent = '$' + (memberCount * 20).toFixed(2);
-        monthlyWrap.style.display = 'none';
-      } else {
-        amountLabel.textContent = (_selected && _selected.feeLabel) ? _selected.feeLabel : '—';
-        monthlyWrap.style.display = 'none';
+        return '$' + (memberCount * 20).toFixed(2);
       }
+      return _selected.feeLabel || '—';
+    }
+
+    // ── Enter the review screen ──────────────────────────────────────────
+    function goToReview() {
+      hideError(pickError);
+      _payAmountLabel = resolvePayAmountLabel();
+
+      reviewFromName.textContent = _current ? (_current.label || '—') : '—';
+      reviewFromFee.textContent  = _current ? (_current.feeLabel || '—') : '—';
+      reviewToName.textContent   = _selected ? _selected.label : '—';
+      reviewToFee.textContent    = _payAmountLabel;
+
+      reviewCurrent.textContent  = _current ? (_current.feeLabel || '—') : '—';
+      reviewNew.textContent      = _payAmountLabel;
+      reviewDue.textContent      = _payAmountLabel;
+
+      showScreen('review');
+    }
+
+    // ── Enter the payment screen ─────────────────────────────────────────
+    function goToPay() {
+      hideError(payError);
+      amountLabel.textContent = _payAmountLabel;
       showScreen('pay');
       initLvlCardElement();
     }
@@ -2526,13 +2749,14 @@
       hideError(pickError);
       hideError(payError);
       _selected = null;
+      _isCheckomatic = false;
+      _payAmountLabel = '—';
       pickNext.disabled = true;
-      // Clear any stale highlight on cached option cards from a prior open.
-      optionsBox.querySelectorAll('.lvl-option.selected').forEach(c => c.classList.remove('selected'));
+      levelSelect.value = '';
+      amountBox.style.display = 'none';
       if (monthlyInput) monthlyInput.value = '';
       if (successLabel) successLabel.textContent = '';
       familyBox.innerHTML = '';
-      addFamilyBlock();
       showScreen('pick');
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
@@ -2558,25 +2782,42 @@
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
     doneBtn?.addEventListener('click', () => { location.href = dashboardUrl; });
 
-    // ── SCREEN 1 → SCREEN 2/3 ────────────────────────────────────────────
+    levelSelect?.addEventListener('change', onLevelSelected);
+
+    // ── SCREEN 1 → family / review ───────────────────────────────────────
     pickNext?.addEventListener('click', () => {
       if (pickNext.disabled || !_selected) return;
+      // Checkomatic levels need a valid monthly amount before continuing.
+      if (_selected.isCheckomatic) {
+        const amt = parseFloat(monthlyInput.value);
+        if (!amt || amt < 20) {
+          showError(pickError, 'Please enter an amount of at least $20.00.');
+          return;
+        }
+      }
       if (_selected.includesFamily) {
+        buildFamilyScreen();
         showScreen('family');
       } else {
-        goToPay();
+        goToReview();
       }
     });
 
-    // ── SCREEN 2 navigation ──────────────────────────────────────────────
+    // ── SCREEN 2 (family) navigation ─────────────────────────────────────
     familyBack?.addEventListener('click', () => { showScreen('pick'); });
-    familyNext?.addEventListener('click', () => { goToPay(); });
-    addMemberBtn?.addEventListener('click', () => { addFamilyBlock(); });
+    familyNext?.addEventListener('click', () => { goToReview(); });
+    addMemberBtn?.addEventListener('click', () => { addFamilyBlock(false); });
 
-    // ── SCREEN 3 navigation ──────────────────────────────────────────────
+    // ── SCREEN 3 (review) navigation ─────────────────────────────────────
+    reviewBack?.addEventListener('click', () => {
+      showScreen(_selected && _selected.includesFamily ? 'family' : 'pick');
+    });
+    reviewNext?.addEventListener('click', () => { goToPay(); });
+
+    // ── SCREEN 4 (pay) navigation ────────────────────────────────────────
     payBack?.addEventListener('click', () => {
       hideError(payError);
-      showScreen(_selected && _selected.includesFamily ? 'family' : 'pick');
+      showScreen('review');
     });
 
     // ── SCREEN 3: process payment ────────────────────────────────────────
@@ -2593,12 +2834,12 @@
           return;
         }
 
-        // Checkomatic monthly amount validation
+        // Checkomatic monthly amount — entered on Screen 1; re-validate here.
         let monthlyAmount = null;
-        if (_isCheckomatic && monthlyWrap.style.display !== 'none') {
+        if (_isCheckomatic) {
           monthlyAmount = parseFloat(monthlyInput.value);
-          if (!monthlyAmount || monthlyAmount <= 0) {
-            showError(payError, 'Please enter a valid monthly amount.');
+          if (!monthlyAmount || monthlyAmount < 20) {
+            showError(payError, 'Please enter an amount of at least $20.00 on the first step.');
             return;
           }
         }

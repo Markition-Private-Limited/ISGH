@@ -448,8 +448,16 @@ class MemberPortalController extends Controller
 
         $profile = new MemberProfile($portal->getBundle((int) $contactId));
 
+        $currentSlug  = \App\Support\MembershipTypes::slugFromLevelName($profile->level);
+        $currentLabel = \App\Support\MembershipTypes::labelForSlug($currentSlug);
+
         return response()->json([
             'success' => true,
+            'current' => [
+                'type'     => $currentSlug,
+                'label'    => $currentLabel !== '' ? $currentLabel : ($profile->level ?: 'Current Membership'),
+                'feeLabel' => $profile->yearlyFee !== '' ? $profile->yearlyFee . ' (USD)' : '—',
+            ],
             'levels'  => $levelChange->availableLevels($profile),
         ]);
     }
