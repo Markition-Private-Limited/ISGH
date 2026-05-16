@@ -154,6 +154,52 @@ class LevelChangeService
     }
 
     /**
+     * Finalize a level change whose payment required 3DS authentication.
+     * Re-checks the PaymentIntent and, if it succeeded, marks the EXISTING
+     * LevelChange paid and dispatches the job — no new charge.
+     *
+     * @return array{success:bool, level_change_id?:int, message?:string}
+     */
+    public function finalize(int $levelChangeId, string $paymentIntentId): array
+    {
+        $levelChange = LevelChange::find($levelChangeId);
+        if (! $levelChange) {
+            return ['success' => false, 'message' => 'Level change not found.'];
+        }
+
+        if ($levelChange->processed || $levelChange->status === 'paid') {
+            return ['success' => true, 'level_change_id' => $levelChange->id];
+        }
+
+        try {
+            $intent = $this->stripe->getPaymentIntent($paymentIntentId);
+        } catch (\Throwable $e) {
+            $levelChange->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            Log::error('LevelChangeService::finalize intent retrieval failed', [
+                'level_change_id' => $levelChange->id, 'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => 'Could not verify payment. Please try again.'];
+        }
+
+        if (($intent->status ?? null) !== 'succeeded') {
+            return [
+                'success' => false,
+                'message' => 'Payment is not complete. Status: ' . ($intent->status ?? 'unknown'),
+            ];
+        }
+
+        $levelChange->update([
+            'status'           => 'paid',
+            'stripe_charge_id' => $intent->latest_charge ?? null,
+            'paid_at'          => now(),
+        ]);
+
+        ProcessLevelChange::dispatch($levelChange);
+
+        return ['success' => true, 'level_change_id' => $levelChange->id];
+    }
+
+    /**
      * @return array{error_type:string,error_code:?string,error_decline_code:?string,error_message:string}
      */
     private function stripeErrorFields(\Throwable $e): array

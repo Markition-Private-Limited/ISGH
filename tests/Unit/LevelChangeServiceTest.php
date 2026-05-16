@@ -201,6 +201,50 @@ class LevelChangeServiceTest extends TestCase
         Queue::assertNotPushed(ProcessLevelChange::class);
     }
 
+    public function test_finalize_marks_paid_and_dispatches_job(): void
+    {
+        Queue::fake();
+
+        $lc = LevelChange::create([
+            'contact_id' => 999, 'member_email' => 'a@b.com',
+            'from_type' => 'individual', 'to_type' => 'family',
+            'amount_cents' => 4000, 'currency' => 'usd', 'status' => 'pending',
+            'stripe_payment_intent_id' => 'pi_3ds', 'family_members' => [],
+        ]);
+
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('getPaymentIntent')->with('pi_3ds')->andReturn(
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_3ds', 'status' => 'succeeded', 'latest_charge' => 'ch_3ds'])
+        );
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $result = app(LevelChangeService::class)->finalize($lc->id, 'pi_3ds');
+
+        $this->assertTrue($result['success']);
+        $this->assertDatabaseHas('level_changes', ['id' => $lc->id, 'status' => 'paid']);
+        Queue::assertPushed(ProcessLevelChange::class);
+    }
+
+    public function test_finalize_is_idempotent_for_already_paid(): void
+    {
+        Queue::fake();
+
+        $lc = LevelChange::create([
+            'contact_id' => 999, 'member_email' => 'a@b.com',
+            'from_type' => 'individual', 'to_type' => 'family',
+            'amount_cents' => 4000, 'currency' => 'usd', 'status' => 'paid',
+            'stripe_payment_intent_id' => 'pi_3ds', 'family_members' => [],
+        ]);
+
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $result = app(LevelChangeService::class)->finalize($lc->id, 'pi_3ds');
+
+        $this->assertTrue($result['success']);
+        Queue::assertNotPushed(ProcessLevelChange::class);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();
