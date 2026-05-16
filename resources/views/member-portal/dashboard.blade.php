@@ -2013,7 +2013,6 @@
   </div>
 </div>
 
-<script src="https://js.stripe.com/v3/"></script>
 <script>
   // ── Renewal modal module (self-contained IIFE) ──────────────────────────
   (function () {
@@ -2306,6 +2305,11 @@
 </script>
 @endunless
 
+{{-- Stripe.js — loaded unconditionally; both the renewal and level-change
+     modals need it, and the level-change modal renders for all members
+     (including lifetime members, whose renewal modal is omitted). --}}
+<script src="https://js.stripe.com/v3/"></script>
+
 {{-- ── Level-change modal ── --}}
 <div class="renew-overlay" id="levelModal" aria-hidden="true">
   <div class="renew-modal" role="dialog" aria-modal="true">
@@ -2557,6 +2561,11 @@
     function initLvlCardElement() {
       if (_cardMounted) return;
       if (!lvlStripeKey) { console.warn('[Level][Stripe] publishable key not set'); return; }
+      if (typeof Stripe === 'undefined') {
+        console.error('[Level][Stripe] Stripe.js has not loaded');
+        showError(payError, 'Payment library failed to load. Please refresh the page and try again.');
+        return;
+      }
       _stripe = Stripe(lvlStripeKey);
       const elements = _stripe.elements();
       _cardElement = elements.create('card', {
