@@ -204,4 +204,58 @@ class MemberPortalIntegrationTest extends TestCase
             ->assertSee('INV-NOURL')
             ->assertSee('inv-view disabled', false);
     }
+
+    /**
+     * Every authenticated member-portal page renders 200 with the sidebar
+     * (which now includes the logout button) present.
+     */
+    public function test_all_member_portal_pages_render_with_logout_button(): void
+    {
+        Cache::put('member_portal_bundle_999', [
+            'contact'  => [
+                'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
+                'Email' => 'tauqeer@example.com', 'Status' => 'Active',
+                'MembershipLevel' => ['Name' => 'Individual Membership'], 'FieldValues' => [],
+            ],
+            'family' => [], 'invoices' => [], 'payments' => [],
+        ], now()->addMinutes(10));
+
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        foreach ([
+            '/member-portal/dashboard',
+            '/member-portal/profile',
+            '/member-portal/payments',
+            '/member-portal/records',
+            '/member-portal/newsletter',
+            '/member-portal/financial-report',
+            '/member-portal/updates',
+            '/member-portal/nominees-training',
+        ] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee('Logout')
+                ->assertSee(route('member-portal.logout'), false);
+        }
+    }
+
+    public function test_logout_clears_session_and_redirects_to_login(): void
+    {
+        $this->withSession([
+            'member_portal_authenticated' => true,
+            'member_portal_contact_id'    => 999,
+            'member_portal_email'         => 'tauqeer@example.com',
+        ]);
+
+        $this->post('/member-portal/logout')
+            ->assertRedirect('/member-portal/login');
+
+        // After logout the protected area must bounce back to login.
+        $this->get('/member-portal/dashboard')
+            ->assertRedirect('/member-portal/login');
+    }
 }
