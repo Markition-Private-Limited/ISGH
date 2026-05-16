@@ -130,6 +130,77 @@ class LevelChangeServiceTest extends TestCase
         $this->assertDatabaseCount('level_changes', 0);
     }
 
+    public function test_charge_declined_card_marks_failed_with_decline_code(): void
+    {
+        Queue::fake();
+
+        $stripeError = \Stripe\ErrorObject::constructFrom([
+            'type'         => 'card_error',
+            'code'         => 'card_declined',
+            'decline_code' => 'insufficient_funds',
+            'message'      => 'Your card has insufficient funds.',
+        ]);
+        $cardException = new \Stripe\Exception\CardException('Your card has insufficient funds.');
+        $cardException->setError($stripeError);
+
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('createCustomer')->andReturn(\Stripe\Customer::constructFrom(['id' => 'cus_test']));
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            \Stripe\PaymentMethod::constructFrom(['type' => 'card', 'card' => ['brand' => 'visa', 'last4' => '4242']])
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test']));
+        $stripe->shouldReceive('processPayment')->andThrow($cardException);
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $svc = app(LevelChangeService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999, 'Email' => 'tauqeer@example.com',
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
+        ]]);
+
+        $result = $svc->charge(999, $profile, 'family', [], 'pm_test', null);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Your card has insufficient funds.', $result['message']);
+        $this->assertDatabaseHas('level_changes', [
+            'contact_id'         => 999,
+            'status'             => 'failed',
+            'error_decline_code' => 'insufficient_funds',
+        ]);
+        Queue::assertNotPushed(ProcessLevelChange::class);
+    }
+
+    public function test_charge_requires_action_returns_client_secret(): void
+    {
+        Queue::fake();
+
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('createCustomer')->andReturn(\Stripe\Customer::constructFrom(['id' => 'cus_test']));
+        $stripe->shouldReceive('addPaymentMethodToCustomer')->andReturn(
+            \Stripe\PaymentMethod::constructFrom(['type' => 'card', 'card' => ['brand' => 'visa', 'last4' => '4242']])
+        );
+        $stripe->shouldReceive('createPaymentIntent')->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test']));
+        $stripe->shouldReceive('processPayment')->andReturn(
+            \Stripe\PaymentIntent::constructFrom(['id' => 'pi_test', 'status' => 'requires_action', 'client_secret' => 'pi_test_secret'])
+        );
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $svc = app(LevelChangeService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999, 'Email' => 'tauqeer@example.com',
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
+        ]]);
+
+        $result = $svc->charge(999, $profile, 'family', [], 'pm_test', null);
+
+        $this->assertTrue($result['requires_action']);
+        $this->assertSame('pi_test_secret', $result['client_secret']);
+        $this->assertArrayHasKey('level_change_id', $result);
+        // The row stays pending until 3DS is finalized; the job is not dispatched.
+        $this->assertDatabaseHas('level_changes', ['id' => $result['level_change_id'], 'status' => 'pending']);
+        Queue::assertNotPushed(ProcessLevelChange::class);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();

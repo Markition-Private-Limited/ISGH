@@ -129,6 +129,11 @@ class ProcessLevelChange implements ShouldQueue
                 if (array_key_exists($idx, $createdIds) || array_key_exists((string) $idx, $createdIds)) {
                     continue; // already created on a prior run
                 }
+                // Non-fatal: a failed family member is logged and skipped, not
+                // recorded in created_family_ids — so a job retry re-attempts it.
+                // Narrow risk: if WA created the contact but the HTTP response
+                // failed, a retry could create a duplicate. addRelatedContact has
+                // no idempotency key; accepted as a rare edge case.
                 try {
                     $related = $wa->addRelatedContact($contactId, $bundleId, $levelId, array_merge($member, [
                         'membership_type' => $toType,
