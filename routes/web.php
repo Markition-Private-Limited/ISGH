@@ -77,6 +77,12 @@ Route::prefix('member-portal')->name('member-portal.')->group(function () {
         Route::post('/renew/finalize',        [MemberPortalController::class, 'finalizeRenewal'])->name('renew.finalize');
         Route::get('/renew/status/{renewal}', [MemberPortalController::class, 'renewStatus'])->name('renew.status');
 
+        // Membership level change
+        Route::get('/change-level/options',          [MemberPortalController::class, 'changeLevelOptions'])->name('change-level.options');
+        Route::post('/change-level',                 [MemberPortalController::class, 'processLevelChange'])->name('change-level');
+        Route::post('/change-level/finalize',        [MemberPortalController::class, 'finalizeLevelChange'])->name('change-level.finalize');
+        Route::get('/change-level/status/{levelChange}', [MemberPortalController::class, 'levelChangeStatus'])->name('change-level.status');
+
         // Static content pages
         Route::get('/records',            [MemberPortalController::class, 'records'])->name('records');
         Route::get('/newsletter',         [MemberPortalController::class, 'newsletter'])->name('newsletter');

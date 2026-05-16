@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Mail\OtpMail;
+use App\Models\LevelChange;
 use App\Models\Renewal;
+use App\Services\LevelChangeService;
 use App\Services\MemberPortalService;
 use App\Services\RenewalService;
 use App\Services\WildApricotService;
@@ -431,6 +433,104 @@ class MemberPortalController extends Controller
             'status'        => $renewal->status,
             'processed'     => $renewal->processed,
             'wa_invoice_id' => $renewal->wa_invoice_id,
+        ]);
+    }
+
+    // ── Membership Level Change ───────────────────────────────────────────
+
+    /** The membership levels the member may switch to. */
+    public function changeLevelOptions(Request $request, MemberPortalService $portal, LevelChangeService $levelChange)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Session expired.'], 401);
+        }
+
+        $profile = new MemberProfile($portal->getBundle((int) $contactId));
+
+        return response()->json([
+            'success' => true,
+            'levels'  => $levelChange->availableLevels($profile),
+        ]);
+    }
+
+    /** Run the Stripe charge for a level change. */
+    public function processLevelChange(Request $request, MemberPortalService $portal, LevelChangeService $levelChange)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Session expired. Please sign in again.'], 401);
+        }
+
+        $validated = $request->validate([
+            'target_type'                 => ['required', 'string'],
+            'payment_method_id'           => ['required', 'string'],
+            'monthly_amount'              => ['nullable', 'numeric', 'min:1'],
+            'family_members'              => ['nullable', 'array'],
+            'family_members.*.first_name' => ['nullable', 'string', 'max:100'],
+            'family_members.*.last_name'  => ['nullable', 'string', 'max:100'],
+            'family_members.*.email'      => ['nullable', 'email'],
+            'family_members.*.phone'      => ['nullable', 'string', 'max:30'],
+            'family_members.*.dob'        => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $profile = new MemberProfile($portal->getBundle((int) $contactId));
+
+        try {
+            $result = $levelChange->charge(
+                (int) $contactId,
+                $profile,
+                $validated['target_type'],
+                $validated['family_members'] ?? [],
+                $validated['payment_method_id'],
+                isset($validated['monthly_amount']) ? (float) $validated['monthly_amount'] : null
+            );
+        } catch (\Throwable $e) {
+            Log::error('MemberPortal: level change failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Could not process the level change. Please try again.'], 422);
+        }
+
+        $status = ($result['success'] ?? false) ? 200 : 402;
+        return response()->json($result, $status);
+    }
+
+    /** Finalize a level change after a 3DS challenge — no new charge. */
+    public function finalizeLevelChange(Request $request, LevelChangeService $levelChange)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Session expired. Please sign in again.'], 401);
+        }
+
+        $validated = $request->validate([
+            'level_change_id'   => ['required', 'integer'],
+            'payment_intent_id' => ['required', 'string'],
+        ]);
+
+        $row = LevelChange::find($validated['level_change_id']);
+        if (! $row || (int) $row->contact_id !== (int) $contactId) {
+            return response()->json(['success' => false, 'message' => 'Level change not found.'], 404);
+        }
+
+        $result = $levelChange->finalize((int) $validated['level_change_id'], $validated['payment_intent_id']);
+        $status = ($result['success'] ?? false) ? 200 : 402;
+        return response()->json($result, $status);
+    }
+
+    /** Level-change status for the success screen. */
+    public function levelChangeStatus(Request $request, LevelChange $levelChange)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId || (int) $levelChange->contact_id !== (int) $contactId) {
+            return response()->json(['success' => false, 'message' => 'Not found.'], 404);
+        }
+
+        return response()->json([
+            'success'       => true,
+            'status'        => $levelChange->status,
+            'processed'     => $levelChange->processed,
+            'wa_invoice_id' => $levelChange->wa_invoice_id,
+            'to_type'       => $levelChange->to_type,
         ]);
     }
 
