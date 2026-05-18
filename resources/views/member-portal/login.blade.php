@@ -51,10 +51,11 @@
     /* ── Main ── */
     .main {
       flex: 1;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 32px 24px 48px;
+      padding: 24px;
       width: 100%;
     }
 
@@ -73,11 +74,11 @@
       background-image: linear-gradient(to top right, #c8f0dc 0%, #ffffff 50%);
       border-radius: 24px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.06);
-      padding: 56px 56px 56px;
+      padding: clamp(32px, 4vw, 56px);
       display: flex;
       flex-direction: column;
       justify-content: center;
-      min-height: 540px;
+      min-height: 460px;
     }
 
     .form-inner {
@@ -322,7 +323,7 @@
       position: relative;
       background: var(--green);
       box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-      min-height: 540px;
+      min-height: 460px;
     }
     .right-card img {
       position: absolute;
