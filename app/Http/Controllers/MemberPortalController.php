@@ -277,7 +277,7 @@ class MemberPortalController extends Controller
             }
 
             $payment = [
-                'date'        => $issueDate,
+                'invoiceDate' => $issueDate,
                 'method'      => $method,
                 'paymentDate' => $paymentDate,
             ];
