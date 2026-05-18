@@ -408,6 +408,20 @@
           </div>
         </div>
 
+        <div id="invStatusBlock" style="display:none;">
+          <div class="inv-section-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Payment Status
+          </div>
+          <div class="inv-data">
+            <div class="d-row"><span class="d-key">Status:</span><span class="d-val" id="invStatusValue"></span></div>
+            <div class="d-divider"></div>
+            <div class="d-row total"><span class="d-key">Amount Due:</span><span class="d-val" id="invAmountDue"></span></div>
+          </div>
+        </div>
+
         <div class="inv-note">
           <b>Note:</b> <span id="invNoteText">This invoice is a record of payment received. For any questions or concerns regarding this invoice, please contact our support team.</span>
         </div>
@@ -547,17 +561,22 @@
       pill.textContent = inv.status;
       pill.classList.toggle('unpaid', !inv.isPaid);
 
-      const payBlock = document.getElementById('invPaymentBlock');
-      const note     = document.getElementById('invNoteText');
+      const payBlock    = document.getElementById('invPaymentBlock');
+      const statusBlock = document.getElementById('invStatusBlock');
+      const note        = document.getElementById('invNoteText');
       if (inv.isPaid && inv.payment) {
-        payBlock.style.display = '';
+        payBlock.style.display    = '';
+        statusBlock.style.display = 'none';
         document.getElementById('invPayDate').textContent     = inv.payment.invoiceDate || '—';
         document.getElementById('invPayMethod').textContent   = inv.payment.method || '—';
         document.getElementById('invPaymentDate').textContent = inv.payment.paymentDate || '—';
         document.getElementById('invTotal').textContent       = fmtMoney(inv.amount, inv.currency);
         note.textContent = 'This invoice is a record of payment received. For any questions or concerns regarding this invoice, please contact our support team.';
       } else {
-        payBlock.style.display = 'none';
+        payBlock.style.display    = 'none';
+        statusBlock.style.display = '';
+        document.getElementById('invStatusValue').textContent = inv.status;
+        document.getElementById('invAmountDue').textContent   = fmtMoney(inv.amount, inv.currency);
         note.textContent = 'This invoice has not been paid. For any questions regarding this invoice, please contact our support team.';
       }
       showState('content');
