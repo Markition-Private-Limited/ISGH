@@ -417,6 +417,140 @@
       .login-box h1 { font-size: 24px; }
       .login-box p  { font-size: 13px; }
     }
+
+    /* Screenshot-matched desktop composition */
+    @media (min-width: 761px) {
+      .page { overflow-x: hidden; }
+
+      header.w-full {
+        padding: 28px 36px 0 !important;
+      }
+      header > .flex {
+        max-width: 1192px !important;
+        gap: 20px !important;
+      }
+      header .hidden.lg\:block {
+        display: block !important;
+      }
+      header .w-full.lg\:hidden {
+        display: none !important;
+      }
+      header .hidden.lg\:block > div {
+        width: 32px !important;
+        height: 32px !important;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+      header .hidden.lg\:block img {
+        width: 32px !important;
+        height: 32px !important;
+        filter: drop-shadow(0 5px 12px rgba(0,0,0,0.18));
+      }
+      .nav-pill.hidden.lg\:flex {
+        display: flex !important;
+      }
+      .nav-pill {
+        background: #111 !important;
+        border: 6px solid #fff !important;
+        border-radius: 999px !important;
+        gap: 18px !important;
+        padding: 4px 5px 4px 21px !important;
+        box-shadow: 0 10px 22px rgba(0,0,0,0.16) !important;
+      }
+      .nav-pill > div:first-child {
+        gap: 19px !important;
+      }
+      .nav-pill > div:last-child {
+        gap: 6px !important;
+      }
+      .nav-pill a {
+        font-size: 10px !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+      }
+      .nav-pill > div:last-child a {
+        min-width: 58px !important;
+        padding: 11px 15px !important;
+      }
+      .nav-pill > div:last-child a:first-child {
+        background: #737373 !important;
+      }
+      .nav-pill > div:last-child a:last-child {
+        background: #00c996 !important;
+      }
+
+      .main {
+        align-items: flex-start;
+        padding: 46px 32px 80px;
+      }
+      .cards-wrapper {
+        max-width: 1192px;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+      }
+      .left-card,
+      .right-card {
+        height: 365px;
+        min-height: 365px;
+        border: 6px solid #fff;
+        border-radius: 24px;
+        box-shadow: 0 16px 44px rgba(0,0,0,0.15);
+      }
+      .left-card {
+        padding: clamp(34px, 4vw, 58px);
+      }
+      .login-box h1 {
+        font-size: clamp(28px, 3.35vw, 40px);
+        letter-spacing: -1.25px;
+      }
+      .login-box p {
+        font-size: clamp(13px, 1.35vw, 16px);
+        color: #727272;
+      }
+      .divider {
+        border-top-color: #d4d4d4;
+      }
+      .field label {
+        font-size: 11px;
+      }
+      .field input[type="email"],
+      .field input[type="text"] {
+        border: 1px solid #bfc6c2;
+        border-radius: 8px;
+        padding: 10px 13px;
+        font-size: 13px;
+      }
+      .btn-primary {
+        margin-top: 12px;
+        padding: 13px 24px;
+        font-size: 14px;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.26), 0 12px 24px rgba(6, 78, 54, 0.22);
+      }
+      .lock-mark {
+        color: #fff;
+        display: block;
+        font-size: 20px;
+        line-height: 1;
+        margin-top: 31px;
+        text-align: center;
+      }
+    }
+
+    @media (min-width: 761px) and (max-width: 980px) {
+      header.w-full { padding-left: 36px !important; padding-right: 28px !important; }
+      .nav-pill { gap: 15px !important; padding-left: 18px !important; }
+      .nav-pill > div:first-child { gap: 15px !important; }
+      .nav-pill a { font-size: 8px !important; }
+      .nav-pill > div:last-child a {
+        min-width: 52px !important;
+        padding: 10px 13px !important;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .lock-mark { display: none; }
+    }
   </style>
 </head>
 <body class="page">
@@ -497,6 +631,7 @@
               <div class="spinner"></div>
               <span class="btn-text">Send OTP</span>
             </button>
+            <span class="lock-mark" aria-hidden="true">▣</span>
           </div>
 
           {{-- ── STEP 2: OTP ── --}}
@@ -532,7 +667,8 @@
             <div class="resend-row">
               Didn't receive the code?
               <button type="button" class="resend-btn" id="btn-resend" disabled>
-                Resend in <span class="resend-timer" id="resend-timer">00:59</span>
+                <span id="resend-waiting">Resend in <span class="resend-timer" id="resend-timer">00:59</span></span>
+                <span id="resend-ready" style="text-decoration:underline; display:none;">Resend code</span>
               </button>
             </div>
 
@@ -605,6 +741,8 @@ function closeMobileMenu() { document.getElementById('mobileMenu').classList.add
   const maskedEl   = document.getElementById('masked-email');
   const otpBoxes   = Array.from(document.querySelectorAll('.otp-box'));
   const timerEl    = document.getElementById('resend-timer');
+  const resendWaiting = document.getElementById('resend-waiting');
+  const resendReady   = document.getElementById('resend-ready');
 
   let resendInterval = null;
 
@@ -651,6 +789,8 @@ function closeMobileMenu() { document.getElementById('mobileMenu').classList.add
   function startTimer(secs) {
     clearInterval(resendInterval);
     btnResend.disabled = true;
+    resendWaiting.style.display = '';
+    resendReady.style.display   = 'none';
     let remaining = secs;
     function tick() {
       const m = String(Math.floor(remaining / 60)).padStart(2, '0');
@@ -659,7 +799,8 @@ function closeMobileMenu() { document.getElementById('mobileMenu').classList.add
       if (remaining <= 0) {
         clearInterval(resendInterval);
         btnResend.disabled = false;
-        btnResend.innerHTML = '<span style="text-decoration:underline">Resend code</span>';
+        resendWaiting.style.display = 'none';
+        resendReady.style.display   = '';
       }
       remaining--;
     }

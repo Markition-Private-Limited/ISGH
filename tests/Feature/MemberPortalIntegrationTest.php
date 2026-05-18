@@ -42,6 +42,23 @@ class MemberPortalIntegrationTest extends TestCase
         $this->assertTrue(Cache::has('member_portal_bundle_999'));
     }
 
+    public function test_verify_otp_expired_returns_expiry_message(): void
+    {
+        // An OTP whose expires_at is in the past must be rejected with the
+        // exact expiry message and must not authenticate the session.
+        $this->withSession(['member_portal_otp' => [
+            'code' => '123456', 'email' => 'tauqeer@example.com',
+            'expires_at' => now()->subSeconds(5)->timestamp, 'contact_id' => 999,
+        ]]);
+
+        $this->postJson('/member-portal/verify-otp', ['otp' => '123456'])
+            ->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Your OTP has expired, please resend the code.',
+            ]);
+    }
+
     public function test_dashboard_renders_member_data(): void
     {
         $this->withSession([

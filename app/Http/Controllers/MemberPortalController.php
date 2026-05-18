@@ -45,9 +45,9 @@ class MemberPortalController extends Controller
             ], 422);
         }
 
-        // Generate a 6-digit OTP and store it in the session
+        // Generate a 6-digit OTP and store it in the session (valid for 1 minute)
         $otp       = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $expiresAt = now()->addMinutes(10)->timestamp;
+        $expiresAt = now()->addMinute()->timestamp;
 
         $request->session()->put('member_portal_otp', [
             'code'       => $otp,
@@ -102,7 +102,7 @@ class MemberPortalController extends Controller
             $request->session()->forget('member_portal_otp');
             return response()->json([
                 'success' => false,
-                'message' => 'Verification code has expired. Please request a new one.',
+                'message' => 'Your OTP has expired, please resend the code.',
             ], 422);
         }
 
@@ -154,7 +154,7 @@ class MemberPortalController extends Controller
         }
 
         $otp       = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $expiresAt = now()->addMinutes(10)->timestamp;
+        $expiresAt = now()->addMinute()->timestamp;
 
         $request->session()->put('member_portal_otp', array_merge($stored, [
             'code'       => $otp,
