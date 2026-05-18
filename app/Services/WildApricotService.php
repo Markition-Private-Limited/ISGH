@@ -1666,6 +1666,27 @@ class WildApricotService
         }
     }
 
+    // ─── MEMBER PORTAL — SINGLE INVOICE ─────────────────────────────────────
+    // GET /accounts/{accountId}/invoices/{invoiceId}
+    // Returns the full invoice document, or null on failure.
+
+    public function getInvoiceById(int $invoiceId): ?array
+    {
+        try {
+            $accountId = $this->getAccountId();
+            $r = $this->apiGet("/accounts/{$accountId}/invoices/{$invoiceId}");
+            if (! $r->successful()) {
+                Log::warning('WA getInvoiceById: API error', ['status' => $r->status(), 'invoice_id' => $invoiceId]);
+                return null;
+            }
+            $body = $r->json();
+            return is_array($body) ? $body : null;
+        } catch (\Throwable $e) {
+            Log::error('WA getInvoiceById exception', ['invoice_id' => $invoiceId, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
     // ─── MEMBER PORTAL — PAYMENTS ───────────────────────────────────────────
     // GET /accounts/{accountId}/payments?contactId={contactId}
     // Returns the contact's payments, or [] on failure.
