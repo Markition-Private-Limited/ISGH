@@ -139,4 +139,17 @@ class InvoiceDetailTest extends TestCase
                 'invoice' => ['isPaid' => false, 'status' => 'Unpaid', 'payment' => null],
             ]);
     }
+
+    public function test_payments_page_renders_invoice_modal_and_view_buttons(): void
+    {
+        $this->seedMember([
+            ['Id' => 156, 'DocumentNumber' => 'INV-2025-0156', 'Value' => 20.0,
+             'IsPaid' => true, 'CreatedDate' => '2026-01-15T00:00:00'],
+        ]);
+
+        $this->get('/member-portal/payments')
+            ->assertOk()
+            ->assertSee('id="invoiceModal"', false)
+            ->assertSee('data-invoice-id="156"', false);
+    }
 }

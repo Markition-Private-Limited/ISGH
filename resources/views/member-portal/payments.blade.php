@@ -32,7 +32,10 @@
     .app { display:grid; grid-template-columns:248px 1fr; min-height:100vh;
            transition:grid-template-columns .3s ease; max-width:100%; overflow-x:hidden; }
     .app.sidebar-collapsed { grid-template-columns:0 1fr; }
-    .app.sidebar-collapsed .sidebar { transform:translateX(-100%); }
+    /* The grid track is 0-wide when collapsed; give the sidebar its own width
+       so translateX(-100%) fully clears it, and clip overflow so its contents
+       don't spill over the page content. */
+    .app.sidebar-collapsed .sidebar { width:248px; overflow:hidden; transform:translateX(-100%); transition:transform .3s ease; }
 
     /* ── Sidebar ── */
     .sidebar { background:var(--surface); border-right:1px solid var(--border);
@@ -64,6 +67,9 @@
     .hamburger { width:38px; height:38px; border:none; background:none; border-radius:9px;
                  display:none; align-items:center; justify-content:center; color:var(--text); }
     .hamburger:hover { background:var(--bg); }
+    /* Desktop: when the sidebar is collapsed off-screen, the topbar hamburger
+       becomes the only control that can reopen it. */
+    .app.sidebar-collapsed .hamburger { display:inline-flex; }
     .page-title { font-size:19px; font-weight:700; }
     .user-name { font-size:14px; font-weight:600; color:var(--text); }
 
@@ -116,7 +122,9 @@
     .inv-table tbody tr:hover { background:#f8fafc; }
     .inv-num { font-weight:600; }
     .inv-amount { font-weight:700; }
-    .inv-view { color:var(--green); font-weight:600; display:inline-flex; align-items:center; gap:5px; }
+    .inv-view { color:var(--green); font-weight:600; display:inline-flex; align-items:center;
+                gap:5px; border:none; background:none; font-family:inherit; font-size:13px;
+                padding:0; cursor:pointer; }
     .inv-view.disabled { color:var(--text-faint); pointer-events:none; }
     .inv-empty { text-align:center; color:var(--text-muted); padding:32px 12px; }
 
@@ -155,6 +163,56 @@
       font-family: inherit; font-size: 14px; text-align: left;
     }
     .nav-item.nav-logout:hover { background: #fef2f2; color: #dc2626; }
+
+    /* ── Invoice detail modal ── */
+    .inv-modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,.55);
+                         display:none; align-items:flex-start; justify-content:center;
+                         padding:40px 16px; z-index:60; overflow-y:auto; }
+    .inv-modal-overlay.open { display:flex; }
+    .inv-modal { background:var(--surface); border-radius:20px; width:100%;
+                 max-width:420px; box-shadow:0 24px 60px rgba(15,23,42,.25);
+                 overflow:hidden; }
+    .inv-modal-head { display:flex; align-items:flex-start; justify-content:space-between;
+                      padding:22px 24px 8px; }
+    .inv-modal-head h2 { font-size:18px; font-weight:700; }
+    .inv-modal-head p { font-size:12px; color:var(--text-muted); margin-top:3px; }
+    .inv-modal-close { width:30px; height:30px; border:none; background:none;
+                       border-radius:8px; color:var(--text-muted); font-size:20px;
+                       line-height:1; flex-shrink:0; }
+    .inv-modal-close:hover { background:var(--bg); }
+    .inv-modal-body { padding:8px 24px 24px; }
+
+    .inv-banner { background:linear-gradient(135deg,#0d7a55 0%,#064e36 100%);
+                  border-radius:14px; padding:18px 20px; color:#fff; position:relative; }
+    .inv-banner .b-label { font-size:11px; opacity:.8; }
+    .inv-banner .b-number { font-size:22px; font-weight:800; margin-top:2px; }
+    .inv-banner .b-pill { position:absolute; top:16px; right:18px; background:#fff;
+                          color:var(--green-dark); font-size:11px; font-weight:700;
+                          padding:4px 12px; border-radius:999px; }
+    .inv-banner .b-pill.unpaid { background:#fee2e2; color:#b91c1c; }
+    .inv-banner .b-row { display:flex; justify-content:space-between; margin-top:18px; }
+    .inv-banner .b-row .b-cell .b-label { display:block; }
+    .inv-banner .b-row .b-cell .b-val { font-size:13px; font-weight:700; margin-top:2px; }
+    .inv-banner .b-row .b-cell.right { text-align:right; }
+
+    .inv-section-title { display:flex; align-items:center; gap:8px; font-size:14px;
+                         font-weight:700; margin:22px 0 12px; }
+    .inv-section-title svg { width:16px; height:16px; color:var(--green); }
+    .inv-data { background:var(--bg); border-radius:12px; padding:14px 16px; }
+    .inv-data .d-row { display:flex; justify-content:space-between; padding:6px 0;
+                       font-size:13px; }
+    .inv-data .d-row .d-key { color:var(--text-muted); }
+    .inv-data .d-row .d-val { font-weight:700; }
+    .inv-data .d-divider { border-top:1px solid var(--border); margin:8px 0; }
+    .inv-data .d-row.total .d-key,
+    .inv-data .d-row.total .d-val { font-size:15px; }
+
+    .inv-note { background:#fef9ec; border-radius:10px; padding:12px 14px;
+                margin-top:18px; font-size:12px; color:#92702a; }
+    .inv-note b { color:#7c5a14; }
+    .inv-modal-loading, .inv-modal-error { padding:48px 0; text-align:center;
+                                           color:var(--text-muted); font-size:13px; }
+    .inv-modal-error { color:#b91c1c; }
 
     /* ── Responsive ── */
     @media (max-width:980px) {
@@ -260,13 +318,13 @@
                 <td>{{ $inv['dateLabel'] ?: '—' }}</td>
                 <td>{{ $profile->billingPeriod($inv) ?: '—' }}</td>
                 <td>
-                  @if(($inv['url'] ?? '#') !== '#' && $inv['url'] !== '')
-                    <a href="{{ $inv['url'] }}" target="_blank" rel="noopener" class="inv-view">
+                  @if(($inv['id'] ?? null) !== null)
+                    <button type="button" class="inv-view" data-invoice-id="{{ $inv['id'] }}">
                       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
                       </svg>
                       View
-                    </a>
+                    </button>
                   @else
                     <span class="inv-view disabled">View</span>
                   @endif
@@ -290,6 +348,71 @@
       </div>
 
     </section>
+  </div>
+</div>
+
+{{-- ── Invoice Detail Modal ── --}}
+<div class="inv-modal-overlay" id="invoiceModal">
+  <div class="inv-modal" role="dialog" aria-modal="true" aria-labelledby="invModalTitle">
+    <div class="inv-modal-head">
+      <div>
+        <h2 id="invModalTitle">Invoice Details</h2>
+        <p>View complete details of your invoice and payment information</p>
+      </div>
+      <button type="button" class="inv-modal-close" id="invModalClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="inv-modal-body">
+      <div class="inv-modal-loading" id="invModalLoading">Loading invoice…</div>
+      <div class="inv-modal-error" id="invModalError" style="display:none;"></div>
+      <div id="invModalContent" style="display:none;">
+        <div class="inv-banner">
+          <span class="b-pill" id="invPill">Paid</span>
+          <div class="b-label">Invoice Number</div>
+          <div class="b-number" id="invNumber"></div>
+          <div class="b-row">
+            <div class="b-cell">
+              <span class="b-label">Issue Date</span>
+              <span class="b-val" id="invIssueDate"></span>
+            </div>
+            <div class="b-cell right">
+              <span class="b-label">Billing Period</span>
+              <span class="b-val" id="invBillingPeriod"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="inv-section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>
+          </svg>
+          Member Information
+        </div>
+        <div class="inv-data">
+          <div class="d-row"><span class="d-key">Member Name:</span><span class="d-val" id="invMemberName"></span></div>
+          <div class="d-row"><span class="d-key">Membership Type:</span><span class="d-val" id="invMembershipType"></span></div>
+        </div>
+
+        <div id="invPaymentBlock">
+          <div class="inv-section-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+            </svg>
+            Payment Details
+          </div>
+          <div class="inv-data">
+            <div class="d-row"><span class="d-key">Date:</span><span class="d-val" id="invPayDate"></span></div>
+            <div class="d-row"><span class="d-key">Payment Method:</span><span class="d-val" id="invPayMethod"></span></div>
+            <div class="d-row"><span class="d-key">Payment Date:</span><span class="d-val" id="invPaymentDate"></span></div>
+            <div class="d-divider"></div>
+            <div class="d-row total"><span class="d-key">Total Amount Paid:</span><span class="d-val" id="invTotal"></span></div>
+          </div>
+        </div>
+
+        <div class="inv-note">
+          <b>Note:</b> <span id="invNoteText">This invoice is a record of payment received. For any questions or concerns regarding this invoice, please contact our support team.</span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
