@@ -352,7 +352,7 @@
 </div>
 
 {{-- ── Invoice Detail Modal ── --}}
-<div class="inv-modal-overlay" id="invoiceModal">
+<div class="inv-modal-overlay" id="invoiceModal" aria-hidden="true">
   <div class="inv-modal" role="dialog" aria-modal="true" aria-labelledby="invModalTitle">
     <div class="inv-modal-head">
       <div>
@@ -495,6 +495,95 @@
     pagerNext.addEventListener('click', () => { page++; render(); });
 
     render();
+  })();
+
+  // ── Invoice detail modal ────────────────────────────────────────────────
+  (function () {
+    const overlay  = document.getElementById('invoiceModal');
+    if (!overlay) return;
+
+    const loadingEl = document.getElementById('invModalLoading');
+    const errorEl   = document.getElementById('invModalError');
+    const contentEl = document.getElementById('invModalContent');
+    const closeBtn  = document.getElementById('invModalClose');
+
+    function open() {
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function close() {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function showState(state) {
+      loadingEl.style.display = state === 'loading' ? '' : 'none';
+      errorEl.style.display   = state === 'error'   ? '' : 'none';
+      contentEl.style.display = state === 'content' ? '' : 'none';
+    }
+
+    function fmtMoney(amount, currency) {
+      return '$' + Number(amount).toFixed(2) + ' ' + (currency || 'USD');
+    }
+
+    function populate(inv) {
+      document.getElementById('invNumber').textContent        = inv.number;
+      document.getElementById('invIssueDate').textContent     = inv.issueDate || '—';
+      document.getElementById('invBillingPeriod').textContent = inv.billingPeriod || '—';
+      document.getElementById('invMemberName').textContent    = inv.memberName;
+      document.getElementById('invMembershipType').textContent= inv.membershipType;
+
+      const pill = document.getElementById('invPill');
+      pill.textContent = inv.status;
+      pill.classList.toggle('unpaid', !inv.isPaid);
+
+      const payBlock = document.getElementById('invPaymentBlock');
+      const note     = document.getElementById('invNoteText');
+      if (inv.isPaid && inv.payment) {
+        payBlock.style.display = '';
+        document.getElementById('invPayDate').textContent     = inv.payment.invoiceDate || '—';
+        document.getElementById('invPayMethod').textContent   = inv.payment.method || '—';
+        document.getElementById('invPaymentDate').textContent = inv.payment.paymentDate || '—';
+        document.getElementById('invTotal').textContent       = fmtMoney(inv.amount, inv.currency);
+        note.textContent = 'This invoice is a record of payment received. For any questions or concerns regarding this invoice, please contact our support team.';
+      } else {
+        payBlock.style.display = 'none';
+        note.textContent = 'This invoice has not been paid. For any questions regarding this invoice, please contact our support team.';
+      }
+      showState('content');
+    }
+
+    async function loadInvoice(id) {
+      showState('loading');
+      open();
+      try {
+        const res  = await fetch('/member-portal/invoice/' + encodeURIComponent(id), {
+          headers: { 'Accept': 'application/json' },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          errorEl.textContent = data.message || 'Could not load invoice details.';
+          showState('error');
+          return;
+        }
+        populate(data.invoice);
+      } catch (e) {
+        errorEl.textContent = 'Could not load invoice details. Please try again.';
+        showState('error');
+      }
+    }
+
+    document.querySelectorAll('.inv-view[data-invoice-id]').forEach(btn => {
+      btn.addEventListener('click', () => loadInvoice(btn.dataset.invoiceId));
+    });
+
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && overlay.classList.contains('open')) close();
+    });
   })();
 </script>
 
