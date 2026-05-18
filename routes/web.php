@@ -70,6 +70,8 @@ Route::prefix('member-portal')->name('member-portal.')->group(function () {
         Route::get('/profile',   [MemberPortalController::class, 'profile'])->name('profile');
         Route::post('/profile/update', [MemberPortalController::class, 'updateProfile'])->name('profile.update');
         Route::get('/payments', [MemberPortalController::class, 'payments'])->name('payments');
+        Route::get('/invoice/{invoiceId}', [MemberPortalController::class, 'invoiceDetail'])
+            ->whereNumber('invoiceId')->name('invoice-detail');
 
         // Membership renewal
         Route::get('/renew/summary',          [MemberPortalController::class, 'renewSummary'])->name('renew.summary');

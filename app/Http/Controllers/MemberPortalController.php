@@ -233,6 +233,73 @@ class MemberPortalController extends Controller
         return view('member-portal.payments', compact('profile', 'email'));
     }
 
+    // ── Invoice detail (modal) ────────────────────────────────────────────
+
+    /**
+     * JSON detail for a single invoice, shown in the payments-page modal.
+     * Guards that the invoice belongs to the logged-in member, fetches it
+     * from WildApricot, and enriches paid invoices with card details from
+     * the local Renewal / LevelChange Stripe records.
+     */
+    public function invoiceDetail(Request $request, MemberPortalService $portal, WildApricotService $wa, int $invoiceId)
+    {
+        $contactId = $request->session()->get('member_portal_contact_id');
+        if (! $contactId) {
+            return response()->json(['success' => false, 'message' => 'Please sign in again.'], 401);
+        }
+
+        $profile = new MemberProfile($portal->getBundle((int) $contactId));
+
+        // Ownership guard — the invoice ID must be one of the member's own.
+        $owned = collect($profile->invoices)->firstWhere('id', $invoiceId);
+        if (! $owned) {
+            return response()->json(['success' => false, 'message' => 'Invoice not found.'], 404);
+        }
+
+        $invoice = $wa->getInvoiceById($invoiceId);
+        if (! $invoice) {
+            return response()->json(['success' => false, 'message' => 'Could not load invoice details.'], 502);
+        }
+
+        $isPaid = (bool) ($invoice['IsPaid'] ?? $owned['isPaid'] ?? false);
+        $issueDate = $owned['date'] ?: '';
+
+        $payment = null;
+        if ($isPaid) {
+            $stripe = LevelChange::where('wa_invoice_id', $invoiceId)->first()
+                ?? Renewal::where('wa_invoice_id', $invoiceId)->first();
+
+            $paymentDate = $stripe?->paid_at?->format('Y-m-d') ?: $issueDate;
+            $method = 'Online Payment';
+            if ($stripe && $stripe->card_last4) {
+                $brand  = ucwords((string) ($stripe->card_brand ?: 'Card'));
+                $method = "{$brand} (**** {$stripe->card_last4})";
+            }
+
+            $payment = [
+                'date'        => $issueDate,
+                'method'      => $method,
+                'paymentDate' => $paymentDate,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'invoice' => [
+                'number'         => (string) ($invoice['DocumentNumber'] ?? $owned['number']),
+                'issueDate'      => $issueDate,
+                'billingPeriod'  => $profile->billingPeriod($owned),
+                'isPaid'         => $isPaid,
+                'status'         => $isPaid ? 'Paid' : 'Unpaid',
+                'amount'         => (float) ($invoice['Value'] ?? $owned['amount']),
+                'currency'       => 'USD',
+                'memberName'     => $profile->fullName ?: 'Member',
+                'membershipType' => $profile->level ?: '—',
+                'payment'        => $payment,
+            ],
+        ]);
+    }
+
     // ── Static content pages ──────────────────────────────────────────────
     // These pages render hardcoded content; the bundle is loaded only so the
     // topbar can display the member's name.
