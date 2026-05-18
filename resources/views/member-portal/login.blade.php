@@ -63,7 +63,7 @@
       width: 100%;
       max-width: 1180px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.3fr 0.7fr;
       gap: 28px;
       align-items: stretch;
     }
