@@ -427,7 +427,15 @@
     const isMobile = () => window.innerWidth <= 768;
 
     function openDrawer()  { sidebar.classList.add('open');    overlay.classList.add('open');    document.body.style.overflow = 'hidden'; }
-    function closeDrawer() { sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+    function closeDrawer() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+      // Only release the body-scroll lock if the invoice modal isn't holding it.
+      const invModal = document.getElementById('invoiceModal');
+      if (!invModal || !invModal.classList.contains('open')) {
+        document.body.style.overflow = '';
+      }
+    }
 
     window.toggleSidebar = function () {
       if (isMobile()) {
@@ -559,11 +567,18 @@
       showState('loading');
       open();
       try {
-        const res  = await fetch('/member-portal/invoice/' + encodeURIComponent(id), {
+        const res = await fetch('/member-portal/invoice/' + encodeURIComponent(id), {
           headers: { 'Accept': 'application/json' },
         });
+        if (!res.ok) {
+          let msg = 'Could not load invoice details.';
+          try { const d = await res.json(); msg = d.message || msg; } catch (_) { /* non-JSON body */ }
+          errorEl.textContent = msg;
+          showState('error');
+          return;
+        }
         const data = await res.json();
-        if (!res.ok || !data.success) {
+        if (!data.success) {
           errorEl.textContent = data.message || 'Could not load invoice details.';
           showState('error');
           return;
