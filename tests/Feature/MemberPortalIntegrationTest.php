@@ -192,10 +192,11 @@ class MemberPortalIntegrationTest extends TestCase
             ->assertSee('No invoices yet');
     }
 
-    public function test_payments_page_renders_disabled_view_link_when_invoice_url_missing(): void
+    public function test_payments_page_renders_view_button_for_invoice_with_id(): void
     {
-        // Invoice has no 'Url' key — MemberProfile defaults url to '#', so the
-        // view must render a disabled <span> instead of an <a> link.
+        // An invoice with an Id is viewable through the detail modal regardless
+        // of whether it has a 'Url' — the View action opens the in-app modal,
+        // keyed by the invoice id, not an external link.
         Cache::put('member_portal_bundle_999', [
             'contact'  => [
                 'Id' => 999, 'FirstName' => 'Tauqeer', 'LastName' => 'Alam',
@@ -219,7 +220,7 @@ class MemberPortalIntegrationTest extends TestCase
         $this->get('/member-portal/payments')
             ->assertOk()
             ->assertSee('INV-NOURL')
-            ->assertSee('inv-view disabled', false);
+            ->assertSee('data-invoice-id="7"', false);
     }
 
     /**
