@@ -613,13 +613,10 @@ class MemberPortalController extends Controller
 
     public function logout(Request $request)
     {
-        $request->session()->forget([
-            'member_portal_authenticated',
-            'member_portal_token',
-            'member_portal_email',
-            'member_portal_contact_id',
-        ]);
-        $request->session()->regenerate();
+        // Destroy the entire session — not just the auth keys — so no member
+        // data survives, and assign a fresh session ID + CSRF token.
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('member-portal.login');
     }

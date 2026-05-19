@@ -405,7 +405,7 @@ class MembershipController extends Controller
 
             // ── Spouse dependents ─────────────────────────────────────────────
             $spouse_data = [];
-            foreach ($request->input('spouses', []) as $spouse) {
+            foreach ($request->input('spouses', []) as $spouseIndex => $spouse) {
                 if (empty($spouse['first_name'])) {
                     continue;
                 }
@@ -420,9 +420,16 @@ class MembershipController extends Controller
                     return response()->json(['success' => false, 'message' => 'Spouse phone '.$spouse['phone'].' is already in use.']);
                 }
 
+                // Name + DOB duplicate. `duplicate.index` is the DOM field-prefix
+                // index sent by the frontend (_field_idx) — used so the offending
+                // member's First/Last/DOB fields can be marked invalid (turn red).
                 $spouseData=$this->wa->searchContact('',$spouse['first_name'],$spouse['last_name'],'',$spouse['dob']);
                 if($spouseData){
-                    return response()->json(['success' => false, 'message' => 'The spouse information you entered matches an existing member. Please verify the details or contact ISGH support.']);
+                    return response()->json([
+                        'success'   => false,
+                        'message'   => 'The spouse information you entered matches an existing member. Please verify the details or contact ISGH support.',
+                        'duplicate' => ['type' => 'spouse', 'index' => $spouse['_field_idx'] ?? $spouseIndex],
+                    ]);
                 }
 
                 $spouse_data[] = [
@@ -465,9 +472,17 @@ class MembershipController extends Controller
                     return response()->json(['success' => false, 'message' => 'Family member phone '.$flat['phone'].' is already in use.']);
                 }
 
+                // Name + DOB duplicate. `duplicate.index` is the DOM field-prefix
+                // index sent by the frontend (_field_idx) — matches the flat-member
+                // field id prefix (flat_member_{N}_*) so the frontend can mark
+                // those fields red, even after blocks were removed.
                 $flatData=$this->wa->searchContact('',$flat['first_name'],$flat['last_name'],'',$flat['dob']);
                 if($flatData){
-                    return response()->json(['success' => false, 'message' => 'The family member#'.$index.' information you entered matches an existing member. Please verify the details or contact ISGH support.']);
+                    return response()->json([
+                        'success'   => false,
+                        'message'   => 'The family member#'.$index.' information you entered matches an existing member. Please verify the details or contact ISGH support.',
+                        'duplicate' => ['type' => 'flat_member', 'index' => $flat['_field_idx'] ?? $index],
+                    ]);
                 }
 
                 $flat_members[] = [

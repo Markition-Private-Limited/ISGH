@@ -784,15 +784,38 @@ class WildApricotService
                 throw new \RuntimeException("WA uploadContactPicture failed for contact {$contactId}: " . $r->body());
             }
 
-            // The response contains picture IDs — now link this picture to the contact
-            $pictureIds = $r->json();
-            if (! empty($pictureIds['picture0'])) {
-                $pictureId = $pictureIds['picture0'];
-                $this->setContactPicture($contactId, $pictureId);
+            // The response contains picture IDs — store this picture in the
+            // contact's "Picture ID" field (the ID card field), not the profile Photo.
+            $pictureId = $this->extractUploadedPictureId($r->json());
+            if ($pictureId !== null) {
+                $this->setContactPictureIdField($contactId, $pictureId);
+            } else {
+                Log::warning('WA uploadContactPicture: no picture id in response', [
+                    'contact_id' => $contactId, 'body' => substr($r->body(), 0, 300),
+                ]);
             }
         } finally {
             @fclose($fh);
         }
+    }
+
+    /**
+     * Pulls the uploaded picture's id out of a WA /pictures response.
+     * WA has been observed returning the key inconsistently — sometimes
+     * `picture0`, sometimes the literally-quoted `"picture0"`. Rather than
+     * depend on the key, take the first non-empty value in the map.
+     */
+    private function extractUploadedPictureId(mixed $response): ?string
+    {
+        if (! is_array($response)) {
+            return null;
+        }
+        foreach ($response as $value) {
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+        return null;
     }
 
     /**
@@ -828,41 +851,73 @@ class WildApricotService
                 return;
             }
 
-            $pictureIds = $r->json();
-            if (! empty($pictureIds['picture0'])) {
-                $pictureId = $pictureIds['picture0'];
-                $this->setContactPicture($contactId, $pictureId);
+            $pictureId = $this->extractUploadedPictureId($r->json());
+            if ($pictureId !== null) {
+                $this->setContactPictureIdField($contactId, $pictureId);
+            } else {
+                Log::warning('WA uploadIdCardFromPath: no picture id in response', [
+                    'contact_id' => $contactId, 'body' => substr($r->body(), 0, 300),
+                ]);
             }
         } finally {
             @fclose($fh);
         }
     }
 
+    /** SystemCode of the WA "Picture ID" custom field (FieldType: Picture). */
+    private const PICTURE_ID_FIELD_CODE = 'custom-17827238';
+
     /**
-     * Sets the uploaded picture as the contact's profile photo.
+     * Stores an uploaded picture in the contact's "Picture ID" custom field
+     * (Picture-type field, SystemCode custom-17827238) — NOT the contact's
+     * built-in profile Photo. The ID card belongs in this field.
+     *
+     * A WA Picture-type FieldValue takes the uploaded picture as {"Id": <id>}.
+     * The whole contact is fetched, the FieldValue merged, then PUT back.
+     *
      * PUT /accounts/{accountId}/contacts/{contactId}
      */
-    private function setContactPicture(int $contactId, string $pictureId): void
+    private function setContactPictureIdField(int $contactId, string $pictureId): void
     {
         $accountId = $this->getAccountId();
 
         $r = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
         if (! $r->successful()) {
-            throw new \RuntimeException("WA setContactPicture: fetch failed for contact {$contactId}: " . $r->body());
+            throw new \RuntimeException("WA setContactPictureIdField: fetch failed for contact {$contactId}: " . $r->body());
         }
 
         $contact = $r->json();
-        $contact['Photo'] = ['Id' => $pictureId];
+
+        // Merge the picture into the "Picture ID" FieldValue, replacing any
+        // existing entry for that SystemCode.
+        $fieldValues = [];
+        $found       = false;
+        foreach ($contact['FieldValues'] ?? [] as $fv) {
+            if (($fv['SystemCode'] ?? '') === self::PICTURE_ID_FIELD_CODE) {
+                $fv['Value'] = ['Id' => $pictureId];
+                $found = true;
+            }
+            $fieldValues[] = $fv;
+        }
+        if (! $found) {
+            $fieldValues[] = [
+                'FieldName'  => 'Picture ID',
+                'SystemCode' => self::PICTURE_ID_FIELD_CODE,
+                'Value'      => ['Id' => $pictureId],
+            ];
+        }
+        $contact['FieldValues'] = $fieldValues;
 
         $rp = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $contact);
-        Log::info('WA setContactPicture response', [
+        Log::info('WA setContactPictureIdField response', [
             'contact_id' => $contactId,
             'picture_id' => $pictureId,
             'status'     => $rp->status(),
+            'body'       => substr($rp->body(), 0, 500),
         ]);
 
         if (! $rp->successful()) {
-            throw new \RuntimeException("WA setContactPicture failed for contact {$contactId}: " . $rp->body());
+            throw new \RuntimeException("WA setContactPictureIdField failed for contact {$contactId}: " . $rp->body());
         }
     }
 
@@ -1406,9 +1461,15 @@ class WildApricotService
         $baseParams  = ['$async' => 'false'];
         $filterParts = ['Member eq true'];
 
-        // Free-text search via WA's simpleQuery param (name, email, phone)
+        // Search — limited to Name and Email only. WA's simpleQuery also matches
+        // phone/ID/company, so it's replaced with an explicit OData $filter on
+        // the top-level FirstName/LastName/Email fields. (Street Address is a
+        // FieldValue and cannot be filtered server-side — see the ZIP note below.)
         if (!empty($filters['search'])) {
-            $baseParams['simpleQuery'] = $filters['search'];
+            $term = str_replace("'", "''", trim($filters['search']));
+            $filterParts[] = "(substringof('{$term}', FirstName)"
+                . " OR substringof('{$term}', LastName)"
+                . " OR substringof('{$term}', Email))";
         }
 
         // Status filter — WA values: Active, Lapsed, PendingNew, PendingRenewal, Archived
@@ -1512,6 +1573,40 @@ class WildApricotService
 
         $baseParams['$filter'] = implode(' AND ', $filterParts);
 
+        $wantedZip = trim($filters['zip'] ?? '');
+
+        // ── ZIP-filtered path ─────────────────────────────────────────────────
+        // ZIP lives inside FieldValues, which WA's OData cannot filter on. The
+        // old code filtered a single already-paginated 25-row slice — so members
+        // with the wanted ZIP on later pages were never fetched and never shown.
+        // Correct approach: fetch the WHOLE OData-matching result set, then
+        // filter, sort, and paginate by ZIP here in PHP.
+        if ($wantedZip !== '') {
+            $all       = $this->fetchAllContacts($accountId, $baseParams);
+            $rows      = array_map(fn($c) => $this->mapContactToMemberRow($c), $all);
+
+            // Keep only rows whose ZIP matches the selection.
+            $rows = array_values(array_filter(
+                $rows,
+                fn(array $row) => trim((string) ($row['zip'] ?? '')) === $wantedZip
+            ));
+
+            // Sort the listing: by ZIP, then address, then name — a stable,
+            // predictable order within the filtered set.
+            usort($rows, function (array $a, array $b) {
+                return [$a['zip'], $a['address'], $a['name']]
+                   <=> [$b['zip'], $b['address'], $b['name']];
+            });
+
+            $total = count($rows);
+            $items = array_slice($rows, $skip, $perPage);
+
+            return ['items' => $items, 'total' => $total];
+        }
+
+        // ── Unfiltered path ───────────────────────────────────────────────────
+        // No ZIP filter: WA does the paging, so fetch only the requested page.
+
         // 1. Get total count
         $countParams = array_merge($baseParams, ['$count' => 'true']);
         $cr = $this->apiGet("/accounts/{$accountId}/contacts?" . http_build_query($countParams));
@@ -1537,25 +1632,53 @@ class WildApricotService
             $total = count($contacts);
         }
 
-        // ZIP filter — WA OData cannot filter on FieldValues, so apply post-fetch.
-        // When active, the count is approximate (based on pre-filter total); the page
-        // may contain fewer rows than $perPage but the paginator still works correctly.
-        $wantedZip = trim($filters['zip'] ?? '');
-        if ($wantedZip !== '') {
-            $contacts = array_values(array_filter($contacts, function (array $c) use ($wantedZip) {
-                foreach ($c['FieldValues'] ?? [] as $fv) {
-                    if (($fv['SystemCode'] ?? '') === 'custom-9967570') {
-                        return trim((string) ($fv['Value'] ?? '')) === $wantedZip;
-                    }
-                }
-                return false;
-            }));
-            $total = count($contacts); // exact count after ZIP filter
-        }
-
         $items = array_map(fn($c) => $this->mapContactToMemberRow($c), $contacts);
 
         return ['items' => $items, 'total' => $total];
+    }
+
+    /**
+     * Fetch every contact matching the given base params, paging through the
+     * WA contacts endpoint until exhausted. Used by the ZIP-filtered members
+     * listing, where filtering must happen across the full result set rather
+     * than a single page. A hard page cap guards against runaway loops.
+     *
+     * @return array<int,array> raw WA contact arrays
+     */
+    private function fetchAllContacts(string $accountId, array $baseParams): array
+    {
+        $all       = [];
+        $pageSize  = 100;          // WA's max page size for the contacts endpoint
+        $maxPages  = 200;          // safety cap → up to 20,000 contacts
+        $skip      = 0;
+
+        for ($i = 0; $i < $maxPages; $i++) {
+            $params = array_merge($baseParams, ['$top' => $pageSize, '$skip' => $skip]);
+            $r = $this->apiGet("/accounts/{$accountId}/contacts?" . http_build_query($params));
+
+            if (!$r->successful()) {
+                Log::error('WA fetchAllContacts page failed', [
+                    'skip' => $skip, 'status' => $r->status(),
+                ]);
+                break;
+            }
+
+            $body  = $r->json();
+            $batch = $body['Contacts'] ?? (is_array($body) ? $body : []);
+            if (empty($batch)) {
+                break;
+            }
+
+            $all  = array_merge($all, $batch);
+            $skip += $pageSize;
+
+            // Last page reached when the batch is short of a full page.
+            if (count($batch) < $pageSize) {
+                break;
+            }
+        }
+
+        return $all;
     }
 
     /**

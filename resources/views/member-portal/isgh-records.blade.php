@@ -50,6 +50,11 @@
     }
     .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
     .app.sidebar-collapsed .sidebar {
+      /* The grid track is 0-wide when collapsed; give the sidebar its own
+         width so translateX(-100%) fully clears it, and clip any overflow
+         so its contents don't spill over the page content. */
+      width: 248px;
+      overflow: hidden;
       transform: translateX(-100%);
       transition: transform .3s ease;
     }
@@ -144,6 +149,9 @@
       border-radius: 8px; color: var(--text); display: none;
     }
     .hamburger:hover { background: var(--bg); }
+    /* Desktop: when the sidebar is collapsed off-screen, the topbar hamburger
+       becomes the only control that can reopen it. */
+    .app.sidebar-collapsed .hamburger { display: inline-flex; }
     .page-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
     .user-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -334,18 +342,18 @@
 
       <div class="records-grid">
 
-        {{-- Shora MOM --}}
+        {{-- Shura MOM --}}
         <div class="record-card">
           <div class="record-icon ic-peach">
             <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
             </svg>
           </div>
-          <div class="record-title">Shora MOM</div>
+          <div class="record-title">Shura MOM</div>
           <div class="record-sub">Minutes of Meeting</div>
           <div class="record-foot">
-            <span class="pdf-badge">PDF</span>
-            <a href="#" class="open-link" target="_blank" rel="noopener">
+            <span class="pdf-badge">ZIP</span>
+            <a href="{{ asset('documents/Meeting Minutes 2024-2026-20260507T123423Z-3-001.zip') }}" class="open-link" target="_blank" rel="noopener">
               <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
@@ -365,7 +373,7 @@
           <div class="record-sub">Official policy document</div>
           <div class="record-foot">
             <span class="pdf-badge">PDF</span>
-            <a href="#" class="open-link" target="_blank" rel="noopener">
+            <a href="{{ asset('documents/ISGH_Policies_Procedures Manual_Oct2024.pdf') }}" class="open-link" target="_blank" rel="noopener">
               <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
@@ -385,7 +393,7 @@
           <div class="record-sub">Governing document</div>
           <div class="record-foot">
             <span class="pdf-badge">PDF</span>
-            <a href="#" class="open-link" target="_blank" rel="noopener">
+            <a href="{{ asset('documents/Constitution and Bylaws as of 5 March 2023.pdf') }}" class="open-link" target="_blank" rel="noopener">
               <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>

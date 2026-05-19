@@ -68,7 +68,7 @@
           type="text"
           name="search"
           class="form-control"
-          placeholder="Search by name, ID, email, phone or zip code"
+          placeholder="Search by name or email"
           value="{{ request('search') }}"
           aria-label="Search members"
         />
@@ -174,24 +174,11 @@
           CSV
         </a>
         <a
-          href="{{ route('portal.members.export.pdf', request()->query()) }}"
+          href="{{ route('portal.members.print', request()->query()) }}"
+          target="_blank"
+          rel="noopener"
           class="btn btn-secondary btn-sm"
-          aria-label="Export members to PDF"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
-          PDF
-        </a>
-        <button
-          class="btn btn-secondary btn-sm"
-          onclick="window.print()"
-          aria-label="Print members list"
+          aria-label="Open printable members list in a new tab"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -200,7 +187,7 @@
             <rect x="6" y="14" width="12" height="8"/>
           </svg>
           Print
-        </button>
+        </a>
       </div>
     </div>
 
@@ -396,9 +383,12 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 (function () {
-  const form = document.getElementById('members-filter-form');
+  const form     = document.getElementById('members-filter-form');
+  const zoneEl   = document.getElementById('filter-zone');
+  const masjidEl = document.getElementById('filter-masjid');
+  const zipEl    = document.getElementById('filter-zip');
 
-  // Initialise Select2 on masjid and zip dropdowns
+  // Initialise Select2 on the masjid and zip dropdowns (cosmetic only).
   ['#filter-masjid', '#filter-zip'].forEach(function (sel) {
     const el = document.querySelector(sel);
     if (!el) return;
@@ -407,11 +397,44 @@
       allowClear: true,
       width: '100%',
     });
-    // Auto-submit when selection changes
-    $(el).on('select2:select select2:clear', function () {
+  });
+
+  // Clear a dropdown's value and sync Select2's display.
+  function clearSelect(el) {
+    if (!el) return;
+    el.value = '';
+    $(el).trigger('change.select2');
+  }
+
+  // Cascading filters — every level auto-submits, and clears its now-stale
+  // dependents first so a filter never outlives the parent it belonged to.
+  // The reload re-renders Masjid (zone-narrowed) and ZIP (zone + masjid
+  // narrowed) server-side, so the cascade survives reloads and URL edits.
+  //
+  //   Zone   change → clear Masjid + ZIP, then submit
+  //   Masjid change → clear ZIP, then submit
+  //   ZIP    change → submit
+
+  if (zoneEl) {
+    zoneEl.addEventListener('change', function () {
+      clearSelect(masjidEl);
+      clearSelect(zipEl);
       form.submit();
     });
-  });
+  }
+
+  if (masjidEl) {
+    $(masjidEl).on('select2:select select2:clear', function () {
+      clearSelect(zipEl);
+      form.submit();
+    });
+  }
+
+  if (zipEl) {
+    $(zipEl).on('select2:select select2:clear', function () {
+      form.submit();
+    });
+  }
 })();
 </script>
 @endpush

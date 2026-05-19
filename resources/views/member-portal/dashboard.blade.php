@@ -55,6 +55,11 @@
     }
     .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
     .app.sidebar-collapsed .sidebar {
+      /* The grid track is 0-wide when collapsed; give the sidebar its own
+         width so translateX(-100%) fully clears it, and clip any overflow
+         so its contents don't spill over the page content. */
+      width: 248px;
+      overflow: hidden;
       transform: translateX(-100%);
       transition: transform .3s ease;
     }
@@ -122,7 +127,7 @@
     .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.8; }
     .nav-item:hover { background: #f8fafc; color: var(--text); }
     .nav-item.active {
-      background: linear-gradient(135deg, #0e7a52 0%, #0a5a3d 100%);
+      background: linear-gradient(135deg, #15a36b 0%, #0c7a52 100%);
       color: #fff;
       box-shadow: 0 6px 16px rgba(13, 122, 82, 0.25);
     }
@@ -152,6 +157,9 @@
       border-radius: 8px; color: var(--text); display: none;
     }
     .hamburger:hover { background: var(--bg); }
+    /* Desktop: when the sidebar is collapsed off-screen, the topbar hamburger
+       becomes the only control that can reopen it. */
+    .app.sidebar-collapsed .hamburger { display: inline-flex; }
     .page-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
     .user-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -249,7 +257,7 @@
       margin-top: 12px;
     }
     .status-tile.featured {
-      background: linear-gradient(135deg, #0e7a52 0%, #0a5a3d 100%);
+      background: linear-gradient(236.81deg, #085241 7.25%, #23BB97 91.07%);
       color: #fff;
     }
     .status-tile.featured .tile-head { color: rgba(255,255,255,0.85); }
@@ -347,9 +355,10 @@
     /* ── Two-column row (Invoices + Payment Overview) ── */
     .row-2 {
       display: grid;
-      grid-template-columns: 360px minmax(0, 1fr);
+      grid-template-columns: 380px minmax(0, 1fr);
       gap: 22px;
       margin-top: 22px;
+      align-items: start;
     }
 
     /* Invoices */
@@ -744,8 +753,14 @@
     [data-page].hidden { display: none !important; }
 
     /* ── Profile-section styles (scoped within #profilePage so they don't override dashboard) ── */
-    #profilePage .left-col,
-    #profilePage .right-col { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+    /* Row-based grid: the six cards auto-place into left/right pairs, one pair
+       per row, so each Profile card stretches to its paired form's height. */
+    #profilePage {
+      grid-auto-flow: row;
+      align-items: stretch;
+      gap: 22px;
+    }
+    #profilePage > * { min-width: 0; }
 
     #profilePage .info-card {
       background: linear-gradient(135deg, #eaf7f0 0%, #f6fbf8 45%, #ffffff 100%);
@@ -791,9 +806,12 @@
       margin-top: 10px;
     }
     #profilePage .info-tile.featured {
-      background: linear-gradient(135deg, #0e7a52 0%, #0a5a3d 100%);
+      background: linear-gradient(236.81deg, #085241 7.25%, #23BB97 91.07%);
       color: #fff;
       box-shadow: 0 8px 22px rgba(13,122,82,0.25);
+      /* Extra bottom room so the white pill button (and its shadow) clears
+         the green block edge instead of touching it. */
+      padding-bottom: 20px;
     }
     #profilePage .info-tile.featured .tile-head { color: rgba(255,255,255,0.9); font-size: 12.5px; }
     #profilePage .info-tile.featured .tile-icon {
@@ -857,6 +875,18 @@
       border-color: var(--green);
       box-shadow: 0 0 0 3px rgba(13,122,82,0.12);
     }
+    /* Identity fields stay locked even in edit mode — show a not-allowed cursor
+       and a muted look so it's clear they can't be changed here. */
+    #profilePage .field input[readonly]:not([data-editable]) { cursor: not-allowed; color: #6b7280; }
+    /* An editable field that has been unlocked (edit mode on). */
+    #profilePage .field input[data-editable]:not([readonly]) { background: #fff; border-color: #d1d5db; }
+    #profilePage .form-note {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 7px;
+      margin-top: 4px;
+      font-size: 12.5px; color: var(--text-muted);
+    }
+    #profilePage .form-note svg { width: 14px; height: 14px; flex-shrink: 0; }
 
     #profilePage .same-as-primary {
       display: inline-block;
@@ -891,6 +921,20 @@
       margin-bottom: 16px;
     }
     #profilePage .mobile-edit-link { display: none; }
+    /* Profile card: title pinned to the top, avatar+name group centred (both
+       axes) in the grid-stretched height so it matches its paired form with
+       no empty gap. */
+    #profilePage .profile-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    #profilePage .profile-card .profile-card-title {
+      align-self: stretch;   /* title stays full-width, left-aligned */
+    }
+    #profilePage .profile-card .avatar-circle { margin-top: auto; }
+    #profilePage .profile-card .profile-sub   { margin-bottom: auto; }
     #profilePage .spouse-profile {
       background: linear-gradient(180deg, #ffffff 0%, #ffffff 55%, #fdf2dc 100%);
     }
@@ -905,26 +949,26 @@
       #profilePage .form-actions { width: 100%; }
     }
     @media (max-width: 768px) {
-      /* On mobile, flatten left-col + right-col into a single flex flow so
-         we can reorder profile cards to sit between forms per the design */
+      /* On mobile, the row-based grid flattens to a single flex column so we
+         can reorder the cards (profile cards sit between forms per the design).
+         Desktop DOM child order of #profilePage:
+           1 info-card · 2 Quick Links · 3 Primary form
+           4 Primary Profile · 5 Spouse form · 6 Spouse Profile */
       #profilePage { display: flex; flex-direction: column; gap: 16px; }
-      #profilePage .left-col, #profilePage .right-col {
-        display: contents;
-      }
 
       /* Mobile stacking order:
-         1. Membership Information (info-card)         → 1
-         2. Primary Profile card                       → 2
-         3. Primary Member Information (form #1)       → 3
-         4. Spouse Profile card                        → 4
-         5. Spouse Information (form #2)               → 5
-         6. Quick Links                                → 6 */
-      #profilePage .info-card                                { order: 1; }
-      #profilePage .right-col > .profile-card:nth-of-type(1) { order: 2; }
-      #profilePage .left-col  > .card:nth-of-type(1)         { order: 3; }
-      #profilePage .right-col > .profile-card:nth-of-type(2) { order: 4; }
-      #profilePage .left-col  > .card:nth-of-type(2)         { order: 5; }
-      #profilePage .right-col > .card                        { order: 6; }
+         1. Membership Information (info-card)
+         2. Primary Profile card
+         3. Primary Member Information (form)
+         4. Spouse Profile card
+         5. Spouse Information (form)
+         6. Quick Links */
+      #profilePage > :nth-child(1) { order: 1; }  /* info-card */
+      #profilePage > :nth-child(4) { order: 2; }  /* Primary Profile card */
+      #profilePage > :nth-child(3) { order: 3; }  /* Primary form */
+      #profilePage > :nth-child(6) { order: 4; }  /* Spouse Profile card */
+      #profilePage > :nth-child(5) { order: 5; }  /* Spouse form */
+      #profilePage > :nth-child(2) { order: 6; }  /* Quick Links */
     }
 
     @media (max-width: 520px) {
@@ -1504,10 +1548,13 @@
 
       let editing = false;
       const inputs = () => form.querySelectorAll('input, select');
+      // Only address fields are member-editable. Identity fields (name, email,
+      // phone, DOB, TX ID, zone) stay read-only — they are managed by ISGH.
+      const editableInputs = () => form.querySelectorAll('[data-editable]');
 
       editBtn.addEventListener('click', () => {
         editing = !editing;
-        inputs().forEach(el => { el.readOnly = !editing; });
+        editableInputs().forEach(el => { el.readOnly = !editing; });
         editBtn.querySelector('span').textContent = editing ? 'Cancel' : 'Edit Profile';
       });
 
@@ -1564,7 +1611,7 @@
 
         // Success (or non-primary form): lock inputs, reset button, show banner.
         editing = false;
-        inputs().forEach(el => { el.readOnly = true; });
+        editableInputs().forEach(el => { el.readOnly = true; });
         editBtn.querySelector('span').textContent = 'Edit Profile';
         if (banner) {
           banner.classList.add('visible');

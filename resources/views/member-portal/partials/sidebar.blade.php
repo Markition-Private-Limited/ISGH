@@ -95,9 +95,9 @@
     </a>
 
     {{-- Logout --}}
-    <form method="POST" action="{{ route('member-portal.logout') }}" class="nav-logout-form">
+    <form method="POST" action="{{ route('member-portal.logout') }}" class="nav-logout-form" id="memberLogoutForm">
       @csrf
-      <button type="submit" class="nav-item nav-logout">
+      <button type="button" class="nav-item nav-logout" onclick="showMemberLogoutModal()">
         <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
         </svg>
@@ -106,3 +106,46 @@
     </form>
   </nav>
 </aside>
+
+{{-- ── Logout Confirmation Modal ──────────────────────────────────
+     Lives in the sidebar partial so it is present on every member-portal
+     page. The sidebar logout button opens this instead of submitting. --}}
+<div id="memberLogoutModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;">
+  {{-- Backdrop --}}
+  <div onclick="hideMemberLogoutModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);"></div>
+  {{-- Dialog --}}
+  <div role="dialog" aria-modal="true" aria-labelledby="memberLogoutModalTitle"
+       style="position:relative;background:#fff;border-radius:16px;padding:32px 28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;">
+    <div style="width:56px;height:56px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </div>
+    <div id="memberLogoutModalTitle" style="font-size:1.15rem;font-weight:700;color:#111827;margin-bottom:6px;">Confirm Logout</div>
+    <div style="font-size:.875rem;color:#6b7280;margin-bottom:24px;">Are you sure you want to log out?</div>
+    <div style="display:flex;gap:12px;">
+      <button type="button" onclick="hideMemberLogoutModal()"
+              style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:.875rem;font-weight:600;color:#374151;cursor:pointer;">
+        No
+      </button>
+      <button type="button" onclick="document.getElementById('memberLogoutForm').submit()"
+              style="flex:1;padding:10px;border:none;border-radius:8px;background:#ef4444;font-size:.875rem;font-weight:600;color:#fff;cursor:pointer;">
+        Yes
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showMemberLogoutModal() {
+    document.getElementById('memberLogoutModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function hideMemberLogoutModal() {
+    document.getElementById('memberLogoutModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') hideMemberLogoutModal();
+  });
+</script>

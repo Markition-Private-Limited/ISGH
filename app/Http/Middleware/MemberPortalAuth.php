@@ -20,6 +20,17 @@ class MemberPortalAuth
             return redirect()->route('member-portal.login');
         }
 
-        return $next($request);
+        $response = $next($request);
+
+        // Forbid the browser from caching authenticated pages. Without this the
+        // browser keeps a copy in its back-forward cache, so after logout the
+        // Back button restores the dashboard from cache without ever hitting
+        // the server — meaning this guard never runs. `no-store` forces a fresh
+        // request on Back/Forward, which then redirects to login.
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+
+        return $response;
     }
 }

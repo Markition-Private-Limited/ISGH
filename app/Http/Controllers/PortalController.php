@@ -107,6 +107,15 @@ class PortalController extends Controller
         'New Territory'=> 'Masjid Maryam - New Territory',
     ];
 
+    /** Filter-dropdown zone slug → dashboard zone name ("Southeast Zone"). */
+    private const ZONE_SLUG_TO_NAME = [
+        'north'     => 'North Zone',
+        'northwest' => 'Northwest Zone',
+        'south'     => 'South Zone',
+        'southeast' => 'Southeast Zone',
+        'southwest' => 'Southwest Zone',
+    ];
+
     private function scopeDashboardData(array $data, \App\Models\User $user): array
     {
         if ($user->isCityWide()) {
@@ -262,7 +271,13 @@ class PortalController extends Controller
         $totalCount    = $total;
         $filteredCount = $total;
 
-        [$masjids, $zipCodes] = $this->getMembersFilterOptions($user);
+        // Cascading dropdown options: Masjid narrowed to the in-effect zone,
+        // ZIP narrowed to the in-effect zone and selected masjid.
+        [$masjids, $zipCodes] = $this->getMembersFilterOptions(
+            $user,
+            $filters['zone']   ?? '',
+            $filters['center'] ?? '',
+        );
 
         return view('portal.members.index', compact('members', 'totalCount', 'filteredCount', 'masjids', 'zipCodes'));
     }
@@ -272,11 +287,19 @@ class PortalController extends Controller
     /**
      * Returns [masjids, zipCodes] scoped to what the user is authorised to see.
      * Sourced from the cached dashboard data — no extra API calls.
-     * masjids: array of ['name' => string, 'value' => string]
+     *
+     * Cascading narrowing:
+     *  - $zoneSlug set   → masjids and zipCodes are limited to that zone.
+     *  - $centerValue set → zipCodes are further limited to that one masjid.
+     *
+     * masjids:  array of ['name' => string, 'value' => string]
      * zipCodes: array of zip code strings, sorted
      */
-    private function getMembersFilterOptions(\App\Models\User $user): array
-    {
+    private function getMembersFilterOptions(
+        \App\Models\User $user,
+        string $zoneSlug = '',
+        string $centerValue = '',
+    ): array {
         $dashData = app(\App\Services\WildApricotService::class)->getDashboardFromDb();
 
         if (! $dashData) {
@@ -286,19 +309,33 @@ class PortalController extends Controller
         // Apply the same scoping as the dashboard
         $scoped = $this->scopeDashboardData($dashData, $user);
 
+        // When a zone is selected, only that zone's centers/zips are offered.
+        $zoneName = self::ZONE_SLUG_TO_NAME[$zoneSlug] ?? '';
+
         $masjids  = [];
         $zipCodes = [];
 
         foreach ($scoped['zones'] ?? [] as $zone) {
+            if ($zoneName !== '' && ($zone['name'] ?? '') !== $zoneName) {
+                continue;
+            }
+
             foreach ($zone['centers'] ?? [] as $center) {
                 $centerName = $center['name'] ?? '';
-                if ($centerName) {
-                    // value sent to getMembersPage filter is the DB center name;
-                    // for city_wide/zone users we use the WA label as the filter value
-                    // because getMembersPage does a substring match on it.
-                    // Reverse-lookup from CENTER_WA_LABELS to get the DB key.
-                    $dbKey = array_search($centerName, self::CENTER_WA_LABELS, true) ?: $centerName;
-                    $masjids[] = ['name' => $centerName, 'value' => $dbKey];
+                if (! $centerName) {
+                    continue;
+                }
+
+                // value sent to getMembersPage filter is the DB center name;
+                // for city_wide/zone users we use the WA label as the filter value
+                // because getMembersPage does a substring match on it.
+                // Reverse-lookup from CENTER_WA_LABELS to get the DB key.
+                $dbKey = array_search($centerName, self::CENTER_WA_LABELS, true) ?: $centerName;
+                $masjids[] = ['name' => $centerName, 'value' => $dbKey];
+
+                // When a masjid is selected, the ZIP list narrows to its zips only.
+                if ($centerValue !== '' && $dbKey !== $centerValue && $centerName !== $centerValue) {
+                    continue;
                 }
 
                 foreach ($center['zips'] ?? [] as $zipRow) {
@@ -456,5 +493,87 @@ class PortalController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    // ── Printable members list (new-tab HTML report) ──────────────────────
+
+    /**
+     * Renders a clean, browser-printable members report carrying the same
+     * filters as the members page. Lists ALL filtered members (batch-fetched),
+     * not just one page. Authorisation scope is re-enforced server-side so a
+     * zone/center user cannot print outside their scope via URL edits.
+     */
+    public function printable(Request $request, WildApricotService $wa)
+    {
+        $user = Auth::user();
+
+        $filters = array_filter([
+            'search' => $request->input('search', ''),
+            'status' => $request->input('status', ''),
+            'zone'   => $request->input('zone', ''),
+            'center' => $request->input('center', ''),
+            'zip'    => $request->input('zip', ''),
+            'type'   => $request->input('type', ''),
+            'level'  => $request->input('level', ''),
+        ]);
+
+        // Enforce the user's authorised scope (mirrors members() / exportPdf()).
+        if ($user->isZoneLevel()) {
+            $filters['zone'] = $user->zone;
+            if (!empty($filters['center'])) {
+                $allowed = array_keys(self::CENTER_WA_LABELS);
+                if (!in_array($filters['center'], $allowed, true)) {
+                    unset($filters['center']);
+                }
+            }
+        } elseif ($user->isCenterLevel()) {
+            $filters['zone']   = $user->zone;
+            $filters['center'] = $user->center;
+        }
+
+        // Fetch every filtered member in batches (same loop as exportCsv).
+        $members = [];
+        $page    = 1;
+        do {
+            try {
+                $result = $wa->getMembersPage($page, 500, $filters);
+            } catch (\Throwable $e) {
+                Log::error('Printable members list error', ['error' => $e->getMessage()]);
+                break;
+            }
+            foreach ($result['items'] as $m) {
+                $members[] = $m;
+            }
+            $hasMore = count($result['items']) === 500;
+            $page++;
+        } while ($hasMore);
+
+        // Human-readable applied-filter labels (mirrors exportPdf()).
+        $statusMap = ['active' => 'Active', 'pending' => 'Pending', 'expired' => 'Expired', 'lapsed' => 'Lapsed'];
+        $typeMap   = ['individual' => 'Individual', 'checkmatic' => 'Checkmatic', 'lifetime' => 'Lifetime'];
+        $zoneMap   = [
+            'north' => 'North Zone', 'northwest' => 'Northwest Zone', 'south' => 'South Zone',
+            'southeast' => 'Southeast Zone', 'southwest' => 'Southwest Zone',
+        ];
+
+        $fZone   = $filters['zone']   ?? '';
+        $fStatus = $filters['status'] ?? '';
+        $fType   = $filters['type']   ?? '';
+
+        $filterLabels = [
+            'zone'   => $zoneMap[$fZone] ?? ($fZone ? ucfirst($fZone) : null),
+            'center' => ($filters['center'] ?? '') ?: null,
+            'status' => $statusMap[$fStatus] ?? null,
+            'type'   => $typeMap[$fType] ?? null,
+            'search' => ($filters['search'] ?? '') ?: null,
+        ];
+
+        return view('portal.members.print', [
+            'members'      => $members,
+            'total'        => count($members),
+            'generatedAt'  => now(),
+            'userRole'     => $user->roleLabel(),
+            'filterLabels' => $filterLabels,
+        ]);
     }
 }

@@ -53,6 +53,7 @@ Route::prefix('admin')->name('portal.')->group(function () {
         Route::get('/members', [PortalController::class, 'members'])->name('members');
         Route::get('/members/export/csv', [PortalController::class, 'exportCsv'])->name('members.export.csv');
         Route::get('/members/export/pdf', [PortalController::class, 'exportPdf'])->name('members.export.pdf');
+        Route::get('/members/print', [PortalController::class, 'printable'])->name('members.print');
     });
 });
 

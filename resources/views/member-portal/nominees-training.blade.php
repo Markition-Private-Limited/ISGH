@@ -50,6 +50,11 @@
     }
     .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
     .app.sidebar-collapsed .sidebar {
+      /* The grid track is 0-wide when collapsed; give the sidebar its own
+         width so translateX(-100%) fully clears it, and clip any overflow
+         so its contents don't spill over the page content. */
+      width: 248px;
+      overflow: hidden;
       transform: translateX(-100%);
       transition: transform .3s ease;
     }
@@ -144,6 +149,9 @@
       border-radius: 8px; color: var(--text); display: none;
     }
     .hamburger:hover { background: var(--bg); }
+    /* Desktop: when the sidebar is collapsed off-screen, the topbar hamburger
+       becomes the only control that can reopen it. */
+    .app.sidebar-collapsed .hamburger { display: inline-flex; }
     .page-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
     .user-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -398,9 +406,8 @@
 
         <div class="orientation-body">
           <div class="video-wrap">
-            {{-- Placeholder YouTube embed --}}
             <iframe
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+              src="https://www.youtube.com/embed/kqhjJp5fwSE?start=12"
               title="ISGH Election Nominee's Orientation"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowfullscreen

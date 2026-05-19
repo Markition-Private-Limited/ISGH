@@ -41,51 +41,54 @@ So the relationship data is present; only the wiring is missing.
 
 ## Architecture
 
-No new AJAX endpoints. Because Zone auto-submits, the cascade is split between
-server and client:
+No new AJAX endpoints, and no client-side option rebuilding. Every filter
+level auto-submits, and the narrowing is done **entirely server-side on
+reload** — which keeps the cascade consistent across reloads and manual URL
+edits, and avoids JS/Select2 timing issues:
 
-- **Zone → Masjid/ZIP narrowing happens server-side on reload.** After a Zone is
-  chosen the page reloads with `?zone=...`; the controller renders the Masjid
-  and ZIP dropdowns already scoped to that zone.
-- **Masjid → ZIP narrowing happens client-side**, without a reload, until the
-  ZIP itself is picked (which auto-submits).
+- **Zone change** → page reloads with `?zone=...`; the controller renders the
+  Masjid dropdown narrowed to that zone and the ZIP dropdown narrowed to that
+  zone.
+- **Masjid change** → page reloads with `?center=...`; the controller narrows
+  the ZIP dropdown to that masjid's zips.
+- Each level's JS handler clears its now-stale dependent selections before
+  submitting, so a `center`/`zip` filter never outlives the zone/masjid it
+  belonged to.
 
 ## Changes
 
-### 1. Controller — zone-scoped options + a JSON tree
+### 1. Controller — zone- and masjid-scoped options
 
-`getMembersFilterOptions()` gains the selected zone slug as a parameter:
+A `ZONE_SLUG_TO_NAME` class constant maps the dropdown slug (`southeast`) to the
+dashboard zone name (`Southeast Zone`).
 
-- When a zone is selected, `$masjids` and `$zipCodes` include only that zone's
-  centers and zips (matched by mapping the zone slug to the dashboard
-  `zone['name']` via the existing slug↔name map). When no zone is selected,
-  behaviour is unchanged (full scoped lists).
-- It also returns a **`$filterTree`**: `[ masjidName => [zip, zip, ...], ... ]`
-  for the in-scope (zone-narrowed) centers, so client JS can narrow the ZIP
-  dropdown when a Masjid is chosen.
+`getMembersFilterOptions()` gains two optional parameters — the selected zone
+slug and the selected center value:
 
-`members()` passes the request's `zone` into the call and forwards
-`$masjids`, `$zipCodes`, `$filterTree` to the view.
+- Zone set → `$masjids` and `$zipCodes` include only that zone's centers/zips.
+- Center set → `$zipCodes` is further limited to that one masjid's zips.
+- Nothing set → behaviour is unchanged (full scoped lists).
 
-### 2. View — emit the tree, keep full server-rendered lists
+`members()` passes the request's `zone` and `center` (post-authorisation, so
+zone/center-locked users get their forced scope) into the call.
 
-- Masjid and ZIP `<option>`s render server-side as today (full no-JS fallback,
-  now zone-narrowed when a zone is in the query string).
-- Emit `$filterTree` as a JS object via `@json(...)` in the `@push('scripts')`
-  block.
+### 2. View — server-rendered dropdowns
 
-### 3. JS — the cascade
+Masjid and ZIP `<option>`s render server-side as today — full no-JS fallback,
+now narrowed by whatever zone/center is in the query string. No JSON tree, no
+client-side option building.
 
-- **Zone change** → submit the form (auto-submit), as Masjid/ZIP already do.
-  The reload re-renders the dependent dropdowns zone-scoped.
-- **Masjid change** → rebuild the ZIP `<option>` list from
-  `filterTree[masjidName]` (a zip in multiple masajid is naturally included
-  under each); reset ZIP to "All"; refresh Select2; then the existing
-  auto-submit fires.
-- All cascade JS no-ops gracefully when a dropdown is absent — the Zone
-  dropdown renders only for city-wide users (`@if isCityWide()`), Masjid only
-  for non-center users (`@if !isCenterLevel()`). Guard every lookup with a
-  null check.
+### 3. JS — auto-submit + stale-dependent clearing
+
+Each filter level auto-submits and clears its stale dependents first:
+
+- **Zone change** → clear Masjid + ZIP selections, then submit.
+- **Masjid change** → clear ZIP selection, then submit.
+- **ZIP change** → submit.
+
+Clearing happens before `form.submit()` so the URL never carries a `center`
+from a different zone or a `zip` from a different masjid. All cascade JS
+no-ops when a dropdown is absent (zone/center-restricted users).
 
 ## Edge cases
 

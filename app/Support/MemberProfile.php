@@ -195,6 +195,37 @@ class MemberProfile
         return $this->formatDate($this->dob);
     }
 
+    /**
+     * Date of birth as "YYYY-MM-DD" — the only format an <input type="date">
+     * accepts. WildApricot returns a full ISO datetime ("2000-03-25T00:00:00"),
+     * which the date input silently rejects and renders blank. Returns '' if
+     * the stored value is empty or unparseable.
+     */
+    public function dobInput(): string
+    {
+        if ($this->dob === '' || strtolower($this->dob) === 'null') {
+            return '';
+        }
+        try {
+            return Carbon::parse($this->dob)->format('Y-m-d');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    /** Date of birth as "MM/DD/YYYY", or '' if empty or unparseable. */
+    public function dobMdy(): string
+    {
+        if ($this->dob === '' || strtolower($this->dob) === 'null') {
+            return '';
+        }
+        try {
+            return Carbon::parse($this->dob)->format('m/d/Y');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
     /** Whole days until renewal; null when renewal is in the past or unknown. */
     public function daysLeft(): ?int
     {

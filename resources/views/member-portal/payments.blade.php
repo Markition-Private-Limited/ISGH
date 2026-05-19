@@ -15,8 +15,11 @@
       --text:#0f172a; --text-muted:#6b7280; --text-faint:#9ca3af;
       --green:#0d7a55; --green-dark:#064e36; --green-mid:#10b981;
       --green-soft:#d8f3e4; --teal-soft:#cdebe2; --yellow-soft:#eef6c4;
+      --danger:#dc2626;
       --radius:18px; --radius-sm:12px;
       --shadow:0 4px 24px rgba(15,23,42,0.05);
+      /* Required by the included renew-modal partial's styles. */
+      --shadow-lg:0 10px 40px rgba(15,23,42,0.08);
     }
 
     html, body {
@@ -94,10 +97,26 @@
     .renewal-card .r-title { font-size:15px; font-weight:700; }
     .renewal-card .r-sub { font-size:12px; color:var(--text-muted); margin-top:4px; }
     .renewal-card .r-date { font-size:24px; font-weight:800; margin-top:14px; }
-    .renewal-pill { margin-top:auto; align-self:flex-end; background:var(--surface);
+    .renewal-pill { background:var(--surface);
                     border-radius:12px; padding:12px 16px; text-align:right; }
     .renewal-pill .amt { font-size:15px; font-weight:700; }
     .renewal-pill .days { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    /* Renewal-card footer: amount pill + Pay Now button on one row. */
+    .renewal-foot { margin-top:auto; display:flex; align-items:flex-end;
+                    justify-content:space-between; gap:14px; padding-top:18px; }
+
+    /* ── "Pay Now" CTA ── */
+    .btn-pay { background:var(--green); color:#fff; border:none;
+               font-size:13px; font-weight:700; border-radius:999px;
+               padding:10px 20px; display:inline-flex; align-items:center; gap:6px;
+               box-shadow:0 4px 12px rgba(13,122,82,0.28);
+               transition:background .15s, transform .15s, box-shadow .15s; }
+    .btn-pay:hover { background:var(--green-dark); transform:translateY(-1px);
+                     box-shadow:0 6px 16px rgba(13,122,82,0.34); }
+    .btn-pay svg { width:14px; height:14px; stroke-width:2; }
+    /* Compact variant for the invoice table's Action column. */
+    .btn-pay.sm { font-size:12px; padding:6px 14px; box-shadow:0 2px 6px rgba(13,122,82,0.22); }
+    .inv-actions { display:inline-flex; align-items:center; gap:14px; }
 
     /* ── Invoice table card ── */
     .table-card { background:var(--surface); border:1px solid var(--border);
@@ -231,7 +250,11 @@
   </style>
 </head>
 <body>
-@php /** @var \App\Support\MemberProfile $profile */ @endphp
+@php
+  /** @var \App\Support\MemberProfile $profile */
+  // Lifetime members have no renewal to pay — hide the "Pay Now" CTAs for them.
+  $isLifetime = stripos(($profile->level ?? ''), 'lifetime') !== false;
+@endphp
 
 <div class="app">
 
@@ -277,11 +300,21 @@
           <div class="r-title">Next Renewal</div>
           <div class="r-sub">Your {{ $profile->level ?: 'Membership' }} will renew on</div>
           <div class="r-date">{{ $profile->renewalFormatted() ?: '—' }}</div>
-          <div class="renewal-pill">
-            <div class="amt">Amount: {{ $profile->yearlyFee ?: '—' }}</div>
-            @if($profile->daysLeft() !== null)
-              <div class="days">{{ $profile->daysLeft() }} days remaining</div>
-            @endif
+          <div class="renewal-foot">
+            @unless($isLifetime)
+              <button type="button" class="btn-pay ql-renew-link">
+                <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+                Pay Now
+              </button>
+            @endunless
+            <div class="renewal-pill">
+              <div class="amt">Amount: {{ $profile->yearlyFee ?: '—' }}</div>
+              @if($profile->daysLeft() !== null)
+                <div class="days">{{ $profile->daysLeft() }} days remaining</div>
+              @endif
+            </div>
           </div>
         </div>
       </div>
@@ -318,16 +351,26 @@
                 <td>{{ $inv['dateLabel'] ?: '—' }}</td>
                 <td>{{ $profile->billingPeriod($inv) ?: '—' }}</td>
                 <td>
-                  @if(($inv['id'] ?? null) !== null)
-                    <button type="button" class="inv-view" data-invoice-id="{{ $inv['id'] }}">
-                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
-                      </svg>
-                      View
-                    </button>
-                  @else
-                    <span class="inv-view disabled">View</span>
-                  @endif
+                  <div class="inv-actions">
+                    @if(($inv['id'] ?? null) !== null)
+                      <button type="button" class="inv-view" data-invoice-id="{{ $inv['id'] }}">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        View
+                      </button>
+                    @else
+                      <span class="inv-view disabled">View</span>
+                    @endif
+                    @if(empty($inv['isPaid']) && ! $isLifetime)
+                      <button type="button" class="btn-pay sm ql-renew-link">
+                        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                          <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                        </svg>
+                        Pay Now
+                      </button>
+                    @endif
+                  </div>
                 </td>
               </tr>
             @empty
@@ -420,6 +463,14 @@
             <div class="d-divider"></div>
             <div class="d-row total"><span class="d-key">Amount Due:</span><span class="d-val" id="invAmountDue"></span></div>
           </div>
+          @unless($isLifetime)
+            <button type="button" class="btn-pay ql-renew-link" id="invModalPayBtn" style="width:100%; justify-content:center; margin-top:16px;">
+              <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+              </svg>
+              Pay Now
+            </button>
+          @endunless
         </div>
 
         <div class="inv-note">
@@ -431,6 +482,11 @@
 </div>
 
 @include('member-portal.partials.bottom-nav', ['active' => 'payments', 'mode' => 'links'])
+
+{{-- Renewal payment modal — self-contained Stripe flow. The "Pay Now" buttons
+     on this page (class .ql-renew-link) open it. Safe for lifetime members:
+     its JS early-returns when #renewModal is absent. --}}
+@include('member-portal.partials.renew-modal')
 
 <script>
   // ── Sidebar drawer ──────────────────────────────────────────────────────
@@ -618,6 +674,11 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && overlay.classList.contains('open')) close();
     });
+
+    // "Pay Now" inside the invoice modal: close this modal so it doesn't sit
+    // behind the renewal modal. The button also carries .ql-renew-link, so the
+    // renew-modal's own handler opens the renewal flow on the same click.
+    document.getElementById('invModalPayBtn')?.addEventListener('click', close);
   })();
 </script>
 

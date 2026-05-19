@@ -51,6 +51,11 @@
     }
     .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
     .app.sidebar-collapsed .sidebar {
+      /* The grid track is 0-wide when collapsed; give the sidebar its own
+         width so translateX(-100%) fully clears it, and clip any overflow
+         so its contents don't spill over the page content. */
+      width: 248px;
+      overflow: hidden;
       transform: translateX(-100%);
       transition: transform .3s ease;
     }
@@ -129,6 +134,9 @@
       border-radius: 8px; color: var(--text); display: none;
     }
     .hamburger:hover { background: var(--bg); }
+    /* Desktop: when the sidebar is collapsed off-screen, the topbar hamburger
+       becomes the only control that can reopen it. */
+    .app.sidebar-collapsed .hamburger { display: inline-flex; }
     .page-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
     .user-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -212,9 +220,12 @@
       margin-top: 10px;
     }
     .info-tile.featured {
-      background: linear-gradient(135deg, #0e7a52 0%, #0a5a3d 100%);
+      background: linear-gradient(236.81deg, #085241 7.25%, #23BB97 91.07%);
       color: #fff;
       box-shadow: 0 8px 22px rgba(13,122,82,0.25);
+      /* Extra bottom room so the white pill button (and its shadow) clears
+         the green block edge instead of touching it. */
+      padding-bottom: 20px;
     }
     .info-tile.featured .tile-head { color: rgba(255,255,255,0.9); font-size: 12.5px; }
     .info-tile.featured .tile-icon {
@@ -304,6 +315,18 @@
       box-shadow: 0 0 0 3px rgba(13,122,82,0.12);
     }
     .field input:read-only { cursor: default; }
+    /* Identity fields stay locked even in edit mode — show a not-allowed cursor
+       and a muted look so it's clear they can't be changed here. */
+    .field input[readonly]:not([data-editable]) { cursor: not-allowed; color: #6b7280; }
+    /* An editable field that has been unlocked (edit mode on). */
+    .field input[data-editable]:not([readonly]) { background: #fff; border-color: #d1d5db; }
+    .form-note {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 7px;
+      margin-top: 4px;
+      font-size: 12.5px; color: var(--text-muted);
+    }
+    .form-note svg { width: 14px; height: 14px; flex-shrink: 0; }
 
     .save-banner {
       display: none;
@@ -670,7 +693,7 @@
             </div>
             <div class="field" style="grid-column: 1 / -1;">
               <label for="p-street">Street Address<span class="req">*</span></label>
-              <input type="text" id="p-street" value="{{ $profile->street }}" readonly />
+              <input type="text" id="p-street" value="{{ $profile->street }}" data-editable readonly />
             </div>
             <div class="field">
               <label for="p-tx">TX DL # / TX ID #<span class="req">*</span></label>
@@ -678,24 +701,28 @@
             </div>
             <div class="field">
               <label for="p-dob">Date of Birth<span class="req">*</span></label>
-              <input type="date" id="p-dob" value="{{ $profile->dob }}" readonly />
+              <input type="date" id="p-dob" value="{{ $profile->dobInput() }}" readonly />
             </div>
             <div class="field">
               <label for="p-zip">Zip Code<span class="req">*</span></label>
-              <input type="text" id="p-zip" value="{{ $profile->zip }}" readonly />
+              <input type="text" id="p-zip" value="{{ $profile->zip }}" data-editable readonly />
             </div>
             <div class="field">
               <label for="p-city">City<span class="req">*</span></label>
-              <input type="text" id="p-city" value="{{ $profile->city }}" readonly />
+              <input type="text" id="p-city" value="{{ $profile->city }}" data-editable readonly />
             </div>
             <div class="field">
               <label for="p-state">States<span class="req">*</span></label>
-              <input type="text" id="p-state" value="{{ $profile->state }}" readonly />
+              <input type="text" id="p-state" value="{{ $profile->state }}" data-editable readonly />
             </div>
             <div class="field">
               <label for="p-zone">Center / Zone<span class="req">*</span></label>
               <input type="text" id="p-zone" value="{{ $profile->zone }}" placeholder="Spring Branch Islamic Center" readonly />
             </div>
+            <p class="form-note">
+              <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Only address fields can be edited here. To change your name, email, or phone number, please contact ISGH.
+            </p>
           </form>
         </div>
 
@@ -726,12 +753,12 @@
             <div class="field"><label for="s-last">Last Name<span class="req">*</span></label><input type="text" id="s-last" value="{{ $spouse->lastName }}" readonly /></div>
             <div class="field"><label for="s-email">Email Address<span class="req">*</span></label><input type="email" id="s-email" value="{{ $spouse->email }}" readonly /></div>
             <div class="field"><label for="s-phone">Phone Number<span class="req">*</span></label><input type="tel" id="s-phone" value="{{ $spouse->phone }}" readonly /></div>
-            <div class="field" style="grid-column: 1 / -1;"><label for="s-address">Street Address<span class="req">*</span></label><input type="text" id="s-address" value="{{ $spouse->street }}" readonly /></div>
+            <div class="field" style="grid-column: 1 / -1;"><label for="s-address">Street Address<span class="req">*</span></label><input type="text" id="s-address" value="{{ $spouse->street }}" data-editable readonly /></div>
             <div class="field"><label for="s-tx">TX DL # / TX ID #<span class="req">*</span></label><input type="text" id="s-tx" value="{{ $spouse->txId }}" readonly /></div>
-            <div class="field"><label for="s-dob">Date of Birth<span class="req">*</span></label><input type="date" id="s-dob" value="{{ $spouse->dob }}" readonly /></div>
-            <div class="field"><label for="s-zip">Zip Code<span class="req">*</span></label><input type="text" id="s-zip" value="{{ $spouse->zip }}" readonly /></div>
-            <div class="field"><label for="s-city">City<span class="req">*</span></label><input type="text" id="s-city" value="{{ $spouse->city }}" readonly /></div>
-            <div class="field"><label for="s-state">States<span class="req">*</span></label><input type="text" id="s-state" value="{{ $spouse->state }}" readonly /></div>
+            <div class="field"><label for="s-dob">Date of Birth<span class="req">*</span></label><input type="date" id="s-dob" value="{{ $spouse->dobInput() }}" readonly /></div>
+            <div class="field"><label for="s-zip">Zip Code<span class="req">*</span></label><input type="text" id="s-zip" value="{{ $spouse->zip }}" data-editable readonly /></div>
+            <div class="field"><label for="s-city">City<span class="req">*</span></label><input type="text" id="s-city" value="{{ $spouse->city }}" data-editable readonly /></div>
+            <div class="field"><label for="s-state">States<span class="req">*</span></label><input type="text" id="s-state" value="{{ $spouse->state }}" data-editable readonly /></div>
             <div class="field"><label for="s-zone">Center / Zone<span class="req">*</span></label><input type="text" id="s-zone" value="{{ $spouse->zone }}" readonly /></div>
           </form>
 
@@ -853,10 +880,13 @@
 
       let editing = false;
       const inputs = () => form.querySelectorAll('input, select');
+      // Only address fields are member-editable. Identity fields (name, email,
+      // phone, DOB, TX ID, zone) stay read-only — they are managed by ISGH.
+      const editableInputs = () => form.querySelectorAll('[data-editable]');
 
       function setEditing(state) {
         editing = state;
-        inputs().forEach(el => { el.readOnly = !state; });
+        editableInputs().forEach(el => { el.readOnly = !state; });
         editBtn.textContent = state ? 'Cancel' : editBtn.dataset.label || editBtn.textContent.trim();
         if (!editBtn.dataset.label) editBtn.dataset.label = 'Edit Profile';
         // Re-render the edit button text + icon if cancelled

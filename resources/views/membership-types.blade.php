@@ -1886,11 +1886,16 @@
             // Clear zip state
             for (const key of Object.keys(_zipState)) { delete _zipState[key]; }
 
-            // Clear ZIP-driven center/donation displays
-            ['uni_center_display', 'uni_donation_section'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
-            });
+            // Clear ZIP-driven center display: hide the wrapper field and empty
+            // the inner display div (do NOT hide the inner div itself — validateZip
+            // writes the assigned center into it and only toggles the wrapper).
+            const _centerField = document.getElementById('uni_center_field');
+            if (_centerField) _centerField.style.display = 'none';
+            const _centerDisplay = document.getElementById('uni_center_display');
+            if (_centerDisplay) {
+                _centerDisplay.style.display = '';
+                _centerDisplay.innerHTML = '';
+            }
 
             // Clear stripe card element
             if (_cardElement) { _cardElement.clear(); }
@@ -2415,6 +2420,10 @@
                 if (!firstName) return;
                 const dobInput = block.querySelector('input[placeholder="MM/DD/YYYY"]');
                 spouses.push({
+                    // DOM field-prefix index — lets the backend point a duplicate
+                    // error back at the exact uni_spouse_{N}_* fields, even when
+                    // blocks were removed and indices are non-contiguous.
+                    _field_idx: idx,
                     first_name: firstName,
                     last_name: gv(ip + 'last_name'),
                     middle_name: gv(ip + 'middle_name'),
@@ -2479,6 +2488,10 @@
                 const firstName = gv('flat_member_' + midx + '_first_name');
                 if (!firstName) return; // skip empty blocks
                 members.push({
+                    // DOM field-prefix index — lets the backend point a duplicate
+                    // error back at the exact flat_member_{N}_* fields, even when
+                    // blocks were removed and indices are non-contiguous.
+                    _field_idx: midx,
                     first_name: firstName,
                     middle_name: gv('flat_member_' + midx + '_middle_name'),
                     last_name: gv('flat_member_' + midx + '_last_name'),
@@ -3187,6 +3200,10 @@
         function _populateDonationTypes(types) {
             const selectEl = document.getElementById('uni_donation_type');
             if (!selectEl) return;
+            // Preserve the user's current choice across rebuilds — updateUnifiedForm()
+            // re-populates this select on every spouse add/remove, which would
+            // otherwise reset the selection to the empty placeholder.
+            const prevValue = selectEl.value;
             selectEl.innerHTML = '<option value="">— Select Donation Type —</option>';
             types.forEach(type => {
                 const opt = document.createElement('option');
@@ -3194,6 +3211,10 @@
                 opt.textContent = type;
                 selectEl.appendChild(opt);
             });
+            // Restore the previous selection if it is still a valid option.
+            if (prevValue && types.includes(prevValue)) {
+                selectEl.value = prevValue;
+            }
         }
 
         function _onCenterChange(prefix, selectEl) {
@@ -3269,7 +3290,10 @@
                 if (centers.length === 1) {
                     _zipState[prefix].zone = centers[0];
                     _zipState[prefix].donationTypes = donationTypesByCenter[0] ?? [];
-                    if (cdEl) cdEl.innerHTML = `<span class="zone-text">📍 ${centers[0]}</span>`;
+                    if (cdEl) {
+                        cdEl.style.display = '';
+                        cdEl.innerHTML = `<span class="zone-text">📍 ${centers[0]}</span>`;
+                    }
                     if (cfEl) cfEl.style.display = '';
                     if (msgEl) {
                         msgEl.textContent = '✓ Center assigned';
@@ -3280,8 +3304,11 @@
                     // Multiple centers — donation types update when the user picks a center
                     if (prefix === 'uni' && _isChk) _populateDonationTypes([]); // reset until center is chosen
                     const opts = centers.map(c => `<option value="${c}">${c}</option>`).join('');
-                    if (cdEl) cdEl.innerHTML =
-                        `<select onchange="_onCenterChange('${prefix}', this)"><option value="">Select your center…</option>${opts}</select>`;
+                    if (cdEl) {
+                        cdEl.style.display = '';
+                        cdEl.innerHTML =
+                            `<select onchange="_onCenterChange('${prefix}', this)"><option value="">Select your center…</option>${opts}</select>`;
+                    }
                     if (cfEl) cfEl.style.display = '';
                     if (msgEl) {
                         msgEl.textContent = '✓ Multiple centers found — please select one';
@@ -3316,6 +3343,36 @@
             el.style.display = 'block';
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(() => { el.style.display = 'none'; }, 8000);
+        }
+
+        // ─── DUPLICATE-FIELD HIGHLIGHTING ────────────────────────────────────────
+        // Flags the given input fields invalid (red border + glow) to indicate a
+        // name+DOB duplicate match. Uses the form's existing .field-invalid class
+        // so it matches every other validation error. The red clears as soon as
+        // the user edits any flagged field.
+        function markDuplicateFields(ids) {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.add('field-invalid');
+                el.classList.remove('field-valid');
+                if (!el._dupClearAttached) {
+                    el._dupClearAttached = true;
+                    el.addEventListener('input', function clearDup() {
+                        el.classList.remove('field-invalid');
+                    });
+                }
+            });
+            const first = document.getElementById(ids[0]);
+            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Builds the [first, last, dob] field-id triple for a duplicate member.
+        // type: 'primary' | 'spouse' | 'flat_member'; index used for spouse/flat.
+        function duplicateFieldIds(type, index) {
+            if (type === 'spouse')      return [`uni_spouse_${index}_first_name`, `uni_spouse_${index}_last_name`, `uni_spouse_${index}_dob`];
+            if (type === 'flat_member') return [`flat_member_${index}_first_name`, `flat_member_${index}_last_name`, `flat_member_${index}_dob`];
+            return ['uni_first_name', 'uni_last_name', 'uni_dob']; // primary
         }
 
         async function submitMembership(type) {
@@ -3588,6 +3645,10 @@
                 if (!data.success) {
                     const errLines = data.errors ? Object.values(data.errors).flat() : [];
                     const msg = data.message || (errLines.length ? errLines.join('\n') : 'Submission failed — please check your form.');
+                    // Name+DOB duplicate — flag the offending member's fields red.
+                    if (data.duplicate && data.duplicate.type) {
+                        markDuplicateFields(duplicateFieldIds(data.duplicate.type, data.duplicate.index));
+                    }
                     throw new Error(msg);
                 }
 
@@ -3914,8 +3975,10 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    // Duplicate found — show error, disable rest of form
+                    // Duplicate found — show error, flag the matched fields red,
+                    // and disable the rest of the form.
                     errEl.style.display = 'block';
+                    markDuplicateFields(duplicateFieldIds('primary'));
                     const restOfForm = document.getElementById('uni_rest_of_form');
                     if (restOfForm) {
                         restOfForm.style.display = 'none';
@@ -3987,7 +4050,7 @@
             <p class="confirm-title" id="checkomaticSpouseTitle">Checkomatic Reminder</p>
             <p class="confirm-body" style="margin-bottom:0.9rem;">Before adding a spouse, please review the payment reminder below.</p>
             <div class="checkomatic-spouse-note">
-                Checkomatic dues totaling $20 per member must be paid by June 30th.
+                Checkomatic dues totaling $20 per member must be paid by June 30th, {{ date('Y') }}.
             </div>
             <div class="confirm-actions" style="margin-top:1.25rem;">
                 <button class="confirm-btn-yes" onclick="confirmCheckomaticSpouseDisclaimer()">Got It</button>
