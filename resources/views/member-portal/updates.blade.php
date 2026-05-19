@@ -50,6 +50,11 @@
     }
     .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
     .app.sidebar-collapsed .sidebar {
+      /* The grid track is 0-wide when collapsed; give the sidebar its own
+         width so translateX(-100%) fully clears it, and clip any overflow
+         so its contents don't spill over the page content. */
+      width: 248px;
+      overflow: hidden;
       transform: translateX(-100%);
       transition: transform .3s ease;
     }
@@ -144,6 +149,9 @@
       border-radius: 8px; color: var(--text); display: none;
     }
     .hamburger:hover { background: var(--bg); }
+    /* Desktop: when the sidebar is collapsed off-screen, the topbar hamburger
+       becomes the only control that can reopen it. */
+    .app.sidebar-collapsed .hamburger { display: inline-flex; }
     .page-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
     .user-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -158,62 +166,45 @@
       margin-bottom: 22px;
     }
 
-    /* ── Updates list ── */
+    /* ── Updates empty state ── */
     .updates-panel {
       background: var(--surface);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 12px 22px;
-    }
-    .update-row {
+      min-height: 460px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 20px 4px;
-      border-bottom: 1px solid var(--border);
+      justify-content: center;
+      padding: 48px 24px;
     }
-    .update-row:last-child { border-bottom: none; }
-    .update-info { min-width: 0; }
-    .update-title {
-      font-size: 16px;
+    .coming-soon {
+      text-align: center;
+      max-width: 420px;
+    }
+    .coming-soon-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d8f3e4 0%, #cdebe2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--green);
+    }
+    .coming-soon-icon svg { width: 34px; height: 34px; stroke-width: 1.8; }
+    .coming-soon-heading {
+      font-size: 22px;
       font-weight: 700;
       color: var(--text);
-      letter-spacing: -0.2px;
-      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+      margin-bottom: 10px;
     }
-    .update-meta {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 14px;
-      font-size: 12.5px;
+    .coming-soon-sub {
+      font-size: 14px;
       color: var(--text-muted);
+      line-height: 1.6;
     }
-    .meta-bit { display: inline-flex; align-items: center; gap: 5px; }
-    .meta-bit svg { width: 13px; height: 13px; stroke-width: 1.9; }
-    .pdf-badge {
-      background: #fde2e2;
-      color: #d64545;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      padding: 4px 9px;
-      border-radius: 20px;
-    }
-    .btn-detail {
-      flex-shrink: 0;
-      background: linear-gradient(135deg, #0e7a52 0%, #0a5a3d 100%);
-      color: #fff;
-      border: none;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 10px 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(13,122,82,0.25);
-      transition: transform .12s, box-shadow .15s;
-    }
-    .btn-detail:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(13,122,82,0.3); }
 
     /* ── Sidebar overlay (mobile) ── */
     .sidebar-overlay {
@@ -336,37 +327,18 @@
       <h2 class="section-heading">UPDATES</h2>
 
       <div class="updates-panel">
-        @php
-          $updates = array_fill(0, 6, [
-            'title'    => 'ISGH Celebration Banquet Taxes',
-            'location' => 'Richardson, TX',
-            'date'     => 'June 27, 2026',
-          ]);
-        @endphp
-
-        @foreach ($updates as $update)
-          <div class="update-row">
-            <div class="update-info">
-              <div class="update-title">{{ $update['title'] }}</div>
-              <div class="update-meta">
-                <span class="meta-bit">
-                  <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                  </svg>
-                  {{ $update['location'] }}
-                </span>
-                <span class="meta-bit">
-                  <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                  {{ $update['date'] }}
-                </span>
-                <span class="pdf-badge">PDF</span>
-              </div>
-            </div>
-            <a href="#" class="btn-detail">See Detail</a>
+        <div class="coming-soon">
+          <div class="coming-soon-icon">
+            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
+            </svg>
           </div>
-        @endforeach
+          <div class="coming-soon-heading">Updates Coming Soon</div>
+          <p class="coming-soon-sub">
+            The ISGH team is currently preparing the latest announcements and reports.
+            They will be uploaded here shortly.
+          </p>
+        </div>
       </div>
     </section>
   </div>
