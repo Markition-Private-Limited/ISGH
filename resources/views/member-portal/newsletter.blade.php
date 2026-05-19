@@ -50,6 +50,11 @@
     }
     .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
     .app.sidebar-collapsed .sidebar {
+      /* The grid track is 0-wide when collapsed; give the sidebar its own
+         width so translateX(-100%) fully clears it, and clip any overflow
+         so its contents don't spill over the page content. */
+      width: 248px;
+      overflow: hidden;
       transform: translateX(-100%);
       transition: transform .3s ease;
     }
@@ -144,6 +149,9 @@
       border-radius: 8px; color: var(--text); display: none;
     }
     .hamburger:hover { background: var(--bg); }
+    /* Desktop: when the sidebar is collapsed off-screen, the topbar hamburger
+       becomes the only control that can reopen it. */
+    .app.sidebar-collapsed .hamburger { display: inline-flex; }
     .page-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
     .user-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -158,74 +166,45 @@
       margin-bottom: 22px;
     }
 
-    /* ── Newsletter grid ── */
-    .item-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 22px;
-    }
-    .item-card {
+    /* ── Newsletter empty state ── */
+    .updates-panel {
       background: var(--surface);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: box-shadow .18s, transform .18s;
-    }
-    .item-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-    .item-banner {
-      position: relative;
-      height: 110px;
+      min-height: 460px;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 48px 24px;
     }
-    .item-banner svg { width: 40px; height: 40px; stroke-width: 1.6; }
-    .item-year {
-      position: absolute;
-      top: 10px; right: 12px;
-      font-size: 11px;
-      font-weight: 700;
-      color: rgba(15,23,42,0.55);
+    .coming-soon {
+      text-align: center;
+      max-width: 420px;
     }
-    /* pastel banner palette */
-    .bn-peach   { background: #fbe4cf; color: #c2772a; }
-    .bn-teal    { background: #c9ebe7; color: #1f9a8e; }
-    .bn-lime    { background: #f0f3cf; color: #93a534; }
-    .bn-green   { background: #d6f0db; color: #3a9d52; }
-    .bn-lavender{ background: #e3def6; color: #7a6bc4; }
-    .bn-pink    { background: #f8dced; color: #c2548f; }
-
-    .item-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-    .item-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
-    .item-meta { font-size: 12.5px; color: var(--text-muted); }
-    .item-foot {
+    .coming-soon-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d8f3e4 0%, #cdebe2 100%);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-top: 12px;
-    }
-    .pdf-badge {
-      background: #fde2e2;
-      color: #d64545;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      padding: 4px 9px;
-      border-radius: 20px;
-    }
-    .open-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      font-weight: 600;
+      justify-content: center;
       color: var(--green);
-      transition: color .15s;
     }
-    .open-link:hover { color: var(--green-dark); }
-    .open-link svg { width: 14px; height: 14px; stroke-width: 2; }
+    .coming-soon-icon svg { width: 34px; height: 34px; stroke-width: 1.8; }
+    .coming-soon-heading {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+      margin-bottom: 10px;
+    }
+    .coming-soon-sub {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
 
     /* ── Sidebar overlay (mobile) ── */
     .sidebar-overlay {
@@ -280,9 +259,6 @@
     }
 
     /* ── Responsive ── */
-    @media (max-width: 1100px) {
-      .item-grid { grid-template-columns: repeat(2, 1fr); }
-    }
     @media (max-width: 768px) {
       .app { grid-template-columns: 1fr; }
       .sidebar {
@@ -304,7 +280,6 @@
       .topbar { padding: 14px 18px; }
       .content { padding: 18px 18px 32px; }
       .section-heading { font-size: 18px; letter-spacing: 2px; }
-      .item-grid { grid-template-columns: 1fr; gap: 16px; }
       .bottom-nav { display: flex; }
       body { padding-bottom: 78px; }
     }
@@ -344,41 +319,19 @@
     <section class="content">
       <h2 class="section-heading">ISGH NEWSLETTER</h2>
 
-      <div class="item-grid">
-        @php
-          $newsletters = [
-            ['year' => '2025', 'banner' => 'bn-peach'],
-            ['year' => '2024', 'banner' => 'bn-teal'],
-            ['year' => '2023', 'banner' => 'bn-lime'],
-            ['year' => '2022', 'banner' => 'bn-green'],
-            ['year' => '2021', 'banner' => 'bn-lavender'],
-            ['year' => '2020', 'banner' => 'bn-pink'],
-          ];
-        @endphp
-
-        @foreach ($newsletters as $nl)
-          <div class="item-card">
-            <div class="item-banner {{ $nl['banner'] }}">
-              <span class="item-year">{{ $nl['year'] }}</span>
-              <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8z"/>
-              </svg>
-            </div>
-            <div class="item-body">
-              <div class="item-title">Newsletter {{ $nl['year'] }}</div>
-              <div class="item-meta">2.4 MB · Published Jan 2025</div>
-              <div class="item-foot">
-                <span class="pdf-badge">PDF</span>
-                <a href="#" class="open-link" target="_blank" rel="noopener">
-                  <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                  </svg>
-                  Open
-                </a>
-              </div>
-            </div>
+      <div class="updates-panel">
+        <div class="coming-soon">
+          <div class="coming-soon-icon">
+            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
+            </svg>
           </div>
-        @endforeach
+          <div class="coming-soon-heading">Newsletters Coming Soon</div>
+          <p class="coming-soon-sub">
+            The ISGH team is currently preparing the latest newsletters and reports.
+            They will be uploaded here shortly.
+          </p>
+        </div>
       </div>
     </section>
   </div>
