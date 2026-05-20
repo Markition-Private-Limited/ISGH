@@ -79,10 +79,49 @@ class PortalController extends Controller
                 '_warming'       => true,
             ];
         } else {
+            // Defensive: the dashboard_stats / dashboard_centers `level_breakdown`
+            // columns are JSON and the models cast to `array`, but in production
+            // we've seen them arrive as raw JSON strings (corrupt write, missing
+            // migration, or cast not applying). Decode here so every downstream
+            // view sees an array — scopeDashboardData already does this per-centre,
+            // but the top-level value for city-wide users skips that path.
+            $data = $this->normaliseDashboardBreakdowns($data);
             $data = $this->scopeDashboardData($data, $user);
         }
 
         return view('portal.dashboard', $data);
+    }
+
+    /**
+     * Ensure `levelBreakdown` (top level) and every centre's `level_breakdown`
+     * are arrays, decoding from a JSON string if necessary. Safe to call even
+     * when the values are already arrays.
+     */
+    private function normaliseDashboardBreakdowns(array $data): array
+    {
+        $toArray = static function ($v): array {
+            if (is_array($v)) return $v;
+            if (is_string($v) && $v !== '') {
+                $decoded = json_decode($v, true);
+                return is_array($decoded) ? $decoded : [];
+            }
+            return [];
+        };
+
+        $data['levelBreakdown'] = $toArray($data['levelBreakdown'] ?? []);
+
+        if (!empty($data['zones']) && is_array($data['zones'])) {
+            foreach ($data['zones'] as $zi => $zone) {
+                if (!empty($zone['centers']) && is_array($zone['centers'])) {
+                    foreach ($zone['centers'] as $ci => $center) {
+                        $data['zones'][$zi]['centers'][$ci]['level_breakdown']
+                            = $toArray($center['level_breakdown'] ?? []);
+                    }
+                }
+            }
+        }
+
+        return $data;
     }
 
     // ── Dashboard scoping ─────────────────────────────────────────────────
