@@ -16,11 +16,16 @@ use Illuminate\Support\Facades\Log;
  */
 class LevelChangeService
 {
-    public function __construct(private StripeService $stripe) {}
+    public function __construct(
+        private StripeService $stripe,
+        private WildApricotService $wa,
+    ) {}
 
     /**
-     * The membership types the member may switch to — all 7 minus their
-     * current one. Each: {type, label, fee, includesFamily, isCheckomatic}.
+     * The membership types the member may switch to — all types minus their
+     * current one and minus 'flat' (Flat Membership is not offered as a
+     * level-change target in the member portal). Each entry:
+     * {type, label, fee, includesFamily, isCheckomatic}.
      * For checkomatic types the fee cents are 0 until the member enters an amount.
      */
     public function availableLevels(MemberProfile $profile): array
@@ -29,7 +34,9 @@ class LevelChangeService
 
         $levels = [];
         foreach (MembershipTypes::allSlugs() as $slug) {
-            if ($slug === $currentSlug) {
+            // Skip the member's current level, and exclude Flat Membership —
+            // it is not a selectable target in the change-level form.
+            if ($slug === $currentSlug || $slug === 'flat') {
                 continue;
             }
             $isCheckomatic = MembershipTypes::isCheckomatic($slug);
@@ -62,6 +69,11 @@ class LevelChangeService
         if (! in_array($toType, MembershipTypes::allSlugs(), true)) {
             return ['success' => false, 'message' => 'Unknown membership level.'];
         }
+        // Flat Membership is not a selectable level-change target — reject it
+        // server-side too, in case a crafted request bypasses the UI.
+        if ($toType === 'flat') {
+            return ['success' => false, 'message' => 'Flat Membership is not available as a level-change option.'];
+        }
         if (MembershipTypes::isCheckomatic($toType) && (float) ($checkomaticAmount ?? 0) <= 0) {
             return ['success' => false, 'message' => 'Please enter your monthly contribution amount.'];
         }
@@ -69,6 +81,32 @@ class LevelChangeService
         $family = MembershipTypes::includesFamily($toType)
             ? array_values(array_filter($familyMembers, fn ($m) => ! empty($m['first_name'])))
             : [];
+
+        // Validate every added family member against WildApricot — same checks
+        // as member creation: email-exists, phone-exists, name+DOB duplicate.
+        // On a hit, abort before any charge and tell the frontend which block
+        // (index) and which field group is at fault so it can be highlighted.
+        foreach ($family as $i => $m) {
+            $dupe = fn (string $field) => [
+                'success'   => false,
+                'duplicate' => ['index' => $i, 'field' => $field],
+            ];
+
+            $email = trim((string) ($m['email'] ?? ''));
+            if ($email !== '' && $this->wa->searchContact($email, '', '', '', '')) {
+                return $dupe('email') + ['message' => 'Family member email ' . $email . ' is already registered as an ISGH member.'];
+            }
+
+            $phoneDigits = preg_replace('/\D/', '', (string) ($m['phone'] ?? ''));
+            if ($phoneDigits !== '' && $this->wa->checkPhoneExists($phoneDigits)) {
+                return $dupe('phone') + ['message' => 'Family member phone ' . ($m['phone'] ?? '') . ' is already registered as an ISGH member.'];
+            }
+
+            // Name + DOB combination duplicate.
+            if (! empty($m['first_name']) && $this->wa->searchContact('', $m['first_name'], $m['last_name'] ?? '', '', $m['dob'] ?? '')) {
+                return $dupe('name_dob') + ['message' => 'The family member information you entered (' . trim(($m['first_name'] ?? '') . ' ' . ($m['last_name'] ?? '')) . ') matches an existing member. Please verify the details or contact ISGH support.'];
+            }
+        }
 
         $fee = MembershipFee::resolve($toType, count($family), $checkomaticAmount);
 

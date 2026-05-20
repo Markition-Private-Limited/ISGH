@@ -355,12 +355,7 @@
       <div class="item-grid">
         @php
           $reports = [
-            ['year' => '2025', 'banner' => 'bn-peach'],
-            ['year' => '2024', 'banner' => 'bn-teal'],
-            ['year' => '2023', 'banner' => 'bn-lime'],
-            ['year' => '2022', 'banner' => 'bn-green'],
-            ['year' => '2021', 'banner' => 'bn-lavender'],
-            ['year' => '2020', 'banner' => 'bn-pink'],
+            ['year' => '2024', 'banner' => 'bn-teal', 'file' => 'Annual-Report-2024.pdf'],
           ];
         @endphp
 
@@ -374,10 +369,10 @@
             </div>
             <div class="item-body">
               <div class="item-title">Annual Financial Report {{ $report['year'] }}</div>
-              <div class="item-meta">2.4 MB · Published Jan 2025</div>
+              <div class="item-meta">PDF Document</div>
               <div class="item-foot">
                 <span class="pdf-badge">PDF</span>
-                <a href="#" class="open-link" target="_blank" rel="noopener">
+                <a href="{{ asset('documents/' . $report['file']) }}" class="open-link" target="_blank" rel="noopener">
                   <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
                   </svg>

@@ -157,6 +157,19 @@
       border-color: var(--green);
       box-shadow: 0 0 0 3px rgba(13,122,82,0.12);
     }
+    /* Invalid family-member field (duplicate email/phone/name+DOB). */
+    .lvl-family-block input.lvl-invalid {
+      border-color: #dc2626 !important;
+      box-shadow: 0 0 0 3px rgba(220,38,38,0.12) !important;
+    }
+    .lvl-field-msg {
+      font-size: 11px;
+      margin: -6px 0 8px;
+      min-height: 13px;
+      line-height: 1.3;
+    }
+    .lvl-field-msg.error   { color: #dc2626; }
+    .lvl-field-msg.success { color: #15803d; }
     .lvl-family-remove {
       position: absolute; top: 10px; right: 10px;
       width: 26px; height: 26px;
@@ -240,6 +253,7 @@
       <p class="renew-sub" id="lvlFamilySub">This level includes family members. Add the people you would like covered under your membership.</p>
       <div id="lvlFamilyContainer"></div>
       <button type="button" class="lvl-add-member" id="lvlAddMember">+ Add Member</button>
+      <div class="renew-error" id="lvlFamilyError"></div>
       <div class="renew-actions">
         <button type="button" class="renew-btn renew-btn-ghost" id="lvlFamilyBack">Back</button>
         <button type="button" class="renew-btn renew-btn-primary" id="lvlFamilyNext">Continue</button>
@@ -349,14 +363,20 @@
       <div class="lvl-field-full">
         <label>Email</label>
         <input type="email" data-field="email" placeholder="Email address" />
+        <div class="lvl-field-msg" data-msg-for="email"></div>
       </div>
       <div>
         <label>Phone</label>
         <input type="tel" data-field="phone" placeholder="Phone" />
+        <div class="lvl-field-msg" data-msg-for="phone"></div>
       </div>
       <div>
         <label>Date of Birth</label>
         <input type="date" data-field="dob" />
+      </div>
+      <div class="lvl-field-full">
+        <label>TX DL # / TX ID #</label>
+        <input type="text" data-field="tx_dl" placeholder="e.g. TX7234578" />
       </div>
     </div>
   </div>
@@ -400,6 +420,7 @@
     const familyBack    = document.getElementById('lvlFamilyBack');
     const familyNext    = document.getElementById('lvlFamilyNext');
     const familyTpl     = document.getElementById('lvlFamilyTemplate');
+    const familyError   = document.getElementById('lvlFamilyError');
     const reviewFromName = document.getElementById('lvlReviewFromName');
     const reviewFromFee  = document.getElementById('lvlReviewFromFee');
     const reviewToName   = document.getElementById('lvlReviewToName');
@@ -581,9 +602,10 @@
           email:      get('email'),
           phone:      get('phone'),
           dob:        get('dob'),
+          tx_dl:      get('tx_dl'),
         };
         // Skip fully-empty blocks
-        if (m.first_name || m.last_name || m.email || m.phone || m.dob) {
+        if (m.first_name || m.last_name || m.email || m.phone || m.dob || m.tx_dl) {
           members.push(m);
         }
       });
@@ -692,8 +714,188 @@
 
     // ── SCREEN 2 (family) navigation ─────────────────────────────────────
     familyBack?.addEventListener('click', () => { showScreen('pick'); });
-    familyNext?.addEventListener('click', () => { goToReview(); });
     addMemberBtn?.addEventListener('click', () => { addFamilyBlock(false); });
+
+    // ── Family-member duplicate validation ───────────────────────────────
+    // Same checks as member creation: email-exists, phone-exists, name+DOB.
+    // Runs in real time (after typing) and again on Continue. The WA lookups
+    // reuse the membership check-email / check-phone / verify endpoints.
+    const _lvlCheckEmailUrl = '{{ route('membership.check-email') }}';
+    const _lvlCheckPhoneUrl = '{{ route('membership.check-phone') }}';
+    const _lvlVerifyUrl     = '{{ route('membership.verify') }}';
+    const _lvlDebounce      = {};
+
+    function lvlInput(block, field) {
+      return block.querySelector('[data-field="' + field + '"]');
+    }
+    function lvlMsg(block, field) {
+      return block.querySelector('[data-msg-for="' + field + '"]');
+    }
+    function lvlSetMsg(block, field, text, kind) {
+      const inp = lvlInput(block, field);
+      const msg = lvlMsg(block, field);
+      if (inp) inp.classList.toggle('lvl-invalid', kind === 'error');
+      if (msg) {
+        msg.textContent = text || '';
+        msg.className = 'lvl-field-msg' + (kind ? ' ' + kind : '');
+      }
+    }
+    // Clears a field's error styling (used when the user edits it).
+    function lvlClearField(block, field) {
+      const inp = lvlInput(block, field);
+      if (inp) { inp.classList.remove('lvl-invalid'); inp._lvlDupe = false; }
+      const msg = lvlMsg(block, field);
+      if (msg) { msg.textContent = ''; msg.className = 'lvl-field-msg'; }
+    }
+
+    async function lvlCheckEmail(block) {
+      const inp = lvlInput(block, 'email');
+      if (!inp) return;
+      const email = inp.value.trim();
+      inp._lvlDupe = false;
+      if (!email) { lvlSetMsg(block, 'email', '', null); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        lvlSetMsg(block, 'email', 'Enter a valid email address.', 'error');
+        inp._lvlDupe = true;
+        return;
+      }
+      lvlSetMsg(block, 'email', 'Checking…', null);
+      try {
+        const res = await fetch(_lvlCheckEmailUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': lvlCsrf, 'Accept': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (data.exists) {
+          inp._lvlDupe = true;
+          lvlSetMsg(block, 'email', 'This email is already registered as an ISGH member.', 'error');
+        } else {
+          lvlSetMsg(block, 'email', '✓ Email is available', 'success');
+        }
+      } catch (e) {
+        // Network error — don't block; clear the checking state.
+        lvlSetMsg(block, 'email', '', null);
+      }
+    }
+
+    async function lvlCheckPhone(block) {
+      const inp = lvlInput(block, 'phone');
+      if (!inp) return;
+      const phone = inp.value.trim();
+      inp._lvlDupe = false;
+      if (!phone) { lvlSetMsg(block, 'phone', '', null); return; }
+      if (phone.replace(/\D/g, '').length < 10) {
+        lvlSetMsg(block, 'phone', 'Enter a valid 10-digit phone number.', 'error');
+        inp._lvlDupe = true;
+        return;
+      }
+      lvlSetMsg(block, 'phone', 'Checking…', null);
+      try {
+        const res = await fetch(_lvlCheckPhoneUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': lvlCsrf, 'Accept': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        const data = await res.json();
+        if (data.exists) {
+          inp._lvlDupe = true;
+          lvlSetMsg(block, 'phone', 'This phone is already registered as an ISGH member.', 'error');
+        } else {
+          lvlSetMsg(block, 'phone', '✓ Phone is available', 'success');
+        }
+      } catch (e) {
+        lvlSetMsg(block, 'phone', '', null);
+      }
+    }
+
+    // Real-time: debounced email/phone checks; clear field error as user edits.
+    familyBox.addEventListener('input', e => {
+      const inp = e.target;
+      const field = inp.dataset ? inp.dataset.field : null;
+      if (!field) return;
+      const block = inp.closest('.lvl-family-block');
+      if (!block) return;
+      lvlClearField(block, field);                 // editing clears prior error
+      hideError(familyError);
+      if (field === 'email' || field === 'phone') {
+        const key = field + '_' + (block._lvlId || (block._lvlId = Math.random()));
+        clearTimeout(_lvlDebounce[key]);
+        _lvlDebounce[key] = setTimeout(() => {
+          field === 'email' ? lvlCheckEmail(block) : lvlCheckPhone(block);
+        }, 600);
+      }
+    });
+    // Immediate check on blur (covers paste-and-tab).
+    familyBox.addEventListener('blur', e => {
+      const inp = e.target;
+      const field = inp.dataset ? inp.dataset.field : null;
+      const block = inp.closest && inp.closest('.lvl-family-block');
+      if (!block) return;
+      if (field === 'email') lvlCheckEmail(block);
+      if (field === 'phone') lvlCheckPhone(block);
+    }, true);
+
+    // Submit-time validation — re-checks email/phone and runs the name+DOB
+    // duplicate check for every family block. Reddens offending fields and
+    // returns false to block the Continue step.
+    async function validateFamilyOnContinue() {
+      hideError(familyError);
+      const blocks = [...familyBox.querySelectorAll('.lvl-family-block')];
+      let ok = true;
+      let firstBad = null;
+
+      for (const block of blocks) {
+        const first = (lvlInput(block, 'first_name')?.value || '').trim();
+        const last  = (lvlInput(block, 'last_name')?.value || '').trim();
+        const dob   = (lvlInput(block, 'dob')?.value || '').trim();
+
+        // Re-run email/phone existence checks so a freshly-typed value is caught.
+        await lvlCheckEmail(block);
+        await lvlCheckPhone(block);
+        if (lvlInput(block, 'email')?._lvlDupe) { ok = false; firstBad = firstBad || lvlInput(block, 'email'); }
+        if (lvlInput(block, 'phone')?._lvlDupe) { ok = false; firstBad = firstBad || lvlInput(block, 'phone'); }
+
+        // Name + DOB combination duplicate (only when a name is entered).
+        if (first) {
+          try {
+            const res = await fetch(_lvlVerifyUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': lvlCsrf, 'Accept': 'application/json' },
+              body: JSON.stringify({ first_name: first, last_name: last, date_of_birth: dob }),
+            });
+            const data = await res.json();
+            // verifyMembership returns success:true when a matching member exists.
+            if (data.success) {
+              ok = false;
+              ['first_name', 'last_name', 'dob'].forEach(f => {
+                const i = lvlInput(block, f);
+                if (i) i.classList.add('lvl-invalid');
+              });
+              firstBad = firstBad || lvlInput(block, 'first_name');
+            }
+          } catch (e) { /* network error — don't block on it */ }
+        }
+      }
+
+      if (!ok) {
+        showError(familyError, 'One or more family members are already registered with ISGH. Please review the highlighted fields.');
+        if (firstBad) firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return ok;
+    }
+
+    familyNext?.addEventListener('click', async () => {
+      const orig = familyNext.textContent;
+      familyNext.disabled = true;
+      familyNext.textContent = 'Checking…';
+      try {
+        if (await validateFamilyOnContinue()) goToReview();
+      } finally {
+        familyNext.disabled = false;
+        familyNext.textContent = orig;
+      }
+    });
 
     // ── SCREEN 3 (review) navigation ─────────────────────────────────────
     reviewBack?.addEventListener('click', () => {
@@ -769,6 +971,28 @@
         let data = await postChange();
 
         if (data && data.success === false) {
+          // Family-member duplicate caught server-side — redden the offending
+          // block's fields and send the user back to the family screen.
+          if (data.duplicate && typeof data.duplicate.index === 'number') {
+            // duplicate.index counts only blocks with a first name — the same
+            // set the backend validated — so filter blocks the same way.
+            const namedBlocks = [...familyBox.querySelectorAll('.lvl-family-block')]
+              .filter(b => (b.querySelector('[data-field="first_name"]')?.value || '').trim() !== '');
+            const block = namedBlocks[data.duplicate.index];
+            if (block) {
+              const fields = data.duplicate.field === 'name_dob'
+                ? ['first_name', 'last_name', 'dob']
+                : [data.duplicate.field];
+              fields.forEach(f => {
+                const i = block.querySelector('[data-field="' + f + '"]');
+                if (i) i.classList.add('lvl-invalid');
+              });
+            }
+            showScreen('family');
+            showError(familyError, data.message || 'A family member is already registered with ISGH.');
+            if (block) block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
           showError(payError, data.message || 'Payment failed. Please try again.');
           return;
         }

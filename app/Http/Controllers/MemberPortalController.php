@@ -547,6 +547,7 @@ class MemberPortalController extends Controller
             'family_members.*.email'      => ['nullable', 'email'],
             'family_members.*.phone'      => ['nullable', 'string', 'max:30'],
             'family_members.*.dob'        => ['nullable', 'string', 'max:20'],
+            'family_members.*.tx_dl'      => ['nullable', 'string', 'max:50'],
         ]);
 
         $profile = new MemberProfile($portal->getBundle((int) $contactId));
