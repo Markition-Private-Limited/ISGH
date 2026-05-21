@@ -318,7 +318,24 @@ class PortalController extends Controller
             $filters['center'] ?? '',
         );
 
-        return view('portal.members.index', compact('members', 'totalCount', 'filteredCount', 'masjids', 'zipCodes'));
+        // Membership Type dropdown options — every level configured in
+        // WildApricot, sorted alphabetically. The filter submits a level's
+        // exact Name, which getMembersPage() matches against MembershipLevelId.
+        try {
+            $waLevels = $wa->getMembershipLevels();
+            $membershipLevels = collect($waLevels)
+                ->pluck('Name')
+                ->filter()
+                ->unique()
+                ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            Log::error('Portal members: failed to load WA membership levels', ['error' => $e->getMessage()]);
+            $membershipLevels = [];
+        }
+
+        return view('portal.members.index', compact('members', 'totalCount', 'filteredCount', 'masjids', 'zipCodes', 'membershipLevels'));
     }
 
     // ── Members filter options ────────────────────────────────────────────

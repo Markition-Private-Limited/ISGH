@@ -31,7 +31,8 @@ class LevelChangeServiceTest extends TestCase
 
         $types = array_column($levels, 'type');
         $this->assertNotContains('individual', $types, 'current type excluded');
-        $this->assertCount(6, $levels);
+        $this->assertNotContains('flat', $types, 'flat membership excluded as a level-change target');
+        $this->assertCount(5, $levels);
     }
 
     public function test_available_levels_flag_family_and_checkomatic(): void

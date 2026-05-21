@@ -47,6 +47,46 @@
   .filter-select-wrap .select2-container {
     width: 100% !important;
   }
+
+  /* ── Filter loading overlay ───────────────────────────────
+     Shown when the filter form submits (cascading filter or Search Enter)
+     and naturally hidden by the full-page reload that follows. */
+  .members-loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  }
+  .members-loading-overlay.is-active { display: flex; }
+  .members-loading-card {
+    background: var(--clr-surface, #fff);
+    border: 1px solid var(--clr-border, #d1d5db);
+    border-radius: 10px;
+    padding: 18px 26px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    font-size: 0.9rem;
+    color: var(--clr-text-1, #111827);
+  }
+  .members-loading-spinner {
+    width: 22px;
+    height: 22px;
+    border: 2.5px solid var(--clr-border, #e5e7eb);
+    border-top-color: var(--clr-primary, #2563eb);
+    border-radius: 50%;
+    animation: members-loading-spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes members-loading-spin {
+    to { transform: rotate(360deg); }
+  }
 </style>
 @endpush
 
@@ -128,24 +168,15 @@
 
         <div class="filter-select-wrap">
           <label class="filter-label" for="filter-type">Membership Type</label>
-          <select id="filter-type" name="type" class="filter-select" aria-label="Filter by membership type">
+          <select id="filter-type" name="level" class="filter-select" aria-label="Filter by membership level">
             <option value="">All Types</option>
-            <option value="individual"  {{ request('type') === 'individual'  ? 'selected' : '' }}>Individual</option>
-            <option value="checkmatic"  {{ request('type') === 'checkmatic'  ? 'selected' : '' }}>Checkmatic</option>
-            <option value="lifetime"    {{ request('type') === 'lifetime'    ? 'selected' : '' }}>Lifetime</option>
+            @foreach (($membershipLevels ?? []) as $levelName)
+              <option value="{{ $levelName }}" {{ request('level') === $levelName ? 'selected' : '' }}>{{ $levelName }}</option>
+            @endforeach
           </select>
         </div>
 
       </div>
-
-      {{-- Hidden level param — passed through from dashboard drill-down links --}}
-      @if (request('level'))
-        <input type="hidden" name="level" value="{{ request('level') }}">
-        <div style="margin-top:.5rem;font-size:.78rem;color:var(--clr-text-3);">
-          Filtered by level: <strong style="color:var(--clr-text-1);">{{ request('level') }}</strong>
-          <a href="{{ route('portal.members', array_diff_key(request()->query(), ['level' => ''])) }}" style="margin-left:.5rem;color:var(--clr-danger);text-decoration:none;" aria-label="Clear level filter">&#x2715;</a>
-        </div>
-      @endif
 
     </form>
   </div>
@@ -376,6 +407,16 @@
 
   </div>
 
+  {{-- ── Filter loading overlay ───────────────────────────────
+       Triggered by the filter form's submit handler; cleared by the
+       full-page reload that completes the request. --}}
+  <div id="members-loading-overlay" class="members-loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+    <div class="members-loading-card">
+      <div class="members-loading-spinner" aria-hidden="true"></div>
+      <span>Loading members…</span>
+    </div>
+  </div>
+
 @endsection
 
 @push('scripts')
@@ -387,6 +428,34 @@
   const zoneEl   = document.getElementById('filter-zone');
   const masjidEl = document.getElementById('filter-masjid');
   const zipEl    = document.getElementById('filter-zip');
+  const overlay  = document.getElementById('members-loading-overlay');
+
+  // Show the loading overlay while the filtered page is fetched. The reload
+  // tears down this script, so there is no need to hide the overlay manually —
+  // it disappears with the page. pageshow re-hides it on back/forward cache
+  // restores so the user is not stuck looking at a leftover spinner.
+  function showLoadingOverlay() {
+    if (!overlay) return;
+    overlay.classList.add('is-active');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+  function hideLoadingOverlay() {
+    if (!overlay) return;
+    overlay.classList.remove('is-active');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  window.addEventListener('pageshow', hideLoadingOverlay);
+
+  // Native submit (e.g. Search field Enter key) — show overlay then let the
+  // browser navigate. submitFiltered() wraps a programmatic submit so cascade
+  // handlers do not need to repeat the overlay call each time.
+  if (form) {
+    form.addEventListener('submit', showLoadingOverlay);
+  }
+  function submitFiltered() {
+    showLoadingOverlay();
+    form.submit();
+  }
 
   // Initialise Select2 on the masjid and zip dropdowns (cosmetic only).
   ['#filter-masjid', '#filter-zip'].forEach(function (sel) {
@@ -419,22 +488,29 @@
     zoneEl.addEventListener('change', function () {
       clearSelect(masjidEl);
       clearSelect(zipEl);
-      form.submit();
+      submitFiltered();
     });
   }
 
   if (masjidEl) {
     $(masjidEl).on('select2:select select2:clear', function () {
       clearSelect(zipEl);
-      form.submit();
+      submitFiltered();
     });
   }
 
   if (zipEl) {
     $(zipEl).on('select2:select select2:clear', function () {
-      form.submit();
+      submitFiltered();
     });
   }
+
+  // Status and Membership Type — independent filters, auto-submit on change.
+  ['filter-status', 'filter-type'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', submitFiltered);
+  });
 })();
 </script>
 @endpush

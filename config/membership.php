@@ -10,7 +10,7 @@ return [
     */
     'fees' => [
         'family'                 => ['cents' => 4000,   'label' => '$40.00'],
-        'individual'             => ['cents' => 2500,   'label' => '$25.00'],
+        'individual'             => ['cents' => 2000,   'label' => '$20.00'],
         'flat'                   => ['cents' => 2000,   'label' => '$20.00 / member'],
         'checkomatic_family'     => ['cents' => 1000,   'label' => '$10.00/mo'],
         'checkomatic_individual' => ['cents' => 1000,   'label' => '$10.00/mo'],

@@ -16,10 +16,37 @@ use Illuminate\Support\Facades\Log;
  */
 class LevelChangeService
 {
+    /**
+     * Fee overrides applied only to the level-change flow. The shared
+     * MembershipFee::resolve() reads config/membership.php which is also used
+     * by public signup and renewals; these keys let the portal charge a
+     * different amount when a member switches levels without affecting the
+     * other flows.
+     */
+    private const FEE_OVERRIDES_CENTS = [
+        'individual' => 2000,
+    ];
+
     public function __construct(
         private StripeService $stripe,
         private WildApricotService $wa,
     ) {}
+
+    /**
+     * Resolve the fee for a level-change target, applying any portal-scoped
+     * overrides on top of the shared MembershipFee math.
+     *
+     * @return array{cents:int,label:string}
+     */
+    private function resolveFee(string $type, int $familyCount, ?float $checkomaticAmount): array
+    {
+        $fee = MembershipFee::resolve($type, $familyCount, $checkomaticAmount);
+        if (isset(self::FEE_OVERRIDES_CENTS[$type])) {
+            $cents = self::FEE_OVERRIDES_CENTS[$type];
+            $fee = ['cents' => $cents, 'label' => '$' . number_format($cents / 100, 2)];
+        }
+        return $fee;
+    }
 
     /**
      * The membership types the member may switch to — all types minus their
@@ -43,7 +70,7 @@ class LevelChangeService
             $levels[] = [
                 'type'           => $slug,
                 'label'          => MembershipTypes::labelForSlug($slug),
-                'fee'            => MembershipFee::resolve($slug, 0, $isCheckomatic ? null : 0.0),
+                'fee'            => $this->resolveFee($slug, 0, $isCheckomatic ? null : 0.0),
                 'includesFamily' => MembershipTypes::includesFamily($slug),
                 'isCheckomatic'  => $isCheckomatic,
             ];
@@ -108,7 +135,7 @@ class LevelChangeService
             }
         }
 
-        $fee = MembershipFee::resolve($toType, count($family), $checkomaticAmount);
+        $fee = $this->resolveFee($toType, count($family), $checkomaticAmount);
 
         $levelChange = LevelChange::create([
             'contact_id'               => $contactId,
@@ -176,7 +203,20 @@ class LevelChangeService
                 'paid_at'          => now(),
             ]);
 
-            ProcessLevelChange::dispatch($levelChange);
+            // Dispatch the WA-side job. On a sync queue this runs inline and
+            // can throw — but Stripe has already charged the card, so any
+            // failure here is a WA bookkeeping issue, NOT a Stripe decline.
+            // Swallow the throw and let the job's own retry/failure path
+            // handle it; do not roll back the LevelChange's "paid" status
+            // and do not surface a decline message to the user.
+            try {
+                ProcessLevelChange::dispatch($levelChange);
+            } catch (\Throwable $jobError) {
+                Log::error('LevelChangeService: WA processing failed after successful Stripe charge', [
+                    'level_change_id' => $levelChange->id,
+                    'error'           => $jobError->getMessage(),
+                ]);
+            }
 
             return ['success' => true, 'level_change_id' => $levelChange->id];
         } catch (\Throwable $e) {
@@ -232,7 +272,17 @@ class LevelChangeService
             'paid_at'          => now(),
         ]);
 
-        ProcessLevelChange::dispatch($levelChange);
+        // See charge() — Stripe has succeeded, so don't let a sync-queue WA
+        // failure bubble back to the controller as a 500. The job's own retry
+        // path is responsible for the WA bookkeeping.
+        try {
+            ProcessLevelChange::dispatch($levelChange);
+        } catch (\Throwable $jobError) {
+            Log::error('LevelChangeService::finalize: WA processing failed after successful Stripe charge', [
+                'level_change_id' => $levelChange->id,
+                'error'           => $jobError->getMessage(),
+            ]);
+        }
 
         return ['success' => true, 'level_change_id' => $levelChange->id];
     }

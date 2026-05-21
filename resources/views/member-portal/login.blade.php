@@ -625,7 +625,10 @@ function closeMobileMenu() { document.getElementById('mobileMenu').classList.add
 
   let resendInterval = null;
 
-  function showError(msg) { jsError.textContent = msg; jsError.style.display = ''; }
+  // The .error-msg stylesheet has `display: none`, so setting style.display = ''
+  // (clearing the inline override) leaves the banner hidden. Use 'block' to
+  // actually reveal it.
+  function showError(msg) { jsError.textContent = msg; jsError.style.display = 'block'; }
   function clearError()   { jsError.textContent = ''; jsError.style.display = 'none'; }
 
   function setLoading(btn, state) {

@@ -699,10 +699,21 @@ class WildApricotService
             if ($key) $existingFVMap[$key] = $newFv;
         }
 
-        $payload['FieldValues'] = array_values($existingFVMap);
+        $payload['FieldValues'] = $this->stripStalePictureFields(array_values($existingFVMap));
 
         $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
         Log::info('WA updateMember response', ['contact_id' => $contactId, 'status' => $r->status(), 'body' => $r->body()]);
+
+        if (! $r->successful()) {
+            // WA sometimes 400s with "Picture with id '…' not found" when the
+            // contact's stored Picture ID references an image that has since
+            // been deleted server-side. Retry once with that field removed.
+            if ($this->isStalePictureError($r->body())) {
+                $payload['FieldValues'] = $this->stripStalePictureFields($payload['FieldValues'], force: true);
+                $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
+                Log::info('WA updateMember retry without Picture ID', ['contact_id' => $contactId, 'status' => $r->status()]);
+            }
+        }
 
         if (! $r->successful()) {
             Log::error('WA updateMember failed', ['contact_id' => $contactId, 'status' => $r->status(), 'body' => $r->body()]);
@@ -978,7 +989,9 @@ class WildApricotService
             $fvMap[$field['SystemCode']] = $field;
         }
 
-        $payload = array_merge($contact, ['FieldValues' => array_values($fvMap)]);
+        $payload = array_merge($contact, [
+            'FieldValues' => $this->stripStalePictureFields(array_values($fvMap)),
+        ]);
 
         $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
         $names = implode(', ', array_column($fields, 'FieldName'));
@@ -987,9 +1000,47 @@ class WildApricotService
             'status'     => $r->status(),
         ]);
 
+        if (! $r->successful() && $this->isStalePictureError($r->body())) {
+            $payload['FieldValues'] = $this->stripStalePictureFields($payload['FieldValues'], force: true);
+            $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
+            Log::info("WA patchContactFields [{$names}] retry without Picture ID", [
+                'contact_id' => $contactId,
+                'status'     => $r->status(),
+            ]);
+        }
+
         if (! $r->successful()) {
             throw new \RuntimeException("WA patchContactFields [{$names}] failed: " . $r->body());
         }
+    }
+
+    /**
+     * Detect WA's "Picture with id '…' not found" 400 response so we know to
+     * retry without echoing back the stale Picture ID FieldValue.
+     */
+    private function isStalePictureError(?string $body): bool
+    {
+        if (! $body) return false;
+        return str_contains($body, "Picture with id") && str_contains($body, "not found");
+    }
+
+    /**
+     * Remove Picture-type FieldValues whose stored Url/Id refers to a picture
+     * WA can no longer resolve. By default this is a no-op (we leave the field
+     * in the payload, since most updates succeed). When $force is true, every
+     * Picture ID FieldValue is dropped so WA leaves the existing value in
+     * place — used as a retry after WA itself returns the "Picture not found"
+     * error on a previous attempt.
+     *
+     * @param  array<int,array<string,mixed>>  $fieldValues
+     * @return array<int,array<string,mixed>>
+     */
+    private function stripStalePictureFields(array $fieldValues, bool $force = false): array
+    {
+        if (! $force) return $fieldValues;
+        return array_values(array_filter($fieldValues, function ($fv) {
+            return ($fv['SystemCode'] ?? null) !== self::PICTURE_ID_FIELD_CODE;
+        }));
     }
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────
