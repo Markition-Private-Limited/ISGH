@@ -799,45 +799,111 @@ class WildApricotService
         return $r->json();
     }
 
-    // ─── UPLOAD CONTACT PICTURE ──────────────────────────────────────────────
-    // POST /accounts/{accountId}/pictures
-    // Uploads a photo/ID card to WildApricot and optionally attaches it to the member contact.
+    // ─── UPLOAD CONTACT PICTURE / ID-CARD ─────────────────────────────────────
+    // WildApricot's v2.x API has no working endpoint for FileAttachment-type
+    // custom fields, so we don't try to upload the binary into WA. Instead:
+    //
+    //   1. Save the uploaded file to local storage (storage/app/public/...)
+    //      under a contact-scoped path.
+    //   2. Build the public URL via Storage::url() / asset() — which works
+    //      because of `php artisan storage:link`.
+    //   3. PUT that URL into the WA contact's "Picture URL" text field
+    //      (SystemCode in self::PICTURE_URL_FIELD_CODE) using the existing
+    //      patchContactField helper.
+    //
+    // Staff can then open the ID card from the WA admin or our portal by
+    // clicking the URL. The file lives on our server, the WA contact carries
+    // only the reference.
 
     public function uploadContactPicture(int $contactId, \Illuminate\Http\UploadedFile $file): void
     {
-        $accountId = $this->getAccountId();
-        $token     = $this->getAccessToken();
+        // 1. Sanitize filename and persist to public storage. Contact-scoped
+        //    directory so each member's IDs are easy to find.
+        $rawName = $file->getClientOriginalName() ?: 'upload';
+        $ext     = strtolower($file->getClientOriginalExtension() ?: ($file->extension() ?: 'bin'));
+        $stem    = pathinfo($rawName, PATHINFO_FILENAME);
+        $safe    = preg_replace('/[^A-Za-z0-9._-]+/', '_', $stem) ?: 'upload';
+        // Add a short random suffix so re-uploads don't overwrite earlier files
+        // (handy when staff want to inspect a member's previous submission).
+        $stored  = $safe . '_' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
+        $dir     = "member-ids/{$contactId}";
 
-        $fh = fopen($file->getRealPath(), 'rb');
-        try {
-            $r = Http::withToken($token)
-                ->acceptJson()
-                ->attach('picture0', $fh, $file->getClientOriginalName())
-                ->post("{$this->baseUrl}/accounts/{$accountId}/pictures");
+        $path = \Illuminate\Support\Facades\Storage::disk('public')
+            ->putFileAs($dir, $file, $stored);
 
-            Log::info('WA uploadContactPicture response', [
-                'contact_id' => $contactId,
-                'status'     => $r->status(),
-                'body'       => substr($r->body(), 0, 500),
-            ]);
-
-            if (! $r->successful()) {
-                throw new \RuntimeException("WA uploadContactPicture failed for contact {$contactId}: " . $r->body());
-            }
-
-            // The response contains picture IDs — store this picture in the
-            // contact's "Picture ID" field (the ID card field), not the profile Photo.
-            $pictureId = $this->extractUploadedPictureId($r->json());
-            if ($pictureId !== null) {
-                $this->setContactPictureIdField($contactId, $pictureId);
-            } else {
-                Log::warning('WA uploadContactPicture: no picture id in response', [
-                    'contact_id' => $contactId, 'body' => substr($r->body(), 0, 300),
-                ]);
-            }
-        } finally {
-            @fclose($fh);
+        if ($path === false || $path === '') {
+            throw new \RuntimeException("uploadContactPicture: failed to persist file for contact {$contactId}");
         }
+
+        // 2. Build a public URL. Storage::url may return either a path-only
+        //    string ('/storage/...') or a fully-qualified URL depending on the
+        //    disk config; normalize to absolute by prepending APP_URL only
+        //    when the returned value isn't already absolute.
+        $rawUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        $publicUrl = preg_match('#^https?://#i', $rawUrl)
+            ? $rawUrl
+            : rtrim((string) config('app.url'), '/') . (str_starts_with($rawUrl, '/') ? '' : '/') . $rawUrl;
+
+        Log::info('uploadContactPicture: file saved locally', [
+            'contact_id'  => $contactId,
+            'stored_path' => $path,
+            'public_url'  => $publicUrl,
+            'byte_size'   => $file->getSize(),
+            'mime'        => $file->getMimeType(),
+        ]);
+
+        // 3. Write the URL to the WA contact's "Picture URL" text field. The
+        //    helper merges this FieldValue into the existing contact and PUTs
+        //    it back, with stale-picture and Picture-ID retry guards already
+        //    in place from the previous bug fixes.
+        $this->patchContactField(
+            $contactId,
+            self::PICTURE_URL_FIELD_CODE,
+            'Picture URL',
+            $publicUrl,
+        );
+    }
+
+    /**
+     * Re-encode unsupported image formats to PNG so WA's /pictures endpoint
+     * accepts them. WA rejects WebP (and other modern formats) with an
+     * empty-body 400. JPEG/PNG/GIF/BMP pass through unchanged.
+     *
+     * @return array{0:string,1:string,2:string}|null  [bytes, mime, filename] when converted, null when no conversion was needed or possible
+     */
+    private function convertImageBytesToSupported(string $bytes, string $mime, string $clientName): ?array
+    {
+        $supported = ['image/jpeg', 'image/pjpeg', 'image/png', 'image/gif', 'image/bmp', 'image/x-ms-bmp'];
+        if (in_array(strtolower($mime), $supported, true)) {
+            return null;
+        }
+
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagepng')) {
+            Log::warning('WA uploadContactPicture: GD missing, cannot convert image format', ['mime' => $mime]);
+            return null;
+        }
+
+        // imagecreatefromstring auto-detects WebP, JPEG, PNG, GIF, BMP — so a
+        // single call handles every format GD knows about on this PHP build.
+        $im = @imagecreatefromstring($bytes);
+        if ($im === false) {
+            Log::warning('WA uploadContactPicture: image decode failed, sending original bytes', ['mime' => $mime]);
+            return null;
+        }
+
+        ob_start();
+        $ok = imagepng($im, null, 6);
+        $pngBytes = ob_get_clean();
+        imagedestroy($im);
+
+        if (! $ok || $pngBytes === '' || $pngBytes === false) {
+            Log::warning('WA uploadContactPicture: PNG encode failed, sending original bytes', ['mime' => $mime]);
+            return null;
+        }
+
+        // Rewrite the filename's extension so WA stores it as .png too.
+        $stem = pathinfo($clientName, PATHINFO_FILENAME) ?: 'upload';
+        return [$pngBytes, 'image/png', $stem . '.png'];
     }
 
     /**
@@ -911,8 +977,21 @@ class WildApricotService
      * field is recreated, look up the new code with:
      *   php artisan tinker --execute="..."  (see getFieldSystemCode helper)
      * or call $wa->getFieldSystemCode('Picture ID') and update this constant.
+     *
+     * This field is no longer the upload target (FileAttachment-type fields
+     * have no working API), but the constant is retained so the stale-picture
+     * retry helpers and historic FieldValue strippers keep working on contacts
+     * that still carry an old Picture ID value.
      */
     private const PICTURE_ID_FIELD_CODE = 'custom-17976996';
+
+    /**
+     * SystemCode of the WA "Picture URL" custom field (FieldType: Text).
+     * uploadContactPicture() saves the uploaded file locally and PUTs the
+     * resulting public URL into this field, so it can be opened from WA
+     * admin or our staff portal.
+     */
+    private const PICTURE_URL_FIELD_CODE = 'custom-17977092';
 
     /**
      * Stores an uploaded picture in the contact's "Picture ID" custom field
@@ -935,14 +1014,45 @@ class WildApricotService
 
         $contact = $r->json();
 
+        // Build the full Picture FieldValue. WA stores Picture-type values as
+        // {Id: <filename>, Url: <full-pictures-url>}. The PUT accepts an
+        // Id-only payload with status 200, but the admin UI then fails to
+        // resolve the picture and renders the field empty. Supplying both
+        // Id AND Url makes the FieldValue render correctly.
+        $pictureUrl = "{$this->baseUrl}/accounts/{$accountId}/Pictures/{$pictureId}";
+        $pictureValue = ['Id' => $pictureId, 'Url' => $pictureUrl];
+
         // Merge the picture into the "Picture ID" FieldValue, replacing any
-        // existing entry for that SystemCode.
+        // existing entry for that SystemCode. Also drop OTHER Picture-type
+        // FieldValues whose stored Url references a now-deleted image — WA
+        // validates every echoed Picture FieldValue and 400s the whole PUT
+        // when it can't resolve one (e.g. the previous Picture ID field was
+        // deleted and recreated, leaving a stale entry on the contact).
         $fieldValues = [];
         $found       = false;
         foreach ($contact['FieldValues'] ?? [] as $fv) {
-            if (($fv['SystemCode'] ?? '') === self::PICTURE_ID_FIELD_CODE) {
-                $fv['Value'] = ['Id' => $pictureId];
+            $isOurField = ($fv['SystemCode'] ?? '') === self::PICTURE_ID_FIELD_CODE;
+            if ($isOurField) {
+                $fv['Value'] = $pictureValue;
                 $found = true;
+                $fieldValues[] = $fv;
+                continue;
+            }
+            // Drop any other Picture-typed FieldValue (a Value with an Id+Url
+            // shape pointing at /Pictures/). Non-picture fields are echoed
+            // back unchanged.
+            $val = $fv['Value'] ?? null;
+            $isPictureValue = is_array($val)
+                && isset($val['Url'])
+                && is_string($val['Url'])
+                && str_contains($val['Url'], '/Pictures/');
+            if ($isPictureValue) {
+                Log::info('WA setContactPictureIdField: dropping stale picture FieldValue', [
+                    'contact_id'  => $contactId,
+                    'system_code' => $fv['SystemCode'] ?? null,
+                    'stale_url'   => $val['Url'],
+                ]);
+                continue;
             }
             $fieldValues[] = $fv;
         }
@@ -950,7 +1060,7 @@ class WildApricotService
             $fieldValues[] = [
                 'FieldName'  => 'Picture ID',
                 'SystemCode' => self::PICTURE_ID_FIELD_CODE,
-                'Value'      => ['Id' => $pictureId],
+                'Value'      => $pictureValue,
             ];
         }
         $contact['FieldValues'] = $fieldValues;
@@ -962,6 +1072,29 @@ class WildApricotService
             'status'     => $rp->status(),
             'body'       => substr($rp->body(), 0, 500),
         ]);
+
+        // If WA still 400s with the stale-picture error (e.g. an exotic edge
+        // case my filter missed), retry once with EVERY Picture-typed
+        // FieldValue stripped so the write can succeed.
+        if (! $rp->successful() && $this->isStalePictureError($rp->body())) {
+            $contact['FieldValues'] = array_values(array_filter($fieldValues, function ($fv) use ($pictureId) {
+                // Keep our own write (it has the brand-new Id, no Url) and
+                // every non-picture field. Drop anything else whose Value
+                // looks like a picture reference.
+                $val = $fv['Value'] ?? null;
+                if (! is_array($val)) return true;
+                if (($fv['SystemCode'] ?? '') === self::PICTURE_ID_FIELD_CODE) return true;
+                $looksLikePicture = isset($val['Url'])
+                    && is_string($val['Url'])
+                    && str_contains($val['Url'], '/Pictures/');
+                return ! $looksLikePicture;
+            }));
+            $rp = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $contact);
+            Log::info('WA setContactPictureIdField retry without stale pictures', [
+                'contact_id' => $contactId,
+                'status'     => $rp->status(),
+            ]);
+        }
 
         if (! $rp->successful()) {
             throw new \RuntimeException("WA setContactPictureIdField failed for contact {$contactId}: " . $rp->body());
@@ -1063,10 +1196,15 @@ class WildApricotService
     /**
      * Remove Picture-type FieldValues whose stored Url/Id refers to a picture
      * WA can no longer resolve. By default this is a no-op (we leave the field
-     * in the payload, since most updates succeed). When $force is true, every
-     * Picture ID FieldValue is dropped so WA leaves the existing value in
-     * place — used as a retry after WA itself returns the "Picture not found"
-     * error on a previous attempt.
+     * in the payload, since most updates succeed). When $force is true, EVERY
+     * picture-typed FieldValue is dropped — regardless of which SystemCode it
+     * lives under — so WA leaves any existing value in place.
+     *
+     * The match is by Value shape, not SystemCode: a Picture FieldValue has
+     * `Value` of the form {Id: <filename>, Url: "https://.../Pictures/..."}.
+     * Matching this way catches values left over from a deleted-and-recreated
+     * Picture ID field (different SystemCode) which would otherwise still
+     * trigger WA's "Picture not found" 400 on every contact PUT.
      *
      * @param  array<int,array<string,mixed>>  $fieldValues
      * @return array<int,array<string,mixed>>
@@ -1075,7 +1213,12 @@ class WildApricotService
     {
         if (! $force) return $fieldValues;
         return array_values(array_filter($fieldValues, function ($fv) {
-            return ($fv['SystemCode'] ?? null) !== self::PICTURE_ID_FIELD_CODE;
+            $val = $fv['Value'] ?? null;
+            if (! is_array($val)) return true;
+            $looksLikePicture = isset($val['Url'])
+                && is_string($val['Url'])
+                && str_contains($val['Url'], '/Pictures/');
+            return ! $looksLikePicture;
         }));
     }
 

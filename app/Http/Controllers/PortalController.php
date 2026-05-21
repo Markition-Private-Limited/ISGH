@@ -507,15 +507,36 @@ class PortalController extends Controller
         $headers = [
             'Content-Type'        => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            // Streamed response — disable nginx/IIS proxy buffering so rows
+            // start arriving in the browser immediately for big exports.
+            'X-Accel-Buffering'   => 'no',
+            'Cache-Control'       => 'no-store',
         ];
 
+        // Forward every filter the Members page supports so the CSV mirrors
+        // what the user is looking at on screen (previously only search and
+        // status were read, so zone/center/zip/level filters were silently
+        // dropped from the export).
         $filters = array_filter([
             'search' => $request->input('search', ''),
             'status' => $request->input('status', ''),
+            'zone'   => $request->input('zone', ''),
+            'center' => $request->input('center', ''),
+            'zip'    => $request->input('zip', ''),
+            'type'   => $request->input('type', ''),
+            'level'  => $request->input('level', ''),
         ]);
 
+        // Re-enforce the user's authorised scope server-side (mirrors members()
+        // / printable() / exportPdf()) so URL edits cannot widen the export.
         if ($user->isZoneLevel()) {
             $filters['zone'] = $user->zone;
+            if (!empty($filters['center'])) {
+                $allowed = array_keys(self::CENTER_WA_LABELS);
+                if (!in_array($filters['center'], $allowed, true)) {
+                    unset($filters['center']);
+                }
+            }
         } elseif ($user->isCenterLevel()) {
             $filters['zone']   = $user->zone;
             $filters['center'] = $user->center;
@@ -525,13 +546,24 @@ class PortalController extends Controller
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['#', 'Name', 'Membership Type', 'Zone', 'Address', 'ZIP', 'Joined', 'Renewal', 'Status']);
 
-            $page = 1;
-            $i    = 0;
+            // WA's contacts endpoint caps $top at 100 — requesting a larger
+            // page silently clamps to 100. The previous loop checked
+            // count($items) === 500 to decide whether to keep paging, which
+            // was never true, so only the first 100 rows ever made it into
+            // the CSV. Use $top=100 and drive the loop with the 'total'
+            // returned by getMembersPage instead.
+            $perPage = 100;
+            $page    = 1;
+            $i       = 0;
+            $total   = null;
             do {
                 try {
-                    $result = $wa->getMembersPage($page, 500, $filters);
+                    $result = $wa->getMembersPage($page, $perPage, $filters);
                 } catch (\Throwable) {
                     break;
+                }
+                if ($total === null) {
+                    $total = (int) ($result['total'] ?? 0);
                 }
                 foreach ($result['items'] as $m) {
                     $i++;
@@ -546,10 +578,20 @@ class PortalController extends Controller
                         $m['renewal'],
                         $m['status'],
                     ]);
+                    // Flush every 500 rows so the download stays responsive
+                    // on big exports.
+                    if ($i % 500 === 0) {
+                        @ob_flush();
+                        flush();
+                    }
                 }
-                $hasMore = count($result['items']) === 500;
+                // Stop when we've emitted everything WA reported, or when a
+                // page came back short (last batch). Belt-and-braces in case
+                // 'total' drifts during pagination.
+                $emittedAll = $total !== null && $i >= $total;
+                $shortPage  = count($result['items']) < $perPage;
                 $page++;
-            } while ($hasMore);
+            } while (! $emittedAll && ! $shortPage);
 
             fclose($handle);
         };
@@ -593,22 +635,31 @@ class PortalController extends Controller
             $filters['center'] = $user->center;
         }
 
-        // Fetch every filtered member in batches (same loop as exportCsv).
+        // Fetch every filtered member in batches. WA's contacts endpoint caps
+        // $top at 100, so use that and drive the loop from the reported total
+        // (the previous code requested 500 and looped while the batch was
+        // exactly 500 — never true, capping the print at 100 rows).
         $members = [];
+        $perPage = 100;
         $page    = 1;
+        $total   = null;
         do {
             try {
-                $result = $wa->getMembersPage($page, 500, $filters);
+                $result = $wa->getMembersPage($page, $perPage, $filters);
             } catch (\Throwable $e) {
                 Log::error('Printable members list error', ['error' => $e->getMessage()]);
                 break;
             }
+            if ($total === null) {
+                $total = (int) ($result['total'] ?? 0);
+            }
             foreach ($result['items'] as $m) {
                 $members[] = $m;
             }
-            $hasMore = count($result['items']) === 500;
+            $emittedAll = $total !== null && count($members) >= $total;
+            $shortPage  = count($result['items']) < $perPage;
             $page++;
-        } while ($hasMore);
+        } while (! $emittedAll && ! $shortPage);
 
         // Human-readable applied-filter labels (mirrors exportPdf()).
         $statusMap = ['active' => 'Active', 'pending' => 'Pending', 'expired' => 'Expired', 'lapsed' => 'Lapsed'];
