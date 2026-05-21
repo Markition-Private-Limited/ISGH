@@ -905,8 +905,14 @@ class WildApricotService
         }
     }
 
-    /** SystemCode of the WA "Picture ID" custom field (FieldType: Picture). */
-    private const PICTURE_ID_FIELD_CODE = 'custom-17827238';
+    /**
+     * SystemCode of the WA "Picture ID" custom field (FieldType: Picture).
+     * NOTE: Recreating the field in WA admin assigns a new SystemCode. If the
+     * field is recreated, look up the new code with:
+     *   php artisan tinker --execute="..."  (see getFieldSystemCode helper)
+     * or call $wa->getFieldSystemCode('Picture ID') and update this constant.
+     */
+    private const PICTURE_ID_FIELD_CODE = 'custom-17976996';
 
     /**
      * Stores an uploaded picture in the contact's "Picture ID" custom field
