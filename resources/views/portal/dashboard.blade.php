@@ -458,12 +458,25 @@ makeSparkline('spark-lapsed', [1,2,1,3,2,3,2,4,3,5], { solid:'#c4b5a0', faded:'r
     },
     options: {
       cutout: 0,
+      // Chart.js clips its tooltip to the canvas by default. The level names
+      // are long ("Lifetime Membership (Family - …") and were being truncated,
+      // hiding the count entirely. Allowing overflow lets the tooltip grow
+      // beyond the canvas, and 'nearest' positioning keeps it near the slice.
       plugins: {
         legend: { display: false },
         tooltip: {
+          position: 'nearest',
           callbacks: {
+            // Title shows the slice's level name; the body shows just the count
+            // so it never runs out of room next to a long label.
+            title: function (ctxs) {
+              return ctxs.length ? ctxs[0].label : '';
+            },
             label: function (ctx) {
-              return ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString();
+              var n = (ctx.parsed != null ? ctx.parsed : 0);
+              var total = (ctx.dataset.data || []).reduce(function (a, b) { return a + (Number(b) || 0); }, 0);
+              var pct = total > 0 ? Math.round((n / total) * 100) : 0;
+              return ' ' + Number(n).toLocaleString() + ' members (' + pct + '%)';
             },
           },
         },
