@@ -137,9 +137,39 @@ class WildApricotService
 
     public function getMembershipLevels(): array
     {
-        return Cache::remember('wa_levels', 3600, fn() =>
-            $this->apiGet("/accounts/{$this->getAccountId()}/membershiplevels")->json() ?? []
-        );
+        // Serve a fresh cached copy when present (24h).
+        $cached = Cache::get('wa_levels');
+        if (is_array($cached) && $cached !== []) {
+            return $cached;
+        }
+
+        // Fetch with a short timeout — WA's /membershiplevels is normally
+        // sub-second; if it stalls we must NOT block the whole request (which
+        // previously hit PHP's 60s max_execution_time in Guzzle and crashed
+        // the Members page). On failure, fall back to the long-lived snapshot
+        // or an empty list so the caller can degrade gracefully.
+        try {
+            $r = Http::withToken($this->getAccessToken())
+                ->acceptJson()
+                ->timeout(8)
+                ->connectTimeout(4)
+                ->get($this->baseUrl . "/accounts/{$this->getAccountId()}/membershiplevels");
+
+            if ($r->successful()) {
+                $levels = $r->json() ?? [];
+                if (is_array($levels) && $levels !== []) {
+                    Cache::put('wa_levels', $levels, 86400);                // fresh: 24h
+                    Cache::put('wa_levels_snapshot', $levels, 86400 * 30);  // last-known-good: 30d
+                    return $levels;
+                }
+            }
+
+            Log::warning('WA getMembershipLevels non-success', ['status' => $r->status()]);
+        } catch (\Throwable $e) {
+            Log::warning('WA getMembershipLevels failed', ['error' => $e->getMessage()]);
+        }
+
+        return Cache::get('wa_levels_snapshot', []);
     }
 
     // ─── MEMBER PORTAL — MEMBERSHIP LEVEL FEE ───────────────────────────────
@@ -1216,8 +1246,14 @@ class WildApricotService
             $zoneName   = $center->zone_name;
             $centerName = $center->center_name;
 
+            // Every "Total Members" surface on the dashboard (top card, per-zone
+            // pill, per-center pill, ZIP table) is now scoped to ACTIVE members
+            // only. The level breakdown and per-zone ZIP page-through in
+            // syncDashboardToDb() already filter Status eq 'Active', so the
+            // existing stored values are active-only; we just need to use
+            // active_members here instead of member_count.
             $zoneMap[$zoneName] ??= ['members' => 0, 'centers' => []];
-            $zoneMap[$zoneName]['members'] += $center->member_count;
+            $zoneMap[$zoneName]['members'] += $center->active_members;
 
             $zips = [];
             foreach ($center->zips->sortByDesc('member_count') as $zipRow) {
@@ -1231,7 +1267,12 @@ class WildApricotService
             $zoneMap[$zoneName]['centers'][] = [
                 'name'            => $centerName,
                 'img'             => 'mosque.png',
-                'total'           => $center->member_count,
+                // 'total' = active-only (used by every per-center / per-zone
+                // pill). 'member_count' = raw WA member count (active + lapsed
+                // + …) — only used to recompute the top "Total Members" card
+                // for zone-/center-scoped users.
+                'total'           => $center->active_members,
+                'member_count'    => $center->member_count,
                 'active'          => $center->active_members,
                 'lapsed'          => $center->lapsed_members,
                 'individual'      => $center->individual_members,
@@ -1264,10 +1305,18 @@ class WildApricotService
 
         $total     = $stat->total_members;
         $active    = $stat->active_members;
-        $activePct = $total > 0 ? (int) round($active / $total * 100) : 0;
+        $lapsed    = $stat->lapsed_members;
+        // Profile Status panel is an Active-vs-Lapsed comparison, so the
+        // percentages are scoped to the two groups (not the raw WA total).
+        $compTotal = $active + $lapsed;
+        $activePct = $compTotal > 0 ? (int) round($active / $compTotal * 100) : 0;
 
         return [
-            'stats'          => ['total' => $total, 'active' => $active, 'lapsed' => $stat->lapsed_members],
+            // Top "Total Members" card shows the full WA member count
+            // (active + lapsed + others). The Active and Lapsed cards next to
+            // it break that total down. Every other surface on the dashboard
+            // (zones, centers, level breakdown, ZIPs) is active-only.
+            'stats'          => ['total' => $total, 'active' => $active, 'lapsed' => $lapsed],
             'levelBreakdown' => $stat->level_breakdown ?? [
                 ['name' => 'Individual', 'count' => $stat->individual_members],
                 ['name' => 'Checkomatic', 'count' => $stat->checkmatic_members],
@@ -1275,7 +1324,7 @@ class WildApricotService
             ],
             'profileStatus'  => [
                 'active'     => $active,
-                'lapsed'     => $stat->lapsed_members,
+                'lapsed'     => $lapsed,
                 'active_pct' => $activePct,
                 'lapsed_pct' => 100 - $activePct,
             ],
@@ -1516,11 +1565,34 @@ class WildApricotService
         // phone/ID/company, so it's replaced with an explicit OData $filter on
         // the top-level FirstName/LastName/Email fields. (Street Address is a
         // FieldValue and cannot be filtered server-side — see the ZIP note below.)
+        //
+        // The user typically types the full name they see in the table
+        // ("Shaheer Zaeem"). Matching that as a single substring against any
+        // one of FirstName / LastName / Email would always fail, since no
+        // single field contains both tokens. So split the input on whitespace
+        // and require EVERY token to match at least one of the three fields —
+        // "Shaheer Zaeem" then matches because FirstName contains "Shaheer"
+        // AND LastName contains "Zaeem". A single-token query keeps working
+        // exactly as before.
         if (!empty($filters['search'])) {
-            $term = str_replace("'", "''", trim($filters['search']));
-            $filterParts[] = "(substringof('{$term}', FirstName)"
-                . " OR substringof('{$term}', LastName)"
-                . " OR substringof('{$term}', Email))";
+            $raw    = trim((string) $filters['search']);
+            $tokens = preg_split('/\s+/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $tokenFilters = [];
+            foreach ($tokens as $token) {
+                $t = str_replace("'", "''", $token);
+                // WA's OData dialect: substringof(FieldName, 'literal').
+                // The standard (literal, field) order makes WA treat the
+                // literal as a field reference and 400 with
+                // "Unknown field 'Shaheer'." Confirmed by laravel.log entries.
+                $tokenFilters[] = "(substringof(FirstName, '{$t}')"
+                    . " OR substringof(LastName, '{$t}')"
+                    . " OR substringof(Email, '{$t}'))";
+            }
+            if ($tokenFilters) {
+                $filterParts[] = count($tokenFilters) === 1
+                    ? $tokenFilters[0]
+                    : '(' . implode(' AND ', $tokenFilters) . ')';
+            }
         }
 
         // Status filter — WA values: Active, Lapsed, PendingNew, PendingRenewal, Archived
@@ -1624,31 +1696,59 @@ class WildApricotService
 
         $baseParams['$filter'] = implode(' AND ', $filterParts);
 
-        $wantedZip = trim($filters['zip'] ?? '');
+        // ZIP sanitization — the raw filter can arrive with junk like "TX 77084"
+        // (DB has dirty values with NBSPs and state prefixes). The ZIP-filtered
+        // path below crawls every contact in WA looking for a match, so a
+        // value that can never match would trigger the worst-case fetch-all
+        // and very likely time out PHP. Extract a clean 5-digit ZIP; if the
+        // input contains no 5-digit run, drop the filter entirely.
+        $rawZip    = (string) ($filters['zip'] ?? '');
+        $wantedZip = preg_match('/(\d{5})/', $rawZip, $m) ? $m[1] : '';
+        if ($rawZip !== '' && $wantedZip === '') {
+            Log::warning('WA getMembersPage: dropped unparseable zip filter', ['raw' => $rawZip]);
+        }
 
         // ── ZIP-filtered path ─────────────────────────────────────────────────
-        // ZIP lives inside FieldValues, which WA's OData cannot filter on. The
-        // old code filtered a single already-paginated 25-row slice — so members
-        // with the wanted ZIP on later pages were never fetched and never shown.
-        // Correct approach: fetch the WHOLE OData-matching result set, then
-        // filter, sort, and paginate by ZIP here in PHP.
+        // ZIP lives inside FieldValues, which WA's OData cannot filter on, so
+        // we cannot ask WA for "page N of members with ZIP=X". Instead:
+        //
+        //   1. Fetch the full OData-matching set (non-ZIP filters applied
+        //      server-side) and cache it for 10 minutes, keyed by the
+        //      OData-filter signature. This makes a request a one-time
+        //      WA cost; every subsequent page click of the same filter set
+        //      paginates against the cache without re-hitting WA.
+        //   2. Apply the ZIP match in PHP against the cached rows.
+        //   3. Paginate the matched rows here. This IS the server-side
+        //      pagination — Laravel returns only the requested $top/$skip
+        //      window to the client.
+        //
+        // The cache key includes the OData $filter so different filter
+        // combinations get independent caches.
         if ($wantedZip !== '') {
-            $all       = $this->fetchAllContacts($accountId, $baseParams);
-            $rows      = array_map(fn($c) => $this->mapContactToMemberRow($c), $all);
+            // Tie this pool cache to the global members_cache_version so the
+            // dashboard warm command (and any future invalidation hook)
+            // instantly invalidates it alongside the per-user page caches.
+            $version  = (int) Cache::get('members_cache_version', 1);
+            $cacheKey = 'wa_zip_pool_v' . $version . '_' . md5($baseParams['$filter']);
+            $rows = Cache::remember($cacheKey, 600, function () use ($accountId, $baseParams) {
+                $all  = $this->fetchAllContacts($accountId, $baseParams);
+                $rows = array_map(fn($c) => $this->mapContactToMemberRow($c), $all);
+                // Sort once at cache time so every page click is cheap.
+                usort($rows, function (array $a, array $b) {
+                    return [$a['zip'], $a['address'], $a['name']]
+                       <=> [$b['zip'], $b['address'], $b['name']];
+                });
+                return $rows;
+            });
 
-            // Keep only rows whose ZIP matches the selection.
+            // Apply the ZIP match.
             $rows = array_values(array_filter(
                 $rows,
                 fn(array $row) => trim((string) ($row['zip'] ?? '')) === $wantedZip
             ));
 
-            // Sort the listing: by ZIP, then address, then name — a stable,
-            // predictable order within the filtered set.
-            usort($rows, function (array $a, array $b) {
-                return [$a['zip'], $a['address'], $a['name']]
-                   <=> [$b['zip'], $b['address'], $b['name']];
-            });
-
+            // Server-side paginate the matched rows: return only the
+            // requested window plus the true total for the paginator.
             $total = count($rows);
             $items = array_slice($rows, $skip, $perPage);
 
@@ -1702,8 +1802,19 @@ class WildApricotService
         $pageSize  = 100;          // WA's max page size for the contacts endpoint
         $maxPages  = 200;          // safety cap → up to 20,000 contacts
         $skip      = 0;
+        // Wall-clock budget so a slow WA can never let the loop run long enough
+        // to hit PHP's max_execution_time. 45s leaves headroom for the rest of
+        // the request to render even when we abort partway through.
+        $deadline  = microtime(true) + 45.0;
 
         for ($i = 0; $i < $maxPages; $i++) {
+            if (microtime(true) > $deadline) {
+                Log::warning('WA fetchAllContacts: time budget exhausted, returning partial result', [
+                    'fetched' => count($all), 'skip' => $skip,
+                ]);
+                break;
+            }
+
             $params = array_merge($baseParams, ['$top' => $pageSize, '$skip' => $skip]);
             $r = $this->apiGet("/accounts/{$accountId}/contacts?" . http_build_query($params));
 
@@ -1920,7 +2031,14 @@ class WildApricotService
 
     private function apiGet(string $path): \Illuminate\Http\Client\Response
     {
-        return Http::withToken($this->getAccessToken())->acceptJson()->get($this->baseUrl . $path);
+        // Hard timeouts so a stalled WA call can never burn PHP's whole
+        // max_execution_time. 4s connect, 20s total response — enough for
+        // larger paged contact requests but bounded.
+        return Http::withToken($this->getAccessToken())
+            ->acceptJson()
+            ->connectTimeout(4)
+            ->timeout(20)
+            ->get($this->baseUrl . $path);
     }
 
     private function apiPost(string $path, array $data): \Illuminate\Http\Client\Response
@@ -1929,6 +2047,8 @@ class WildApricotService
         return Http::withToken($this->getAccessToken())
             ->acceptJson()
             ->asJson()
+            ->connectTimeout(4)
+            ->timeout(20)
             ->post($this->baseUrl . $path, $data);
     }
 
@@ -1938,6 +2058,8 @@ class WildApricotService
         return Http::withToken($this->getAccessToken())
             ->acceptJson()
             ->asJson()
+            ->connectTimeout(4)
+            ->timeout(20)
             ->put($this->baseUrl . $path, $data);
     }
 }

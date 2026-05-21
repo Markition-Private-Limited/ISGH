@@ -191,9 +191,11 @@ class PortalController extends Controller
             }
         }
 
-        // Recompute all stats from visible centers
+        // Recompute all stats from visible centers. 'total' on the top card
+        // is the raw WA member count (active + lapsed + …); every other
+        // surface uses 'active'/'lapsed' which are active-only.
         $data['stats'] = [
-            'total'  => array_sum(array_column($visibleCenters, 'total')),
+            'total'  => array_sum(array_column($visibleCenters, 'member_count')),
             'active' => array_sum(array_column($visibleCenters, 'active')),
             'lapsed' => array_sum(array_column($visibleCenters, 'lapsed')),
         ];
@@ -215,13 +217,17 @@ class PortalController extends Controller
             array_values($levelTotals)
         ));
 
-        $scopedTotal     = $data['stats']['total'];
+        // Profile Status percentages compare Active vs Lapsed within the
+        // visible scope (not active vs raw WA total, which would be
+        // misleading now that the top "Total" card is active-only).
         $scopedActive    = $data['stats']['active'];
-        $scopedActivePct = $scopedTotal > 0 ? (int) round($scopedActive / $scopedTotal * 100) : 0;
+        $scopedLapsed    = $data['stats']['lapsed'];
+        $compTotal       = $scopedActive + $scopedLapsed;
+        $scopedActivePct = $compTotal > 0 ? (int) round($scopedActive / $compTotal * 100) : 0;
 
         $data['profileStatus'] = [
             'active'     => $scopedActive,
-            'lapsed'     => $data['stats']['lapsed'],
+            'lapsed'     => $scopedLapsed,
             'active_pct' => $scopedActivePct,
             'lapsed_pct' => 100 - $scopedActivePct,
         ];
