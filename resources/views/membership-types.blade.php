@@ -4010,6 +4010,14 @@
                             }
                         });
                     }
+                    // Auto-fill the (read-only) card-name field with the primary
+                    // member's First + Last name. Done after the loop above so
+                    // it isn't overwritten by the generic reset.
+                    const cardNameEl = document.getElementById('uni_cardholder_name');
+                    if (cardNameEl) {
+                        cardNameEl.value = `${firstName} ${lastName}`.trim();
+                        cardNameEl.classList.remove('field-invalid');
+                    }
                 }
             })
             .catch(() => {
@@ -4678,7 +4686,10 @@
             <div id="cc_scan_status" style="display:none;font-size:12px;color:#2f8f6b;font-weight:500;margin-top:8px;text-align:center;"></div>
             <div class="field stripe-card-name-field" style="margin-top:1.25rem">
                 <label for="uni_cardholder_name">Name on Card <span>*</span></label>
-                <input type="text" id="uni_cardholder_name" placeholder="Enter the name shown on your card" autocomplete="cc-name">
+                {{-- Locked to the primary member's first + last name (set after
+                     the Confirm & Continue step). Keep `readonly` (not
+                     `disabled`) so the value still submits with the form. --}}
+                <input type="text" id="uni_cardholder_name" placeholder="Auto-filled from primary member" autocomplete="cc-name" readonly>
             </div>
             <div id="stripe-card-element"></div>
             <div id="stripe-card-error" role="alert"></div>
@@ -5451,15 +5462,10 @@
             }
 
             // ── Credit card mode ───────────────────────────────────────────
+            // The "Name on Card" field is locked to the primary member's name,
+            // so we don't overwrite it from the scanned card. Inform the user.
             if (isCard) {
-                const name = data.cardholder_name || '';
-                if (!name) {
-                    show('Could not read card name. Please type it manually.', '#dc2626');
-                    return;
-                }
-                const el = document.getElementById('uni_cardholder_name');
-                if (el) { el.value = name; el.dispatchEvent(new Event('input', {bubbles:true})); }
-                show('Card name filled! Please verify.', '#0f5c45');
+                show('The name on card is taken from the primary member and cannot be changed here.', '#0f5c45');
                 setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 4000);
                 return;
             }

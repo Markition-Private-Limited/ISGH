@@ -94,9 +94,9 @@ class RenewalService
     public function newRenewalDate(string $type): string
     {
         if (str_starts_with($type, 'checkomatic')) {
-            return now()->addMonth()->format('F d, Y');
+            return now()->addMonth()->format('m-d-Y');
         }
-        return now()->addYear()->endOfYear()->format('F d, Y');
+        return now()->addYear()->endOfYear()->format('m-d-Y');
     }
 
     /**

@@ -468,6 +468,11 @@
         <div class="result-grid">
 
           <div class="result-field">
+            <p class="result-label">Member ID</p>
+            <p class="result-value" id="res-member-id">—</p>
+          </div>
+
+          <div class="result-field">
             <p class="result-label">Name</p>
             <p class="result-value" id="res-name">—</p>
           </div>
@@ -745,6 +750,7 @@
       if (data.success) {
         const m = data.member;
         verifiedContactId = m.id || null;
+        setVal('res-member-id', m.id ? String(m.id) : '—');
         setVal('res-name',   m.name);
         setVal('res-email',  m.email);
         setVal('res-phone',  m.phone);

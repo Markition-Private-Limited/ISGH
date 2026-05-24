@@ -144,7 +144,7 @@
           @endif
         </td>
         <td style="text-align:center;">{{ $reg->retry_count }}</td>
-        <td style="font-size:11px;color:#6b7280;">{{ $reg->created_at->format('M d, Y H:i') }}</td>
+        <td style="font-size:11px;color:#6b7280;">{{ $reg->created_at->format('m-d-Y H:i') }}</td>
         <td style="display:flex;gap:6px;align-items:center;">
           <a href="{{ route('admin.show', $reg) }}" class="btn-view">View</a>
           @if($reg->stripe_paid && !$reg->processed)

@@ -262,7 +262,7 @@
 
   {{-- Footer --}}
   <div class="footer">
-    <span>Generated on: {{ now()->format('Y-m-d \a\t h:i A') }} | ISGH Member Portal</span>
+    <span>Generated on: {{ now()->format('m-d-Y \a\t h:i A') }} | ISGH Member Portal</span>
     <span>Page {{ $currentPage }} of {{ $lastPage }}</span>
   </div>
 

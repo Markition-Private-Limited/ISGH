@@ -213,14 +213,14 @@ class MemberProfile
         }
     }
 
-    /** Date of birth as "MM/DD/YYYY", or '' if empty or unparseable. */
+    /** Date of birth as "MM-DD-YYYY", or '' if empty or unparseable. */
     public function dobMdy(): string
     {
         if ($this->dob === '' || strtolower($this->dob) === 'null') {
             return '';
         }
         try {
-            return Carbon::parse($this->dob)->format('m/d/Y');
+            return Carbon::parse($this->dob)->format('m-d-Y');
         } catch (\Throwable) {
             return '';
         }
@@ -258,7 +258,7 @@ class MemberProfile
             return '';
         }
         try {
-            return Carbon::parse($value)->format('F d, Y');
+            return Carbon::parse($value)->format('m-d-Y');
         } catch (\Throwable) {
             return '';
         }

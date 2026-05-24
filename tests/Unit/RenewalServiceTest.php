@@ -114,7 +114,7 @@ class RenewalServiceTest extends TestCase
     public function test_new_renewal_date_is_end_of_next_calendar_year(): void
     {
         $svc = app(RenewalService::class);
-        $expected = now()->addYear()->endOfYear()->format('F d, Y');
+        $expected = now()->addYear()->endOfYear()->format('m-d-Y');
 
         $this->assertSame($expected, $svc->newRenewalDate('individual'));
     }
@@ -133,7 +133,7 @@ class RenewalServiceTest extends TestCase
     public function test_new_renewal_date_for_checkomatic_is_one_month_out(): void
     {
         $svc = app(RenewalService::class);
-        $expected = now()->addMonth()->format('F d, Y');
+        $expected = now()->addMonth()->format('m-d-Y');
 
         $this->assertSame($expected, $svc->newRenewalDate('checkomatic_individual'));
     }

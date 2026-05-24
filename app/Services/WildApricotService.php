@@ -2049,7 +2049,7 @@ class WildApricotService
             if (!$d || $d === 'null') return '—';
             $s = is_array($d) ? ($d['Value'] ?? '') : (string) $d;
             if (!$s || $s === 'Never') return $s ?: '—';
-            try { return Carbon::parse($s)->format('d/m/Y'); } catch (\Throwable) { return $s; }
+            try { return Carbon::parse($s)->format('m-d-Y'); } catch (\Throwable) { return $s; }
         };
 
         return [

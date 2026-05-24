@@ -99,7 +99,9 @@
 
         @php
           $levelPalette = ['#1a5c42','#f59e0b','#3aab7b','#6366f1','#ec4899','#0ea5e9','#f97316','#a855f7','#14b8a6','#84cc16','#ef4444','#64748b'];
-          $levels = $levelBreakdown ?? [];
+          $levels = array_values(array_filter($levelBreakdown ?? [], function ($l) {
+            return (int) ($l['count'] ?? 0) > 0;
+          }));
         @endphp
 
         {{-- Legend table (left) --}}
@@ -247,13 +249,9 @@
             @foreach ($zipData as $i => $row)
               <tr>
                 <td class="col-num">{{ $i + 1 }}</td>
-                <td style="font-weight:600;">
-                  <a href="{{ route('portal.members', ['status' => 'active', 'zip' => $row['zip']]) }}" style="color:inherit;text-decoration:none;" class="drill-link">{{ $row['zip'] }}</a>
-                </td>
+                <td style="font-weight:600;">{{ $row['zip'] }}</td>
                 <td class="text-muted">{{ $row['city'] }}</td>
-                <td style="font-weight:700;">
-                  <a href="{{ route('portal.members', ['status' => 'active', 'zip' => $row['zip']]) }}" style="color:inherit;text-decoration:none;font-weight:700;" class="drill-link">{{ $row['count'] }}</a>
-                </td>
+                <td style="font-weight:700;">{{ $row['count'] }}</td>
               </tr>
             @endforeach
           </tbody>
@@ -293,8 +291,30 @@
         @php
           // Convert "North Zone" → "north", "Northwest Zone" → "northwest", etc.
           $zoneSlug = fn(string $name): string => strtolower(str_replace(' Zone', '', $name));
-          // Extract the short center name from the full WA label, e.g. "Masjid Bilal - Adel Road" → "Adel Road"
-          $centerSlug = function(string $name): string {
+          // Map WA's full masjid label to the canonical short key the members-list
+          // center filter expects (mirrors PortalController::CENTER_WA_LABELS).
+          // Without this, names without a " - " suffix (e.g. "Cypress Islamic Center",
+          // "Masjid Ayesha") were passed through verbatim and didn't match any option.
+          $centerWaLabelToKey = [
+              'Masjid Bilal - Adel Road'        => 'Adel Road',
+              'Masjid Al-Salam - Champions'     => 'Champions',
+              'Masjid Al-Ansar - Woodlands'     => 'Woodlands',
+              'Cypress Islamic Center'          => 'Cypress',
+              'Masjid Al-Mustafa - Bear Creek'  => 'Bear Creek',
+              'Masjid Aqsa - Katy'              => 'Katy',
+              'Spring Branch Islamic Center'    => 'Spring Branch',
+              'Masjid Abubakr - HWY 3'          => 'HWY3',
+              'Pearland Islamic Center'         => 'Pearland',
+              'Masjid As-Sabireen - Brand Lane' => 'Brand Lane',
+              'Masjid Ayesha'                   => 'Ayesha',
+              'River Oaks Islamic Center'       => 'River Oaks',
+              'Masjid Attaqwa - Synott'         => 'Synott',
+              'Masjid Hamza - Mission Bend'     => 'Mission Bend',
+              'Masjid Maryam - New Territory'   => 'New Territory',
+          ];
+          $centerSlug = function(string $name) use ($centerWaLabelToKey): string {
+              if (isset($centerWaLabelToKey[$name])) return $centerWaLabelToKey[$name];
+              // Fallback for any new masjid not yet in the map: post-dash portion if present, else full name.
               if (preg_match('/\s*-\s*(.+)$/', $name, $m)) return trim($m[1]);
               return $name;
           };
@@ -379,10 +399,8 @@
                       </div>
                       @foreach ($center['zips'] as $zip)
                         <div class="masjid-zip-row">
-                          <a href="{{ route('portal.members', ['status' => 'active', 'zone' => $zSlug, 'center' => $cSlug, 'zip' => $zip['code']]) }}"
-                             class="drill-link" style="color:inherit;text-decoration:none;">{{ $zip['code'] }}</a>
-                          <a href="{{ route('portal.members', ['status' => 'active', 'zone' => $zSlug, 'center' => $cSlug, 'zip' => $zip['code']]) }}"
-                             class="drill-link" style="color:inherit;text-decoration:none;font-weight:700;">{{ $zip['count'] }}</a>
+                          <span>{{ $zip['code'] }}</span>
+                          <span style="font-weight:700;">{{ $zip['count'] }}</span>
                         </div>
                       @endforeach
                     </div>
@@ -445,6 +463,32 @@ makeSparkline('spark-lapsed', [1,2,1,3,2,3,2,4,3,5], { solid:'#c4b5a0', faded:'r
   var palette = {!! json_encode($levelPalette) !!};
   var levels  = {!! json_encode(array_values($levels)) !!};
   if (!levels.length) return;
+  var pieSliceLabelPlugin = {
+    id: 'pieSliceLabels',
+    afterDatasetsDraw: function (chart) {
+      var ctx = chart.ctx;
+      var meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data) return;
+      var dataset = chart.data.datasets[0] || {};
+      var total = (dataset.data || []).reduce(function (a, b) { return a + (Number(b) || 0); }, 0);
+      if (total <= 0) return;
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.font = '600 11px system-ui, -apple-system, Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,.35)';
+      ctx.shadowBlur = 2;
+      meta.data.forEach(function (arc, i) {
+        var value = Number(dataset.data[i]) || 0;
+        var pct = (value / total) * 100;
+        if (pct < 4) return;
+        var pos = arc.tooltipPosition ? arc.tooltipPosition() : { x: arc.x, y: arc.y };
+        ctx.fillText(Math.round(pct) + '%', pos.x, pos.y);
+      });
+      ctx.restore();
+    },
+  };
   new Chart(canvas, {
     type: 'pie',
     data: {
@@ -456,6 +500,7 @@ makeSparkline('spark-lapsed', [1,2,1,3,2,3,2,4,3,5], { solid:'#c4b5a0', faded:'r
         hoverOffset: 6,
       }],
     },
+    plugins: [pieSliceLabelPlugin],
     options: {
       cutout: 0,
       // Chart.js clips its tooltip to the canvas by default. The level names

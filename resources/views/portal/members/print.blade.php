@@ -163,7 +163,7 @@
   {{-- Header --}}
   <div class="report-head">
     <div class="report-title">ISGH Admin Staff</div>
-    <div class="report-sub">Members List - {{ $generatedAt->format('F j, Y') }}</div>
+    <div class="report-sub">Members List - {{ $generatedAt->format('m-d-Y') }}</div>
     <div class="report-total">Total Members: {{ number_format($total) }}</div>
   </div>
 

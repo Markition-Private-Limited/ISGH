@@ -84,7 +84,7 @@
       </div>
       <div class="field">
         <div class="lbl">Processed At</div>
-        <div class="val" style="font-size:13px;">{{ $registration->processed_at?->format('M d, Y H:i') ?? '—' }}</div>
+        <div class="val" style="font-size:13px;">{{ $registration->processed_at?->format('m-d-Y H:i') ?? '—' }}</div>
       </div>
     </div>
 
@@ -105,7 +105,7 @@
 
     @if($registration->wa_error)
     <div class="error-box">
-      <div class="step">Failed at step: {{ strtoupper($registration->wa_step ?? 'unknown') }} — {{ $registration->wa_error_at?->format('M d, Y H:i') }}</div>
+      <div class="step">Failed at step: {{ strtoupper($registration->wa_step ?? 'unknown') }} — {{ $registration->wa_error_at?->format('m-d-Y H:i') }}</div>
       <pre>{{ $registration->wa_error }}</pre>
     </div>
     @endif
@@ -136,7 +136,7 @@
     <h2>Stripe Reference</h2>
     <div class="row">
       <div class="field"><div class="lbl">Reference (UUID)</div><div class="val" style="font-family:monospace;font-size:12px;">{{ $registration->stripe_intent_id }}</div></div>
-      <div class="field"><div class="lbl">Created</div><div class="val">{{ $registration->created_at->format('M d, Y H:i') }}</div></div>
+      <div class="field"><div class="lbl">Created</div><div class="val">{{ $registration->created_at->format('m-d-Y H:i') }}</div></div>
     </div>
   </div>
 

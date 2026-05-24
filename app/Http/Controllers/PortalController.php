@@ -543,6 +543,13 @@ class PortalController extends Controller
         }
 
         $callback = function () use ($wa, $filters) {
+            // Big exports (~3,800 members at $top=100) need ~38 sequential WA
+            // requests; the default 60s PHP limit was being hit mid-stream
+            // around row ~1500, leaving Laravel's HTML error page appended
+            // to the partial CSV. Lift the cap for this streamed response.
+            @set_time_limit(0);
+            @ignore_user_abort(true);
+
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['#', 'Name', 'Membership Type', 'Zone', 'Address', 'ZIP', 'Joined', 'Renewal', 'Status']);
 
@@ -556,44 +563,54 @@ class PortalController extends Controller
             $page    = 1;
             $i       = 0;
             $total   = null;
-            do {
-                try {
-                    $result = $wa->getMembersPage($page, $perPage, $filters);
-                } catch (\Throwable) {
-                    break;
-                }
-                if ($total === null) {
-                    $total = (int) ($result['total'] ?? 0);
-                }
-                foreach ($result['items'] as $m) {
-                    $i++;
-                    fputcsv($handle, [
-                        $i,
-                        $m['name'],
-                        $m['type'],
-                        $m['zone'],
-                        $m['address'],
-                        $m['zip'],
-                        $m['joined'],
-                        $m['renewal'],
-                        $m['status'],
-                    ]);
-                    // Flush every 500 rows so the download stays responsive
-                    // on big exports.
-                    if ($i % 500 === 0) {
-                        @ob_flush();
-                        flush();
+            try {
+                do {
+                    try {
+                        $result = $wa->getMembersPage($page, $perPage, $filters);
+                    } catch (\Throwable) {
+                        break;
                     }
-                }
-                // Stop when we've emitted everything WA reported, or when a
-                // page came back short (last batch). Belt-and-braces in case
-                // 'total' drifts during pagination.
-                $emittedAll = $total !== null && $i >= $total;
-                $shortPage  = count($result['items']) < $perPage;
-                $page++;
-            } while (! $emittedAll && ! $shortPage);
-
-            fclose($handle);
+                    if ($total === null) {
+                        $total = (int) ($result['total'] ?? 0);
+                    }
+                    foreach ($result['items'] as $m) {
+                        $i++;
+                        fputcsv($handle, [
+                            $i,
+                            $m['name'],
+                            $m['type'],
+                            $m['zone'],
+                            $m['address'],
+                            $m['zip'],
+                            $m['joined'],
+                            $m['renewal'],
+                            $m['status'],
+                        ]);
+                        // Flush every 500 rows so the download stays responsive
+                        // on big exports.
+                        if ($i % 500 === 0) {
+                            @ob_flush();
+                            flush();
+                        }
+                    }
+                    // Stop when we've emitted everything WA reported, or when a
+                    // page came back short (last batch). Belt-and-braces in case
+                    // 'total' drifts during pagination.
+                    $emittedAll = $total !== null && $i >= $total;
+                    $shortPage  = count($result['items']) < $perPage;
+                    $page++;
+                } while (! $emittedAll && ! $shortPage);
+            } catch (\Throwable $e) {
+                // Never let Laravel flush an HTML error page into an open
+                // CSV download — that's what was producing the garbled tail.
+                \Log::error('exportCsv stream aborted', [
+                    'rowsEmitted' => $i,
+                    'page'        => $page,
+                    'error'       => $e->getMessage(),
+                ]);
+            } finally {
+                fclose($handle);
+            }
         };
 
         return response()->stream($callback, 200, $headers);
@@ -639,6 +656,9 @@ class PortalController extends Controller
         // $top at 100, so use that and drive the loop from the reported total
         // (the previous code requested 500 and looped while the batch was
         // exactly 500 — never true, capping the print at 100 rows).
+        // Big lists (~3,800 rows) need ~38 sequential WA calls and overrun
+        // the default 60s PHP execution limit; lift it for this report.
+        @set_time_limit(0);
         $members = [];
         $perPage = 100;
         $page    = 1;

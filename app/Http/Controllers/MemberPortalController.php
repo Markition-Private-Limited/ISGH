@@ -262,14 +262,16 @@ class MemberPortalController extends Controller
         }
 
         $isPaid = (bool) ($invoice['IsPaid'] ?? $owned['isPaid'] ?? false);
-        $issueDate = $owned['date'] ?: '';
+        // Use the pre-formatted dateLabel (MM-DD-YYYY) for display. The raw
+        // 'date' field is the internal ISO key used for sorting.
+        $issueDate = (string) ($owned['dateLabel'] ?? '') ?: ($owned['date'] ?? '');
 
         $payment = null;
         if ($isPaid) {
             $stripe = LevelChange::where('wa_invoice_id', $invoiceId)->first()
                 ?? Renewal::where('wa_invoice_id', $invoiceId)->first();
 
-            $paymentDate = $stripe?->paid_at?->format('Y-m-d') ?: $issueDate;
+            $paymentDate = $stripe?->paid_at?->format('m-d-Y') ?: $issueDate;
             $method = 'Online Payment';
             if ($stripe && $stripe->card_last4) {
                 $brand  = ucwords((string) ($stripe->card_brand ?: 'Card'));

@@ -198,11 +198,22 @@ class MembershipController extends Controller
 
         $status = $contact['Status'] ?? 'Unknown';
         $levelName = $contact['MembershipLevel']['Name'] ?? '—';
-        $renewalRaw = $contact['RenewalDue'] ?? null;
-        $sinceRaw = $contact['MemberSince'] ?? null;
+        // WA returns MemberSince / RenewalDue inside FieldValues (SystemCode),
+        // not at the top level of the contact object. Reading the top level
+        // here would silently return null and render '—' on the verify page,
+        // even when the member actually has those dates set.
+        $renewalRaw = $contact['RenewalDue'] ?? $this->wa->extractFieldValue($contact, 'RenewalDue');
+        $sinceRaw   = $contact['MemberSince'] ?? $this->wa->extractFieldValue($contact, 'MemberSince');
 
-        $expiry = $renewalRaw ? Carbon::parse($renewalRaw)->format('M d, Y') : '—';
-        $since = $sinceRaw ? Carbon::parse($sinceRaw)->format('M d, Y') : '—';
+        $parseDisplayDate = function (?string $raw): string {
+            if (! $raw || strtolower($raw) === 'never') {
+                return $raw ?: '—';
+            }
+            try { return Carbon::parse($raw)->format('m-d-Y'); }
+            catch (\Throwable) { return $raw; }
+        };
+        $expiry = $parseDisplayDate($renewalRaw);
+        $since  = $parseDisplayDate($sinceRaw);
 
         // Voting eligibility: Active status only
         $isActive = strtolower($status) === 'active';
