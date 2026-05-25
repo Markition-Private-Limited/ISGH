@@ -865,6 +865,60 @@ class WildApricotService
     }
 
     /**
+     * Same end-result as uploadContactPicture(), but the source file already
+     * lives on the 'local' disk (registration flow stores ID cards there
+     * before payment confirmation). Copies the file into the public disk
+     * under member-ids/{contactId}/ and writes the resulting public URL into
+     * the contact's "Picture URL" custom field.
+     */
+    public function uploadIdCardFromLocalPath(int $contactId, string $localRelativePath): void
+    {
+        $localDisk  = \Illuminate\Support\Facades\Storage::disk('local');
+        $publicDisk = \Illuminate\Support\Facades\Storage::disk('public');
+
+        if (! $localDisk->exists($localRelativePath)) {
+            Log::warning('uploadIdCardFromLocalPath: source not found', [
+                'contact_id' => $contactId,
+                'path'       => $localRelativePath,
+            ]);
+            return;
+        }
+
+        $rawName = basename($localRelativePath) ?: 'upload';
+        $ext     = strtolower(pathinfo($rawName, PATHINFO_EXTENSION) ?: 'bin');
+        $stem    = pathinfo($rawName, PATHINFO_FILENAME) ?: 'upload';
+        $safe    = preg_replace('/[^A-Za-z0-9._-]+/', '_', $stem) ?: 'upload';
+        $stored  = $safe . '_' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
+        $dir     = "member-ids/{$contactId}";
+
+        $bytes = $localDisk->get($localRelativePath);
+        $publicPath = $dir . '/' . $stored;
+        if (! $publicDisk->put($publicPath, $bytes)) {
+            throw new \RuntimeException("uploadIdCardFromLocalPath: failed to persist file for contact {$contactId}");
+        }
+
+        $rawUrl = $publicDisk->url($publicPath);
+        $publicUrl = preg_match('#^https?://#i', $rawUrl)
+            ? $rawUrl
+            : rtrim((string) config('app.url'), '/') . (str_starts_with($rawUrl, '/') ? '' : '/') . $rawUrl;
+
+        Log::info('uploadIdCardFromLocalPath: file copied to public disk', [
+            'contact_id'   => $contactId,
+            'source_path'  => $localRelativePath,
+            'stored_path'  => $publicPath,
+            'public_url'   => $publicUrl,
+            'byte_size'    => strlen($bytes),
+        ]);
+
+        $this->patchContactField(
+            $contactId,
+            self::PICTURE_URL_FIELD_CODE,
+            'Picture URL',
+            $publicUrl,
+        );
+    }
+
+    /**
      * Re-encode unsupported image formats to PNG so WA's /pictures endpoint
      * accepts them. WA rejects WebP (and other modern formats) with an
      * empty-body 400. JPEG/PNG/GIF/BMP pass through unchanged.
@@ -923,52 +977,6 @@ class WildApricotService
             }
         }
         return null;
-    }
-
-    /**
-     * Uploads a stored ID card file path (local filesystem) to WildApricot.
-     * Used when creating members from pending registrations that have stored ID card files.
-     */
-    public function uploadIdCardFromPath(int $contactId, string $filePath): void
-    {
-        if (! file_exists($filePath)) {
-            Log::warning('WA uploadIdCardFromPath: file not found', ['path' => $filePath, 'contact_id' => $contactId]);
-            return;
-        }
-
-        $accountId = $this->getAccountId();
-        $token     = $this->getAccessToken();
-
-        $fh = fopen($filePath, 'rb');
-        try {
-            $fileName = basename($filePath);
-            $r = Http::withToken($token)
-                ->acceptJson()
-                ->attach('picture0', $fh, $fileName)
-                ->post("{$this->baseUrl}/accounts/{$accountId}/pictures");
-
-            Log::info('WA uploadIdCardFromPath response', [
-                'contact_id' => $contactId,
-                'file_path'  => $filePath,
-                'status'     => $r->status(),
-            ]);
-
-            if (! $r->successful()) {
-                Log::error('WA uploadIdCardFromPath failed', ['contact_id' => $contactId, 'body' => $r->body()]);
-                return;
-            }
-
-            $pictureId = $this->extractUploadedPictureId($r->json());
-            if ($pictureId !== null) {
-                $this->setContactPictureIdField($contactId, $pictureId);
-            } else {
-                Log::warning('WA uploadIdCardFromPath: no picture id in response', [
-                    'contact_id' => $contactId, 'body' => substr($r->body(), 0, 300),
-                ]);
-            }
-        } finally {
-            @fclose($fh);
-        }
     }
 
     /**

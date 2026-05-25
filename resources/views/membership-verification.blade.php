@@ -521,8 +521,8 @@
 
         <!-- ── PHOTO UPLOAD SECTION ── -->
         <div id="photo-upload-section" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
-          <p style="font-family:'SF Pro bold';font-size:0.88rem;color:#374151;margin-bottom:0.6rem;">Upload Profile Photo</p>
-          <p style="font-size:0.78rem;color:#9ca3af;margin-bottom:1rem;">Upload a clear photo to attach to your membership record on Wild Apricot.</p>
+          <p style="font-family:'SF Pro bold';font-size:0.88rem;color:#374151;margin-bottom:0.6rem;">Upload ID</p>
+          <p style="font-size:0.78rem;color:#9ca3af;margin-bottom:1rem;">Upload a clear photo of your ID to attach to your membership record on Wild Apricot.</p>
 
           <label id="photo-drop-label" for="photo-input"
                  style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;border:2px dashed #d1d5db;border-radius:1rem;padding:1.5rem 1rem;cursor:pointer;background:#fafafa;transition:border-color 0.2s;">

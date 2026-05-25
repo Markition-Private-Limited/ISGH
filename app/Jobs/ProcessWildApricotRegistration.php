@@ -151,7 +151,7 @@ class ProcessWildApricotRegistration implements ShouldQueue
         // ── Step 4: Upload primary member ID card ─────────────────────────────
         if ($data['id_cards']['primary'] ?? null) {
             try {
-                $wa->uploadIdCardFromPath($contactId, Storage::disk('local')->path($data['id_cards']['primary']));
+                $wa->uploadIdCardFromLocalPath($contactId, $data['id_cards']['primary']);
                 Log::info('Uploaded primary member ID card to WA', ['contact_id' => $contactId]);
             } catch (Throwable $e) {
                 Log::warning('Failed to upload primary ID card to WA', [
@@ -181,7 +181,7 @@ class ProcessWildApricotRegistration implements ShouldQueue
                     // Upload spouse ID card
                     if ($data['id_cards']['spouses'][$idx] ?? null) {
                         try {
-                            $wa->uploadIdCardFromPath($spouseContactIds[$idx], Storage::disk('local')->path($data['id_cards']['spouses'][$idx]));
+                            $wa->uploadIdCardFromLocalPath($spouseContactIds[$idx], $data['id_cards']['spouses'][$idx]);
                             Log::info('Uploaded spouse ID card to WA', ['contact_id' => $spouseContactIds[$idx], 'spouse_idx' => $idx]);
                         } catch (Throwable $e) {
                             Log::warning('Failed to upload spouse ID card to WA', [
@@ -226,7 +226,7 @@ class ProcessWildApricotRegistration implements ShouldQueue
                 // Upload flat member ID card
                 if ($data['id_cards']['flat_members'][$idx] ?? null) {
                     try {
-                        $wa->uploadIdCardFromPath($flatMemberContactIds[$idx], Storage::disk('local')->path($data['id_cards']['flat_members'][$idx]));
+                        $wa->uploadIdCardFromLocalPath($flatMemberContactIds[$idx], $data['id_cards']['flat_members'][$idx]);
                         Log::info('Uploaded flat member ID card to WA', ['contact_id' => $flatMemberContactIds[$idx], 'member_idx' => $idx]);
                     } catch (Throwable $e) {
                         Log::warning('Failed to upload flat member ID card to WA', [
