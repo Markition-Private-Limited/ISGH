@@ -335,7 +335,7 @@
         <div class="hidden lg:flex items-center gap-7">
           <a href="{{ route('home') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
           <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
-          <a href="#" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
+          <a href="{{ route('portal.login') }}" class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Staff</a>
           <a href="{{ route('join') }}" class="text-white/75 text-[15px] font-medium hover:text-gray-300 transition-colors">Become a Member</a>
           <a href="{{ route('membership-verification') }}" class="text-white/75 text-[15px] font-medium hover:text-gray-300 transition-colors">Verify Membership Status</a>
         </div>
@@ -672,16 +672,24 @@
         headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
         body: formData,
       });
-      const data = await res.json();
-      if (data.success) {
+      const raw = await res.text();
+      let data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch (_) { /* non-JSON (e.g. 413 HTML) */ }
+
+      if (res.ok && data.success) {
         showPhotoMsg('Photo uploaded successfully!', '#15803d');
         btn.style.display = 'none';
         document.getElementById('photo-drop-label').style.borderColor = '#10b981';
+      } else if (res.status === 413 || /request entity too large/i.test(raw)) {
+        showPhotoMsg('Photo is too large for the server. Please use an image under 8 MB.', '#991b1b');
       } else {
-        showPhotoMsg(data.message || 'Upload failed. Please try again.', '#991b1b');
+        showPhotoMsg(
+          data.message || ('Upload failed (HTTP ' + res.status + '). Please try again.'),
+          '#991b1b'
+        );
       }
     } catch (err) {
-      showPhotoMsg('A network error occurred. Please try again.', '#991b1b');
+      showPhotoMsg('A network error occurred. Please try again. (' + ((err && err.message) || 'unknown') + ')', '#991b1b');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Submit Photo';
@@ -825,7 +833,7 @@
     <nav class="flex flex-col gap-1">
       <a href="{{ route('home') }}" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Home</a>
       <a href="#" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Centers</a>
-      <a href="#" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Donate</a>
+      <a href="{{ route('portal.login') }}" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Staff</a>
       <a href="{{ route('join') }}" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Become a Member</a>
       <a href="{{ route('membership-verification') }}" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Verify Membership</a>
     </nav>

@@ -1601,15 +1601,35 @@ class WildApricotService
                 $skip     = 0;
                 $pageSize = 100;
                 do {
-                    $r = $this->apiGet(
-                        "/accounts/{$accountId}/contacts?" . http_build_query([
-                            '$async'  => 'false',
-                            '$filter' => "Member eq true AND Status eq 'Active' AND 'Zone / Center' eq {$choiceId}",
-                            '$top'    => $pageSize,
-                            '$skip'   => $skip,
-                        ])
-                    );
-                    if (!$r->successful()) break;
+                    // Retry once on transient WA timeouts (cURL 28). Without this,
+                    // a single slow page on one center kills the whole hourly sync.
+                    $r = null;
+                    for ($attempt = 1; $attempt <= 2; $attempt++) {
+                        try {
+                            $r = $this->apiGet(
+                                "/accounts/{$accountId}/contacts?" . http_build_query([
+                                    '$async'  => 'false',
+                                    '$filter' => "Member eq true AND Status eq 'Active' AND 'Zone / Center' eq {$choiceId}",
+                                    '$top'    => $pageSize,
+                                    '$skip'   => $skip,
+                                ])
+                            );
+                            break;
+                        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                            if ($attempt === 2) {
+                                Log::warning('WA dashboard sync: paging timeout, skipping remainder of center', [
+                                    'zone'   => $zoneName,
+                                    'center' => $centerName,
+                                    'skip'   => $skip,
+                                    'error'  => $e->getMessage(),
+                                ]);
+                                $r = null;
+                                break;
+                            }
+                            usleep(500_000);
+                        }
+                    }
+                    if ($r === null || !$r->successful()) break;
 
                     $batch = $r->json()['Contacts'] ?? [];
                     if (empty($batch)) break;

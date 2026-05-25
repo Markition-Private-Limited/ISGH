@@ -4231,8 +4231,8 @@
                         class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Home</a>
                     <a href="#"
                         class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Centers</a>
-                    <a href="#"
-                        class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Donate</a>
+                    <a href="{{ route('portal.login') }}"
+                        class="text-white text-[15px] font-medium hover:text-gray-300 transition-colors">Staff</a>
                     <a href="{{ route('join') }}"
                         class="text-white/75 text-[15px] font-medium hover:text-gray-300 transition-colors">Become a
                         Member</a>
@@ -4985,7 +4985,7 @@
                 <a href="{{ route('home') }}"
                     class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Home</a>
                 <a href="#" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Centers</a>
-                <a href="#" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Donate</a>
+                <a href="{{ route('portal.login') }}" class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Staff</a>
                 <a href="{{ route('join') }}"
                     class="text-white/90 hover:bg-white/10 px-4 py-3 rounded-xl text-base">Become a Member</a>
                 <a href="{{ route('membership-verification') }}"
