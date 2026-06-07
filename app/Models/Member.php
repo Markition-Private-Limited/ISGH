@@ -36,6 +36,7 @@ class Member extends Model
         'stripe_subscription_id',
         'payment_status',
         'amount_cents',
+        'membership_duration_years',
         'checkomatic_monthly_cents',
 
         'terms_agreed',

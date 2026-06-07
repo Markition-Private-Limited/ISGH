@@ -1826,7 +1826,7 @@
             if (unified) {
                 // Re-enable fields disabled by disablePrimaryFields(), skipping the email
                 // (it is server-rendered readonly and must never be touched by reset)
-                unified.querySelectorAll('input:not(#uni_email), select:not(#uni_state), textarea, button').forEach(el => {
+                unified.querySelectorAll('input:not(#uni_email), select:not(#uni_state):not(#uni_duration_years), textarea, button').forEach(el => {
                     el.disabled = false;
                     el.removeAttribute('readonly');
                     el.style.background = '';
@@ -1835,12 +1835,16 @@
                     // Clear watcher flag so attachConfirmWatchers() re-registers listeners
                     el._confirmWatchAttached = false;
                 });
-                // Clear all values except email and state
-                unified.querySelectorAll('input:not([type="hidden"]):not(#uni_email), select:not(#uni_state), textarea').forEach(el => {
+                // Clear all values except email, state, and duration (which has
+                // a meaningful default of '1' that must survive form resets).
+                unified.querySelectorAll('input:not([type="hidden"]):not(#uni_email), select:not(#uni_state):not(#uni_duration_years), textarea').forEach(el => {
                     if (el.type === 'checkbox' || el.type === 'radio') { el.checked = false; }
                     else { el.value = ''; }
                     el.classList.remove('field-invalid', 'field-valid');
                 });
+                // Restore duration to default 1 Year on every reset.
+                const _durSel = document.getElementById('uni_duration_years');
+                if (_durSel) _durSel.value = '1';
                 // Clear inline validation messages
                 unified.querySelectorAll('.email-msg, .phone-msg, .dob-msg').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
             }
@@ -1985,6 +1989,17 @@
             if (flatSection) flatSection.style.display = cfg.hasFlatMembers ? 'block' : 'none';
             if (flatCountRow) flatCountRow.style.display = cfg.hasFlatMembers ? 'flex' : 'none';
             if (feeRow) feeRow.style.display = cfg.hasFlatMembers ? 'none' : 'flex';
+
+            // Membership duration dropdown is shown for the "Individual
+            // Membership" option, which is wired in the markup as value="flat".
+            const durationSection = document.getElementById('uni_duration_section');
+            if (durationSection) durationSection.style.display = (type === 'flat') ? 'block' : 'none';
+            // Reset to 1 Year whenever switching to a type that hides the
+            // dropdown so a stale 5-year value can't leak into the submit.
+            if (type !== 'flat') {
+                const durEl = document.getElementById('uni_duration_years');
+                if (durEl) durEl.value = '1';
+            }
 
             setText('uni_order_type', cfg.orderType);
             setText('uni_order_fee', cfg.orderFee);
@@ -2283,7 +2298,13 @@
             const container = document.getElementById('flat_members_container');
             if (!container) return;
             const count = 1 + container.querySelectorAll('.member-card').length;
-            const total = count * FLAT_FEE_PER_MEMBER;
+            // Years multiplier: only the "Individual Membership" flow (mapped
+            // to the `flat` config key) exposes the duration dropdown; other
+            // types keep `years` at 1.
+            const years = (currentMembershipType === 'flat')
+                ? (parseInt(document.getElementById('uni_duration_years')?.value, 10) || 1)
+                : 1;
+            const total = count * FLAT_FEE_PER_MEMBER * years;
             const fmt = '$' + total.toFixed(2);
             const feeEl = document.getElementById('flat_fee_display');
             const totalEl = document.getElementById('uni_order_total');
@@ -2291,7 +2312,12 @@
             const btnLabel = document.getElementById('uni_submit_label');
             if (feeEl) feeEl.textContent = fmt;
             if (totalEl) totalEl.textContent = fmt;
-            if (countEl) countEl.textContent = count + ' member' + (count !== 1 ? 's' : '') + ' × $' + FLAT_FEE_PER_MEMBER;
+            if (countEl) {
+                const memberPart = count + ' member' + (count !== 1 ? 's' : '') + ' × $' + FLAT_FEE_PER_MEMBER;
+                countEl.textContent = years > 1
+                    ? memberPart + ' × ' + years + ' Years'
+                    : memberPart;
+            }
             if (btnLabel) btnLabel.innerHTML = btnLabel.innerHTML.replace(/Pay \$[\d,]+\.\d{2}/, 'Pay ' + fmt);
         }
 
@@ -3595,6 +3621,7 @@
                 // Build FormData to support file uploads
                 const formData = new FormData();
                 formData.append('membership_type', type);
+                formData.append('membership_duration_years', parseInt(document.getElementById('uni_duration_years')?.value, 10) || 1);
                 formData.append('primary', JSON.stringify(primary));
                 formData.append('spouses', JSON.stringify(spouses));
                 formData.append('flat_members', JSON.stringify(flatMembers));
@@ -4670,6 +4697,24 @@
                                 Add Another Family Member (Optional)
                             </button>
                         </div>
+
+                        <!-- MEMBERSHIP DURATION (Individual only) -->
+                        <div id="uni_duration_section" style="display:none; margin-top:1.5rem;">
+                            <div class="section-divider" style="margin-bottom:1.25rem;"></div>
+                            <div class="step-indicator">
+                                <div class="step-number">4</div>
+                                <h3 class="form-section-title">Membership Duration</h3>
+                            </div>
+                            <div class="field" style="margin-top:1rem;">
+                                <label for="uni_duration_years">Membership Duration <span>*</span></label>
+                                <select id="uni_duration_years" onchange="updateFlatTotal()">
+                                    <option value="1" selected>1 Year</option>
+                                    <option value="3">3 Years</option>
+                                    <option value="5">5 Years</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="section-divider"></div>
                         <!-- STRIPE CARD ELEMENT -->
         <div class="stripe-card-section">

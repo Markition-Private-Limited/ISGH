@@ -244,7 +244,7 @@ class WildApricotService
             'Status'            => 'Active',
             'MembershipEnabled' => true,
             'MemberSince'       => now()->toIso8601String(),
-            'RenewalDue'        => $this->calcRenewalDate($data['membership_type']),
+            'RenewalDue'        => $this->calcRenewalDate($data['membership_type'], (int) ($data['duration_years'] ?? 1)),
             'MembershipLevel'   => ['Id' => $levelId],
             'FieldValues'       => $this->buildFieldValues($data),
             'RecreateInvoice' => $data['auto_renewal'] ?? false, // If true, WA will auto-renew next year and generate an invoice (which we won't pay via Stripe, but it keeps the contact in good standing and sends renewal reminders).
@@ -2095,12 +2095,14 @@ class WildApricotService
     }
 
 
-    private function calcRenewalDate(string $type): string
+    private function calcRenewalDate(string $type, int $years = 1): string
     {
+        $years = max(1, $years);
+
         return match(true) {
             str_contains($type, 'lifetime')    => 'Never',
             str_contains($type, 'checkomatic') => now()->addMonth()->toIso8601String(),
-            default                            => now()->endOfYear()->toIso8601String(),
+            default                            => now()->addYears($years - 1)->endOfYear()->toIso8601String(),
         };
     }
 

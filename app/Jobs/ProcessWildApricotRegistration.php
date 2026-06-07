@@ -9,7 +9,6 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ProcessWildApricotRegistration implements ShouldQueue
@@ -79,6 +78,7 @@ class ProcessWildApricotRegistration implements ShouldQueue
                     'role'            => $primaryRole,
                     'zone'            => $data['zone'] ?? '',
                     'terms_agreed_at' => $termsAgreedAt,
+                    'duration_years'  => (int) ($data['duration_years'] ?? 1),
                 ]));
                 $contactId = (int) $contact['Id'];
                 $bundleId  = (int) $wa->extractFieldValue($contact, 'BundleId');

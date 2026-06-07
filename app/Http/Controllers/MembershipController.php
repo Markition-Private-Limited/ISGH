@@ -321,6 +321,7 @@ class MembershipController extends Controller
         // Validate
         $validator = Validator::make($request->all(), [
             'membership_type' => 'required|string|in:family,individual,flat,checkomatic_family,checkomatic_individual,lifetime_family,lifetime_individual',
+            'membership_duration_years' => 'nullable|integer|in:1,3,5',
             'primary.first_name' => 'required|string|max:100',
             'primary.last_name' => 'required|string|max:100',
             'primary.email' => 'required|email',
@@ -358,16 +359,23 @@ class MembershipController extends Controller
         $type = $request->input('membership_type');
         $fee = config('membership.fees')[$type];
 
-        // Flat membership: $20 per member
+        // Membership duration (years). UI exposes 1/3/5 for Individual; other
+        // types ignore the value but we still clamp defensively.
+        $years = (int) $request->input('membership_duration_years', 1);
+        if (! in_array($years, [1, 3, 5], true)) {
+            $years = 1;
+        }
+
+        // Flat membership: $20 per member × duration years. The public form's
+        // "Individual Membership" option is wired as type=flat and now also
+        // exposes a 1/3/5-year duration dropdown.
         if ($type === 'flat') {
             // 1 primary member + additional flat family members
             $memberCount = 1 + count($request->input('flat_members', []));
 
             $type='individual'; // Process as individual for WA, we'll add dependents separately
-            // if($memberCount >1){
-            // }
 
-            $totalCents = $memberCount * 2000;
+            $totalCents = $memberCount * 2000 * $years;
             $fee = [
                 'cents' => $totalCents,
                 'label' => '$'.number_format($totalCents / 100, 2),
@@ -405,6 +413,7 @@ class MembershipController extends Controller
                 'zone' => $request->input('zone'),
                 'donation_type' => $request->input('donation_type') ?: null,
                 'amount_cents' => $fee['cents'],
+                'membership_duration_years' => $years,
                 'checkomatic_monthly_cents' => in_array($type, ['checkomatic_family', 'checkomatic_individual'])
                     ? (int) round((float) $request->input('checkomatic_amount', 10) * 100)
                     : null,
@@ -620,6 +629,7 @@ class MembershipController extends Controller
                         'zone' => $request->input('zone', ''),
                         'amount_cents' => $fee['cents'],
                         'amount_label' => $fee['label'],
+                        'duration_years' => $years,
                         'id_cards' => $idCards,
                     ],
                     'processed' => false,
