@@ -50,7 +50,12 @@ class MembershipLevelChangeTest extends TestCase
 
         $types = array_column($res['levels'], 'type');
         $this->assertNotContains('individual', $types);
-        $this->assertCount(6, $types);
+        // Allowlist is now: checkomatic_individual, individual, lifetime_family, lifetime_individual
+        // Member is 'Individual' → 3 options remain.
+        $this->assertContains('checkomatic_individual', $types);
+        $this->assertContains('lifetime_family', $types);
+        $this->assertContains('lifetime_individual', $types);
+        $this->assertCount(3, $types);
     }
 
     public function test_process_level_change_charges_and_creates_row(): void
