@@ -635,7 +635,7 @@
         if (monthlyInput) monthlyInput.value = '';
       }
 
-      pickNext.disabled = !lvl;
+      if (!_isCheckomatic) pickNext.disabled = !lvl;
       hideError(pickError);
     }
 

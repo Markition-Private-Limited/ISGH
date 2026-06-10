@@ -102,13 +102,13 @@ class LevelChangeServiceTest extends TestCase
             'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
         ]]);
 
-        $result = $svc->charge(999, $profile, 'family', [], 'pm_test', null);
+        $result = $svc->charge(999, $profile, 'lifetime_individual', [], 'pm_test', null);
 
         $this->assertTrue($result['success']);
         $this->assertDatabaseHas('level_changes', [
             'id'        => $result['level_change_id'],
             'from_type' => 'individual',
-            'to_type'   => 'family',
+            'to_type'   => 'lifetime_individual',
             'status'    => 'paid',
         ]);
         Queue::assertPushed(ProcessLevelChange::class);
@@ -199,7 +199,7 @@ class LevelChangeServiceTest extends TestCase
             'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
         ]]);
 
-        $result = $svc->charge(999, $profile, 'family', [], 'pm_test', null);
+        $result = $svc->charge(999, $profile, 'lifetime_individual', [], 'pm_test', null);
 
         $this->assertFalse($result['success']);
         $this->assertSame('Your card has insufficient funds.', $result['message']);
@@ -232,7 +232,7 @@ class LevelChangeServiceTest extends TestCase
             'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
         ]]);
 
-        $result = $svc->charge(999, $profile, 'family', [], 'pm_test', null);
+        $result = $svc->charge(999, $profile, 'lifetime_individual', [], 'pm_test', null);
 
         $this->assertTrue($result['requires_action']);
         $this->assertSame('pi_test_secret', $result['client_secret']);
