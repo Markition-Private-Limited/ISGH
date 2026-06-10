@@ -74,6 +74,27 @@
       box-shadow: 0 0 0 3px rgba(217,119,6,0.15);
     }
     .lvl-amount-hint { font-size: 11.5px; color: #b45309; }
+    .lvl-amount-note {
+      font-size: 12px;
+      color: #92400e;
+      margin: 4px 0 0;
+      font-weight: 600;
+    }
+    .lvl-amount-error {
+      color: #dc2626 !important;
+      font-size: 12px;
+    }
+    .lvl-checkomatic-warning {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+      color: #92400e;
+      line-height: 1.5;
+    }
+    .lvl-checkomatic-warning p { margin: 0; }
 
     /* Review screen — from/to cards */
     .lvl-review-cards {
@@ -233,11 +254,17 @@
         </select>
       </div>
 
-      {{-- Checkomatic amount entry — amber box, shown only for checkomatic levels --}}
+      {{-- Checkomatic amount entry — shown only when checkomatic level is selected --}}
       <div class="lvl-amount-box" id="lvlAmountBox" style="display:none;">
-        <span class="lvl-amount-title">Enter Amount (Minimum $20)</span>
-        <input id="lvlMonthlyInput" type="number" min="20" step="0.01" placeholder="Minimum $20.00" />
-        <span class="lvl-amount-hint">You can add any amount above the minimum.</span>
+        <span class="lvl-amount-title">Monthly Amount (Minimum $10)</span>
+        <input id="lvlMonthlyInput" type="number" min="10" step="1" value="10" placeholder="Minimum $10.00" />
+        <p id="lvlAmountNote" class="lvl-amount-note">You will be charged $10.00/month</p>
+        <span id="lvlAmountError" class="lvl-amount-hint lvl-amount-error" style="display:none;">Minimum monthly amount is $10.00.</span>
+      </div>
+
+      {{-- Recurring-billing warning — shown below amount box when Checkomatic is selected --}}
+      <div class="lvl-checkomatic-warning" id="lvlCheckomaticWarning" style="display:none;">
+        <p>To qualify as a voting member for the current year, a minimum membership contribution of $20/person must be completed by June 30.</p>
       </div>
 
       <div class="renew-error" id="lvlPickError"></div>
@@ -389,7 +416,7 @@
     if (!modal) return;
 
     const lvlCsrf      = document.querySelector('meta[name="csrf-token"]').content;
-    const lvlStripeKey = '{{ config("services.stripe.key") }}';
+    const lvlStripeKey = '{{ $stripePublishableKey ?? config("services.stripe.key") }}';
 
     const optionsUrl    = '{{ route('member-portal.change-level.options') }}';
     const changeUrl     = '{{ route('member-portal.change-level') }}';
@@ -410,6 +437,9 @@
     const levelSelect   = document.getElementById('lvlSelect');
     const amountBox     = document.getElementById('lvlAmountBox');
     const monthlyInput  = document.getElementById('lvlMonthlyInput');
+    const amountNote    = document.getElementById('lvlAmountNote');
+    const amountError   = document.getElementById('lvlAmountError');
+    const checkWarning  = document.getElementById('lvlCheckomaticWarning');
     const pickError     = document.getElementById('lvlPickError');
     const pickCancel    = document.getElementById('lvlPickCancel');
     const pickNext      = document.getElementById('lvlPickNext');
@@ -449,6 +479,22 @@
 
     function showError(el, msg) { if (el) { el.textContent = msg; el.classList.add('show'); } }
     function hideError(el)      { if (el) { el.textContent = ''; el.classList.remove('show'); } }
+
+    function updateLvlAmountNote() {
+      if (!monthlyInput || !amountNote) return;
+      const val = parseFloat(monthlyInput.value);
+      const min = 10;
+      if (isNaN(val) || val < min) {
+        amountNote.style.display = 'none';
+        if (amountError) { amountError.style.display = ''; }
+        pickNext.disabled = true;
+      } else {
+        amountNote.textContent = 'You will be charged $' + val.toFixed(2) + '/month';
+        amountNote.style.display = '';
+        if (amountError) { amountError.style.display = 'none'; }
+        pickNext.disabled = !_selected;
+      }
+    }
 
     function showScreen(name) {
       Object.entries(screens).forEach(([k, el]) => {
@@ -545,8 +591,11 @@
       // Checkomatic levels need a monthly amount entered here on Screen 1.
       if (_isCheckomatic) {
         amountBox.style.display = 'flex';
+        if (checkWarning) checkWarning.style.display = '';
+        updateLvlAmountNote();
       } else {
         amountBox.style.display = 'none';
+        if (checkWarning) checkWarning.style.display = 'none';
         if (monthlyInput) monthlyInput.value = '';
       }
 
@@ -663,6 +712,7 @@
       pickNext.disabled = true;
       levelSelect.value = '';
       amountBox.style.display = 'none';
+      if (checkWarning) checkWarning.style.display = 'none';
       if (monthlyInput) monthlyInput.value = '';
       if (successLabel) successLabel.textContent = '';
       familyBox.innerHTML = '';
@@ -692,6 +742,7 @@
     doneBtn?.addEventListener('click', () => { location.href = dashboardUrl; });
 
     levelSelect?.addEventListener('change', onLevelSelected);
+    monthlyInput?.addEventListener('input', updateLvlAmountNote);
 
     // ── SCREEN 1 → family / review ───────────────────────────────────────
     pickNext?.addEventListener('click', () => {
@@ -699,8 +750,8 @@
       // Checkomatic levels need a valid monthly amount before continuing.
       if (_selected.isCheckomatic) {
         const amt = parseFloat(monthlyInput.value);
-        if (!amt || amt < 20) {
-          showError(pickError, 'Please enter an amount of at least $20.00.');
+        if (!amt || amt < 10) {
+          showError(pickError, 'Please enter an amount of at least $10.00.');
           return;
         }
       }
@@ -927,8 +978,8 @@
         let monthlyAmount = null;
         if (_isCheckomatic) {
           monthlyAmount = parseFloat(monthlyInput.value);
-          if (!monthlyAmount || monthlyAmount < 20) {
-            showError(payError, 'Please enter an amount of at least $20.00 on the first step.');
+          if (!monthlyAmount || monthlyAmount < 10) {
+            showError(payError, 'Please enter an amount of at least $10.00 on the first step.');
             return;
           }
         }
