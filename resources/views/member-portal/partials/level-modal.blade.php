@@ -95,6 +95,16 @@
       line-height: 1.5;
     }
     .lvl-checkomatic-warning p { margin: 0; }
+    .lvl-spouse-disclaimer-note {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-size: 13px;
+      color: #92400e;
+      font-weight: 600;
+      line-height: 1.5;
+    }
 
     /* Review screen — from/to cards */
     .lvl-review-cards {
@@ -368,6 +378,29 @@
       </div>
     </div>
   </div>
+
+  {{-- Checkomatic spouse disclaimer — shown before the spouse form is revealed --}}
+  <div class="confirm-overlay" id="lvlSpouseDisclaimer" aria-hidden="true">
+    <div class="confirm-box">
+      <div class="confirm-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 8v4"/><path d="M12 16h.01"/>
+          <path d="M10.29 3.86l-8.43 14.5A2 2 0 0 0 3.58 21h16.84a2 2 0 0 0 1.72-2.64l-8.43-14.5a2 2 0 0 0-3.44 0z"/>
+        </svg>
+      </div>
+      <p class="confirm-title">Checkomatic Reminder</p>
+      <p class="confirm-body" style="margin-bottom:0.9rem;">
+        Before adding a spouse, please review the payment reminder below.
+      </p>
+      <div class="lvl-spouse-disclaimer-note">
+        Checkomatic dues totaling $20 per member must be paid by June 30th, {{ date('Y') }}.
+      </div>
+      <div class="confirm-actions" style="margin-top:1.25rem;">
+        <button type="button" class="confirm-btn-yes" id="lvlSpouseDisclaimerOk">Got It</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 {{-- family-member block template --}}
@@ -466,6 +499,9 @@
     const payError      = document.getElementById('lvlPayError');
     const successLabel  = document.getElementById('lvlSuccessLabel');
     const doneBtn       = document.getElementById('lvlDoneBtn');
+    const spouseDisclaimer    = document.getElementById('lvlSpouseDisclaimer');
+    const spouseDisclaimerOk  = document.getElementById('lvlSpouseDisclaimerOk');
+    let   _spouseDisclaimerShown = false;
 
     let _stripe = null;
     let _cardElement = null;
@@ -625,7 +661,13 @@
     /** Build the family screen for the current selection. */
     function buildFamilyScreen() {
       familyBox.innerHTML = '';
-      if (isSpouseOnly()) {
+      _spouseDisclaimerShown = false;
+      if (_isCheckomatic) {
+        familyHeading.textContent = 'Add Spouse (Optional)';
+        familySub.textContent = 'You may add your spouse to your membership. Adding a spouse does not change your monthly rate.';
+        addMemberBtn.textContent = '+ Add Spouse';
+        addMemberBtn.style.display = '';
+      } else if (isSpouseOnly()) {
         familyHeading.textContent = 'Add Spouse';
         familySub.textContent = 'This level includes your spouse. Enter their details below.';
         addMemberBtn.style.display = 'none';
@@ -633,6 +675,7 @@
       } else {
         familyHeading.textContent = 'Add Family Members';
         familySub.textContent = 'This level includes family members. Add the people you would like covered under your membership.';
+        addMemberBtn.textContent = '+ Add Member';
         addMemberBtn.style.display = '';
         addFamilyBlock(false);
       }
@@ -708,6 +751,7 @@
       hideError(payError);
       _selected = null;
       _isCheckomatic = false;
+      _spouseDisclaimerShown = false;
       _payAmountLabel = '—';
       pickNext.disabled = true;
       levelSelect.value = '';
@@ -765,7 +809,27 @@
 
     // ── SCREEN 2 (family) navigation ─────────────────────────────────────
     familyBack?.addEventListener('click', () => { showScreen('pick'); });
-    addMemberBtn?.addEventListener('click', () => { addFamilyBlock(false); });
+    addMemberBtn?.addEventListener('click', () => {
+      if (_isCheckomatic && !_spouseDisclaimerShown) {
+        if (spouseDisclaimer) {
+          spouseDisclaimer.classList.add('open');
+          spouseDisclaimer.setAttribute('aria-hidden', 'false');
+        }
+        return;
+      }
+      addFamilyBlock(_isCheckomatic);
+      if (_isCheckomatic) addMemberBtn.style.display = 'none';
+    });
+
+    spouseDisclaimerOk?.addEventListener('click', () => {
+      _spouseDisclaimerShown = true;
+      if (spouseDisclaimer) {
+        spouseDisclaimer.classList.remove('open');
+        spouseDisclaimer.setAttribute('aria-hidden', 'true');
+      }
+      addFamilyBlock(true);
+      addMemberBtn.style.display = 'none';
+    });
 
     // ── Family-member duplicate validation ───────────────────────────────
     // Same checks as member creation: email-exists, phone-exists, name+DOB.
