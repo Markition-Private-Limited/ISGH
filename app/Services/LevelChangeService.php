@@ -49,29 +49,43 @@ class LevelChangeService
     }
 
     /**
-     * The membership types the member may switch to — all types minus their
-     * current one and minus 'flat' (Flat Membership is not offered as a
-     * level-change target in the member portal). Each entry:
-     * {type, label, fee, includesFamily, isCheckomatic}.
-     * For checkomatic types the fee cents are 0 until the member enters an amount.
+     * The membership types the member may switch to — restricted to the four
+     * supported change-level targets. The member's current level is excluded.
+     * checkomatic_individual is labelled 'Checkomatic' and has includesFamily=true
+     * so the modal shows the optional spouse screen (type submitted stays individual).
+     *
+     * @return array<int, array{type:string,label:string,fee:array,includesFamily:bool,isCheckomatic:bool}>
      */
     public function availableLevels(MemberProfile $profile): array
     {
         $currentSlug = MembershipTypes::slugFromLevelName($profile->level);
 
+        $allowed = [
+            'checkomatic_individual',
+            'individual',
+            'lifetime_family',
+            'lifetime_individual',
+        ];
+
         $levels = [];
-        foreach (MembershipTypes::allSlugs() as $slug) {
-            // Skip the member's current level, and exclude Flat Membership —
-            // it is not a selectable target in the change-level form.
-            if ($slug === $currentSlug || $slug === 'flat') {
+        foreach ($allowed as $slug) {
+            if ($slug === $currentSlug) {
                 continue;
             }
             $isCheckomatic = MembershipTypes::isCheckomatic($slug);
             $levels[] = [
                 'type'           => $slug,
-                'label'          => MembershipTypes::labelForSlug($slug),
+                // Override label for checkomatic_individual — show 'Checkomatic'
+                // not 'Checkomatic Individual' so the UI shows a single clean entry.
+                'label'          => $slug === 'checkomatic_individual'
+                                        ? 'Checkomatic'
+                                        : MembershipTypes::labelForSlug($slug),
                 'fee'            => $this->resolveFee($slug, 0, $isCheckomatic ? null : 0.0),
-                'includesFamily' => MembershipTypes::includesFamily($slug),
+                // Force includesFamily=true for checkomatic_individual so the modal
+                // shows the optional spouse screen. The submitted type never changes.
+                'includesFamily' => $slug === 'checkomatic_individual'
+                                        ? true
+                                        : MembershipTypes::includesFamily($slug),
                 'isCheckomatic'  => $isCheckomatic,
             ];
         }
@@ -137,11 +151,17 @@ class LevelChangeService
 
         $fee = $this->resolveFee($toType, count($family), $checkomaticAmount);
 
+        // Route checkomatic level changes through the zone's Stripe account.
+        if (MembershipTypes::isCheckomatic($toType)) {
+            $this->stripe->useKeysFor($profile->zone, $toType);
+        }
+
         $levelChange = LevelChange::create([
             'contact_id'               => $contactId,
             'member_email'             => $profile->email,
             'from_type'                => $fromType,
             'to_type'                  => $toType,
+            'zone'                     => $profile->zone,
             'amount_cents'             => $fee['cents'],
             'currency'                 => 'usd',
             'status'                   => 'pending',
@@ -247,6 +267,12 @@ class LevelChangeService
 
         if ($levelChange->processed || $levelChange->status === 'paid') {
             return ['success' => true, 'level_change_id' => $levelChange->id];
+        }
+
+        // Mirror the charge() key switch on 3DS-resumed lookups so we hit
+        // the same Stripe account the intent was created on.
+        if (MembershipTypes::isCheckomatic((string) $levelChange->to_type)) {
+            $this->stripe->useKeysFor((string) $levelChange->zone, (string) $levelChange->to_type);
         }
 
         try {

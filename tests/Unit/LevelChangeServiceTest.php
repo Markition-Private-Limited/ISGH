@@ -24,32 +24,52 @@ class LevelChangeServiceTest extends TestCase
         ]]);
     }
 
-    public function test_available_levels_excludes_current_type(): void
+    public function test_available_levels_returns_allowlisted_types_only(): void
     {
         $svc = app(LevelChangeService::class);
         $levels = $svc->availableLevels($this->profileWithLevel('Individual'));
 
         $types = array_column($levels, 'type');
+        // individual is the current level — excluded
         $this->assertNotContains('individual', $types, 'current type excluded');
-        $this->assertNotContains('flat', $types, 'flat membership excluded as a level-change target');
-        $this->assertCount(5, $levels);
+        // these were previously offered but are now removed
+        $this->assertNotContains('family', $types, 'family no longer a change target');
+        $this->assertNotContains('flat', $types, 'flat never a change target');
+        $this->assertNotContains('checkomatic_family', $types, 'checkomatic_family never a change target');
+        // the 3 remaining allowed slugs
+        $this->assertContains('checkomatic_individual', $types);
+        $this->assertContains('lifetime_family', $types);
+        $this->assertContains('lifetime_individual', $types);
+        $this->assertCount(3, $levels);
     }
 
-    public function test_available_levels_flag_family_and_checkomatic(): void
+    public function test_available_levels_checkomatic_label_and_flags(): void
     {
         $svc = app(LevelChangeService::class);
         $levels = $svc->availableLevels($this->profileWithLevel('Individual'));
 
-        $byType = [];
-        foreach ($levels as $l) {
-            $byType[$l['type']] = $l;
-        }
+        $byType = array_column($levels, null, 'type');
 
-        $this->assertTrue($byType['family']['includesFamily']);
-        $this->assertFalse($byType['lifetime_individual']['includesFamily']);
+        // Checkomatic label must be 'Checkomatic' (not 'Checkomatic Individual')
+        $this->assertSame('Checkomatic', $byType['checkomatic_individual']['label']);
+        // includesFamily must be true so the JS shows the optional spouse screen
+        $this->assertTrue($byType['checkomatic_individual']['includesFamily']);
         $this->assertTrue($byType['checkomatic_individual']['isCheckomatic']);
-        $this->assertArrayHasKey('fee', $byType['family']);
-        $this->assertArrayHasKey('label', $byType['family']);
+        $this->assertArrayHasKey('fee', $byType['checkomatic_individual']);
+        // Lifetime individual has no family
+        $this->assertFalse($byType['lifetime_individual']['includesFamily']);
+    }
+
+    public function test_available_levels_excludes_current_when_checkomatic(): void
+    {
+        $svc = app(LevelChangeService::class);
+        // Member is already on checkomatic_individual — it should not appear
+        $levels = $svc->availableLevels(
+            $this->profileWithLevel('Checkomatic')
+        );
+        $types = array_column($levels, 'type');
+        $this->assertNotContains('checkomatic_individual', $types);
+        $this->assertCount(3, $levels); // individual, lifetime_family, lifetime_individual
     }
 
     private function mockStripeSuccess(): void
