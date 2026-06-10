@@ -137,6 +137,7 @@ class ProcessLevelChange implements ShouldQueue
                 try {
                     $related = $wa->addRelatedContact($contactId, $bundleId, $levelId, array_merge($member, [
                         'membership_type' => $toType,
+                        'zone'            => $levelChange->zone ?? '',
                     ]));
                     $createdIds[$idx] = (int) ($related['Id'] ?? 0);
                     $levelChange->update(['created_family_ids' => $createdIds]);

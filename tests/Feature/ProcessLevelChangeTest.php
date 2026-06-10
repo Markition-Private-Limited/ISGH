@@ -34,6 +34,9 @@ class ProcessLevelChangeTest extends TestCase
             ], 200),
             'api.wildapricot.org/v2.3/accounts/12345/contactfields' => Http::response([
                 ['FieldName' => 'Member Identifier', 'SystemCode' => 'custom-member-id'],
+                ['FieldName' => 'Zone / Center', 'SystemCode' => 'custom-9967573', 'AllowedValues' => [
+                    ['Id' => 55, 'Label' => 'SW Zone'],
+                ]],
             ], 200),
             'api.wildapricot.org/v2.3/accounts/12345/contacts/999' => Http::response([
                 'Id' => 999, 'Status' => 'Active',
@@ -75,6 +78,7 @@ class ProcessLevelChangeTest extends TestCase
             'from_type' => 'individual', 'to_type' => 'family',
             'amount_cents' => 4000, 'currency' => 'usd', 'status' => 'paid',
             'stripe_charge_id' => 'ch_test',
+            'zone' => 'SW Zone',
             'family_members' => [
                 ['first_name' => 'Sarah', 'last_name' => 'Alam', 'email' => 'sarah@example.com'],
             ],
@@ -86,10 +90,20 @@ class ProcessLevelChangeTest extends TestCase
         $this->assertTrue($lc->processed);
         $this->assertSame([1001], $lc->created_family_ids);
 
-        Http::assertSent(fn ($request) =>
-            $request->method() === 'POST'
-            && str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/accounts/12345/contacts')
-        );
+        // Family member POST must include the primary member's Zone/Center field.
+        Http::assertSent(function ($request) {
+            if ($request->method() !== 'POST') return false;
+            if (! str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/accounts/12345/contacts')) return false;
+            $body = $request->data();
+            $fields = $body['FieldValues'] ?? [];
+            foreach ($fields as $f) {
+                if (($f['SystemCode'] ?? '') === 'custom-9967573'
+                    && ($f['Value']['Label'] ?? '') === 'SW Zone') {
+                    return true;
+                }
+            }
+            return false;
+        });
     }
 
     public function test_job_is_idempotent_when_already_processed(): void
@@ -126,6 +140,9 @@ class ProcessLevelChangeTest extends TestCase
             ], 200),
             'api.wildapricot.org/v2.3/accounts/12345/contactfields' => Http::response([
                 ['FieldName' => 'Member Identifier', 'SystemCode' => 'custom-member-id'],
+                ['FieldName' => 'Zone / Center', 'SystemCode' => 'custom-9967573', 'AllowedValues' => [
+                    ['Id' => 55, 'Label' => 'SW Zone'],
+                ]],
             ], 200),
             // PUT (updateMember) returns a contact WITHOUT BundleId; a later GET
             // returns it. The /contacts/999 endpoint is hit 7 times before the
