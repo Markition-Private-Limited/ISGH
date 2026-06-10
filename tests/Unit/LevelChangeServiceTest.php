@@ -151,6 +151,26 @@ class LevelChangeServiceTest extends TestCase
         $this->assertDatabaseCount('level_changes', 0);
     }
 
+    public function test_charge_rejects_checkomatic_family(): void
+    {
+        Queue::fake();
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+
+        $svc = app(LevelChangeService::class);
+        $profile = new MemberProfile(['contact' => [
+            'Id' => 999, 'Email' => 'a@b.com',
+            'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
+        ]]);
+
+        $result = $svc->charge(999, $profile, 'checkomatic_family', [], 'pm_test', 25.0);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('not available', $result['message']);
+        $this->assertDatabaseCount('level_changes', 0);
+        Queue::assertNotPushed(ProcessLevelChange::class);
+    }
+
     public function test_charge_declined_card_marks_failed_with_decline_code(): void
     {
         Queue::fake();

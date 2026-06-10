@@ -110,10 +110,10 @@ class LevelChangeService
         if (! in_array($toType, MembershipTypes::allSlugs(), true)) {
             return ['success' => false, 'message' => 'Unknown membership level.'];
         }
-        // Flat Membership is not a selectable level-change target — reject it
-        // server-side too, in case a crafted request bypasses the UI.
-        if ($toType === 'flat') {
-            return ['success' => false, 'message' => 'Flat Membership is not available as a level-change option.'];
+        // Family Checkomatic and Flat Membership are not selectable level-change
+        // targets — reject server-side in case a crafted request bypasses the UI.
+        if ($toType === 'flat' || $toType === 'checkomatic_family') {
+            return ['success' => false, 'message' => 'That membership type is not available as a level-change option.'];
         }
         if (MembershipTypes::isCheckomatic($toType) && (float) ($checkomaticAmount ?? 0) <= 0) {
             return ['success' => false, 'message' => 'Please enter your monthly contribution amount.'];
