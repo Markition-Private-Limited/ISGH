@@ -192,7 +192,14 @@ class MemberPortalController extends Controller
         $bundle  = $portal->getBundle((int) $contactId);
         $profile = new MemberProfile($bundle);
 
-        return view('member-portal.dashboard', compact('profile', 'email'));
+        // The renew/level modals embedded in the dashboard need the publishable
+        // key for the member's zone Stripe account (only matters for checkomatic
+        // members; the resolver returns the env key for anyone else).
+        $slug = \App\Support\MembershipTypes::slugFromLevelName($profile->level);
+        $stripePublishableKey = app(\App\Services\StripeKeyResolver::class)
+            ->resolve($profile->zone, $slug)['publishable'];
+
+        return view('member-portal.dashboard', compact('profile', 'email', 'stripePublishableKey'));
     }
 
     public function profile(Request $request, MemberPortalService $portal)
@@ -211,7 +218,13 @@ class MemberPortalController extends Controller
         $bundle  = $portal->getBundle((int) $contactId);
         $profile = new MemberProfile($bundle);
 
-        return view('member-portal.profile', compact('profile', 'email'));
+        // Same per-zone publishable-key resolve as the dashboard — the level
+        // modal is included from here too.
+        $slug = \App\Support\MembershipTypes::slugFromLevelName($profile->level);
+        $stripePublishableKey = app(\App\Services\StripeKeyResolver::class)
+            ->resolve($profile->zone, $slug)['publishable'];
+
+        return view('member-portal.profile', compact('profile', 'email', 'stripePublishableKey'));
     }
 
     public function payments(Request $request, MemberPortalService $portal)
@@ -296,7 +309,7 @@ class MemberPortalController extends Controller
                 'amount'         => (float) ($invoice['Value'] ?? $owned['amount']),
                 'currency'       => 'USD',
                 'memberName'     => $profile->fullName ?: 'Member',
-                'membershipType' => $profile->level ?: '—',
+                'membershipType' => (string) ($invoice['MembershipLevel']['Name'] ?? $invoice['Memo'] ?? $owned['levelName'] ?? $profile->level ?: '—'),
                 'payment'        => $payment,
             ],
         ]);

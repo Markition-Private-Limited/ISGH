@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\StripeKeyResolver;
 use Stripe\Checkout\Session as CheckoutSession;
 use Stripe\Customer;
 use Stripe\Exception\ApiErrorException;
@@ -18,6 +19,19 @@ class StripeService
     public function __construct()
     {
         Stripe::setApiKey(config('services.stripe.secret'));
+    }
+
+    /**
+     * Switch the global Stripe SDK API key to the one configured for the given
+     * (zone, membership type). For non-checkomatic types this is a no-op
+     * because the resolver returns the env key, which the constructor already
+     * set. Returns $this so callers can chain it before a payment call.
+     */
+    public function useKeysFor(?string $zone, string $membershipType): self
+    {
+        $keys = app(StripeKeyResolver::class)->resolve($zone, $membershipType);
+        Stripe::setApiKey($keys['secret']);
+        return $this;
     }
 
     // ─────────────────────────────────────────────────────────────────────

@@ -137,10 +137,17 @@ class RenewalService
         $familyCount = count($profile->family);
         $fee         = $this->resolveFee($type, $familyCount, $checkomaticAmount);
 
+        // For checkomatic renewals route the charge through the zone's Stripe
+        // account. No-op for any non-checkomatic type (resolver returns env).
+        if (MembershipTypes::isCheckomatic($type)) {
+            $this->stripe->useKeysFor($profile->zone, $type);
+        }
+
         $renewal = Renewal::create([
             'contact_id'               => $contactId,
             'member_email'             => $profile->email,
             'membership_type'          => $type,
+            'zone'                     => $profile->zone,
             'amount_cents'             => $fee['cents'],
             'currency'                 => 'usd',
             'status'                   => 'pending',
@@ -237,6 +244,12 @@ class RenewalService
         // Already finalized — idempotent no-op (job already dispatched/done).
         if ($renewal->processed || $renewal->status === 'paid') {
             return ['success' => true, 'renewal_id' => $renewal->id];
+        }
+
+        // Mirror the charge() key switch on 3DS-resumed lookups so we hit
+        // the same Stripe account the intent was created on.
+        if (MembershipTypes::isCheckomatic((string) $renewal->membership_type)) {
+            $this->stripe->useKeysFor((string) $renewal->zone, (string) $renewal->membership_type);
         }
 
         try {

@@ -10,6 +10,7 @@ class Renewal extends Model
         'contact_id',
         'member_email',
         'membership_type',
+        'zone',
         'amount_cents',
         'currency',
         'stripe_customer_id',

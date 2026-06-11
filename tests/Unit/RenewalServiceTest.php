@@ -70,8 +70,8 @@ class RenewalServiceTest extends TestCase
         $svc = app(RenewalService::class);
         $fee = $svc->resolveFee('individual', 0, null);
 
-        $this->assertSame(2500, $fee['cents']);
-        $this->assertSame('$25.00', $fee['label']);
+        $this->assertSame(2000, $fee['cents']);
+        $this->assertSame('$20.00', $fee['label']);
     }
 
     public function test_fee_for_flat_plan_multiplies_by_member_count(): void
@@ -106,7 +106,7 @@ class RenewalServiceTest extends TestCase
 
         $this->assertSame('individual', $summary['type']);
         $this->assertFalse($summary['isCheckomatic']);
-        $this->assertSame(2500, $summary['fee']['cents']);
+        $this->assertSame(2000, $summary['fee']['cents']);
         $this->assertArrayHasKey('newRenewalDate', $summary);
         $this->assertSame(0, $summary['familyCount']);
     }

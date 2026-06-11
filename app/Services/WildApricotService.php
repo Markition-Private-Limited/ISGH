@@ -729,6 +729,14 @@ class WildApricotService
             if ($key) $existingFVMap[$key] = $newFv;
         }
 
+        // When the caller is changing membership level, the stale "Membership
+        // level ID" FieldValue copied from the existing contact will silently
+        // override the top-level MembershipLevel.Id (WA honors the FieldValue
+        // entry). Drop it so the new level actually takes effect.
+        if (! empty($data['membership_type'])) {
+            unset($existingFVMap['MembershipLevelId']);
+        }
+
         $payload['FieldValues'] = $this->stripStalePictureFields(array_values($existingFVMap));
 
         $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
@@ -1131,6 +1139,38 @@ class WildApricotService
             ['FieldName' => 'Payment Processed', 'SystemCode' => 'custom-10357567', 'Value' => true],
             ['FieldName' => 'Proof Of Payment',  'SystemCode' => 'custom-17207638', 'Value' => $chargeId],
         ]);
+    }
+
+    /**
+     * Re-PUTs Street Address / City / State / ZIP on a contact whose level
+     * just changed. WildApricot silently drops these fields on certain level
+     * transitions (e.g. Individual → Checkomatic), so callers should invoke
+     * this after a level switch using the values from the local DB.
+     *
+     * Each value is only sent when non-empty so we don't clobber a populated
+     * field with a blank.
+     *
+     * @param array{street?: ?string, city?: ?string, state?: ?string, zip?: ?string} $address
+     */
+    public function repairAddressFields(int $contactId, array $address): void
+    {
+        $fields = [];
+        $map = [
+            'street' => ['FieldName' => 'Street Address', 'SystemCode' => 'custom-9967566'],
+            'city'   => ['FieldName' => 'City',           'SystemCode' => 'custom-9967567'],
+            'state'  => ['FieldName' => 'State',          'SystemCode' => 'custom-9967569'],
+            'zip'    => ['FieldName' => 'ZIP',            'SystemCode' => 'custom-9967570'],
+        ];
+        foreach ($map as $key => $def) {
+            $val = trim((string) ($address[$key] ?? ''));
+            if ($val !== '') {
+                $fields[] = $def + ['Value' => $val];
+            }
+        }
+        if ($fields === []) {
+            return;
+        }
+        $this->patchContactFields($contactId, $fields);
     }
 
     /**

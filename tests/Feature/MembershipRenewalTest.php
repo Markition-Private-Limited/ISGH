@@ -46,7 +46,7 @@ class MembershipRenewalTest extends TestCase
         ])->getJson('/member-portal/renew/summary')
           ->assertOk()
           ->assertJson(['renewable' => true, 'type' => 'individual'])
-          ->assertJsonPath('fee.cents', 2500);
+          ->assertJsonPath('fee.cents', 2000);
     }
 
     public function test_process_renewal_charges_and_creates_renewal(): void
@@ -83,7 +83,7 @@ class MembershipRenewalTest extends TestCase
     {
         $renewal = Renewal::create([
             'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
-            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'membership_type' => 'individual', 'amount_cents' => 2000,
             'currency' => 'usd', 'status' => 'processed', 'processed' => true,
             'wa_invoice_id' => 555,
         ]);
@@ -101,7 +101,7 @@ class MembershipRenewalTest extends TestCase
         // A renewal that belongs to contact 999.
         $renewal = Renewal::create([
             'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
-            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'membership_type' => 'individual', 'amount_cents' => 2000,
             'currency' => 'usd', 'status' => 'processed', 'processed' => true,
             'wa_invoice_id' => 555,
         ]);
@@ -153,7 +153,7 @@ class MembershipRenewalTest extends TestCase
         // A pending renewal awaiting 3DS, owned by the session member (999).
         $renewal = Renewal::create([
             'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
-            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'membership_type' => 'individual', 'amount_cents' => 2000,
             'currency' => 'usd', 'status' => 'pending',
             'stripe_payment_intent_id' => 'pi_3ds',
         ]);
@@ -183,7 +183,7 @@ class MembershipRenewalTest extends TestCase
     {
         $renewal = Renewal::create([
             'contact_id' => 999, 'member_email' => 'tauqeer@example.com',
-            'membership_type' => 'individual', 'amount_cents' => 2500,
+            'membership_type' => 'individual', 'amount_cents' => 2000,
             'currency' => 'usd', 'status' => 'pending',
             'stripe_payment_intent_id' => 'pi_3ds',
         ]);

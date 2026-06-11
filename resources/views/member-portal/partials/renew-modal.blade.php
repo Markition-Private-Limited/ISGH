@@ -221,7 +221,7 @@
     if (!modal) return; // lifetime members have no modal
 
     const renewCsrf      = document.querySelector('meta[name="csrf-token"]').content;
-    const renewStripeKey = '{{ config("services.stripe.key") }}';
+    const renewStripeKey = '{{ $stripePublishableKey ?? config("services.stripe.key") }}';
 
     const summaryUrl   = '{{ route('member-portal.renew.summary') }}';
     const renewUrl     = '{{ route('member-portal.renew') }}';
@@ -315,7 +315,6 @@
 
     notNowBtn?.addEventListener('click', closeModal);
     closeBtn?.addEventListener('click', closeModal);
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
     backBtn?.addEventListener('click', () => { hideError(payError); showScreen('confirm'); });
     doneBtn?.addEventListener('click', () => { location.href = dashboardUrl; });
 

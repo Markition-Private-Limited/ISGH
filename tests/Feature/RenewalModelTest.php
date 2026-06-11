@@ -16,7 +16,7 @@ class RenewalModelTest extends TestCase
             'contact_id'      => 999,
             'member_email'    => 'tauqeer@example.com',
             'membership_type' => 'individual',
-            'amount_cents'    => 2500,
+            'amount_cents'    => 2000,
             'currency'        => 'usd',
             'status'          => 'pending',
         ]);
@@ -25,7 +25,7 @@ class RenewalModelTest extends TestCase
             'id'           => $renewal->id,
             'contact_id'   => 999,
             'status'       => 'pending',
-            'amount_cents' => 2500,
+            'amount_cents' => 2000,
         ]);
         $this->assertFalse((bool) $renewal->processed);
     }

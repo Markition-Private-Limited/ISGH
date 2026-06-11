@@ -27,6 +27,7 @@ class MemberProfile
     public string $dob;
     public string $txId;
     public string $zone;
+    public string $role;
     public string $memberSince;
     public string $renewalDue;
     public string $yearlyFee;
@@ -60,6 +61,10 @@ class MemberProfile
         $this->dob         = $this->field('Date of Birth', 'custom-10694881');
         $this->txId        = $this->field('TX DL/ID Number', 'custom-17846913');
         $this->zone        = $this->field('Zone / Center', 'custom-9967573');
+        // Role names the contact's family relationship within the bundle —
+        // "Spouse", "Father", "Family Member", etc. Set during signup and
+        // level-change adds (SystemCode custom-16727578).
+        $this->role        = $this->field('Role', 'custom-16727578');
         // MemberSince / RenewalDue are returned by WildApricot as TOP-LEVEL contact
         // properties (see WildApricotService::createActiveMember). Prefer those;
         // fall back to FieldValues only if the top-level key is absent.
@@ -91,6 +96,7 @@ class MemberProfile
                 'amount'    => (float) ($inv['Value'] ?? 0),
                 'isPaid'    => (bool) ($inv['IsPaid'] ?? false),
                 'url'       => (string) ($inv['Url'] ?? '#'),
+                'levelName' => (string) ($inv['Memo'] ?? ''),
             ];
         }
 
@@ -270,16 +276,35 @@ class MemberProfile
         return $this->family !== [];
     }
 
-    /** True when the member has a spouse (first family member). */
+    /** True when the bundle contains a contact whose Role identifies them as the spouse. */
     public function hasSpouse(): bool
     {
-        return isset($this->family[0]);
+        return $this->spouse() !== null;
     }
 
-    /** The spouse (first family member), or null. */
+    /**
+     * The spouse, found by Role=Spouse in the family bundle. Falls back to
+     * the first family member only when none of them carries any Role —
+     * preserves the pre-Role-aware behavior for legacy contacts that were
+     * created before the role field was wired in.
+     */
     public function spouse(): ?MemberProfile
     {
-        return $this->family[0] ?? null;
+        if ($this->family === []) {
+            return null;
+        }
+        foreach ($this->family as $member) {
+            if (strcasecmp($member->role, 'Spouse') === 0) {
+                return $member;
+            }
+        }
+        // Legacy fallback: only when EVERY family member is roleless.
+        foreach ($this->family as $member) {
+            if ($member->role !== '') {
+                return null;
+            }
+        }
+        return $this->family[0];
     }
 
     /** True when the member has at least one invoice. */

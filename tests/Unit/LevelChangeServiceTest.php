@@ -35,9 +35,11 @@ class LevelChangeServiceTest extends TestCase
         // these were previously offered but are now removed
         $this->assertNotContains('family', $types, 'family no longer a change target');
         $this->assertNotContains('flat', $types, 'flat never a change target');
-        $this->assertNotContains('checkomatic_family', $types, 'checkomatic_family never a change target');
+        // checkomatic_individual is no longer surfaced — Checkomatic is offered
+        // as checkomatic_family so the spouse flow is consistent.
+        $this->assertNotContains('checkomatic_individual', $types);
         // the 3 remaining allowed slugs
-        $this->assertContains('checkomatic_individual', $types);
+        $this->assertContains('checkomatic_family', $types);
         $this->assertContains('lifetime_family', $types);
         $this->assertContains('lifetime_individual', $types);
         $this->assertCount(3, $levels);
@@ -50,12 +52,12 @@ class LevelChangeServiceTest extends TestCase
 
         $byType = array_column($levels, null, 'type');
 
-        // Checkomatic label must be 'Checkomatic' (not 'Checkomatic Individual')
-        $this->assertSame('Checkomatic', $byType['checkomatic_individual']['label']);
-        // includesFamily must be true so the JS shows the optional spouse screen
-        $this->assertTrue($byType['checkomatic_individual']['includesFamily']);
-        $this->assertTrue($byType['checkomatic_individual']['isCheckomatic']);
-        $this->assertArrayHasKey('fee', $byType['checkomatic_individual']);
+        // Checkomatic is now submitted as checkomatic_family but still labelled
+        // 'Checkomatic' (single, clean option).
+        $this->assertSame('Checkomatic', $byType['checkomatic_family']['label']);
+        $this->assertTrue($byType['checkomatic_family']['includesFamily']);
+        $this->assertTrue($byType['checkomatic_family']['isCheckomatic']);
+        $this->assertArrayHasKey('fee', $byType['checkomatic_family']);
         // Lifetime individual has no family
         $this->assertFalse($byType['lifetime_individual']['includesFamily']);
     }
@@ -63,11 +65,12 @@ class LevelChangeServiceTest extends TestCase
     public function test_available_levels_excludes_current_when_checkomatic(): void
     {
         $svc = app(LevelChangeService::class);
-        // Member is already on checkomatic_individual — it should not appear
+        // Member already on Checkomatic shouldn't see Checkomatic as a target.
         $levels = $svc->availableLevels(
             $this->profileWithLevel('Checkomatic')
         );
         $types = array_column($levels, 'type');
+        $this->assertNotContains('checkomatic_family', $types);
         $this->assertNotContains('checkomatic_individual', $types);
         $this->assertCount(3, $levels); // individual, lifetime_family, lifetime_individual
     }
@@ -145,14 +148,17 @@ class LevelChangeServiceTest extends TestCase
             'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
         ]]);
 
-        $result = $svc->charge(999, $profile, 'checkomatic_individual', [], 'pm_test', null);
+        // Checkomatic is now submitted as checkomatic_family.
+        $result = $svc->charge(999, $profile, 'checkomatic_family', [], 'pm_test', null);
 
         $this->assertFalse($result['success']);
         $this->assertDatabaseCount('level_changes', 0);
     }
 
-    public function test_charge_rejects_checkomatic_family(): void
+    public function test_charge_rejects_checkomatic_individual(): void
     {
+        // checkomatic_individual is no longer a selectable change target;
+        // server-side guard must reject it if a crafted request bypasses the UI.
         Queue::fake();
         $stripe = Mockery::mock(\App\Services\StripeService::class);
         $this->app->instance(\App\Services\StripeService::class, $stripe);
@@ -163,7 +169,7 @@ class LevelChangeServiceTest extends TestCase
             'MembershipLevel' => ['Id' => 1, 'Name' => 'Individual'], 'FieldValues' => [],
         ]]);
 
-        $result = $svc->charge(999, $profile, 'checkomatic_family', [], 'pm_test', 25.0);
+        $result = $svc->charge(999, $profile, 'checkomatic_individual', [], 'pm_test', 25.0);
 
         $this->assertFalse($result['success']);
         $this->assertStringContainsString('not available', $result['message']);

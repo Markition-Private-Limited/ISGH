@@ -297,7 +297,7 @@
         </div>
 
         <div class="renewal-card">
-          <div class="r-title">Next Renewal</div>
+          <div class="r-title">{{ str_contains(strtolower($profile->level ?? ''), 'checkomatic') ? 'Next Payment Due' : 'Next Renewal' }}</div>
           <div class="r-sub">Your {{ $profile->level ?: 'Membership' }} will renew on</div>
           <div class="r-date">{{ $profile->renewalFormatted() ?: '—' }}</div>
           <div class="renewal-foot">
@@ -346,7 +346,7 @@
             @forelse($profile->invoices as $inv)
               <tr class="inv-row" data-number="{{ strtolower($inv['number']) }}">
                 <td class="inv-num">{{ $inv['number'] }}</td>
-                <td>{{ $profile->level ?: '—' }}</td>
+                <td>{{ $inv['levelName'] ?: ($profile->level ?: '—') }}</td>
                 <td class="inv-amount">${{ number_format($inv['amount'], 2) }}</td>
                 <td>{{ $inv['dateLabel'] ?: '—' }}</td>
                 <td>{{ $profile->billingPeriod($inv) ?: '—' }}</td>
@@ -670,7 +670,6 @@
     });
 
     closeBtn.addEventListener('click', close);
-    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && overlay.classList.contains('open')) close();
     });

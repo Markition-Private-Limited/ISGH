@@ -110,6 +110,26 @@ class ProcessLevelChange implements ShouldQueue
                 $levelId  = $levelId ?: (int) ($fresh['MembershipLevel']['Id'] ?? 0);
             }
             $levelChange->update(['wa_bundle_id' => $bundleId, 'wa_level_id' => $levelId]);
+
+            // WA strips Street / City / State / ZIP on certain level transitions
+            // (e.g. Individual → Checkomatic). Replay them from the local Member
+            // row so the profile page keeps showing the address afterwards.
+            try {
+                $member = \App\Models\Member::where('email', $levelChange->member_email)
+                    ->latest('id')->first();
+                if ($member) {
+                    $wa->repairAddressFields($contactId, [
+                        'street' => $member->street,
+                        'city'   => $member->city,
+                        'state'  => $member->state,
+                        'zip'    => $member->zip,
+                    ]);
+                }
+            } catch (Throwable $e) {
+                Log::warning('ProcessLevelChange: address-fields replay failed', [
+                    'level_change_id' => $levelChange->id, 'error' => $e->getMessage(),
+                ]);
+            }
         } catch (Throwable $e) {
             $fail('level', $e);
         }
@@ -135,9 +155,15 @@ class ProcessLevelChange implements ShouldQueue
                 // failed, a retry could create a duplicate. addRelatedContact has
                 // no idempotency key; accepted as a rare edge case.
                 try {
+                    // The level-change modal only ever collects a spouse on
+                    // family/checkomatic targets, so tag the added contact as
+                    // Spouse — without this the profile page can't tell them
+                    // apart from existing flat-membership family members
+                    // (father/mother/etc.) added during the original signup.
                     $related = $wa->addRelatedContact($contactId, $bundleId, $levelId, array_merge($member, [
                         'membership_type' => $toType,
                         'zone'            => $levelChange->zone ?? '',
+                        'role'            => $member['role'] ?? 'Spouse',
                     ]));
                     $createdIds[$idx] = (int) ($related['Id'] ?? 0);
                     $levelChange->update(['created_family_ids' => $createdIds]);

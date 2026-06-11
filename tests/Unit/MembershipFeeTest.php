@@ -10,8 +10,8 @@ class MembershipFeeTest extends TestCase
     public function test_standard_fee_from_config(): void
     {
         $fee = MembershipFee::resolve('individual', 0, null);
-        $this->assertSame(2500, $fee['cents']);
-        $this->assertSame('$25.00', $fee['label']);
+        $this->assertSame(2000, $fee['cents']);
+        $this->assertSame('$20.00', $fee['label']);
     }
 
     public function test_family_fee_from_config(): void

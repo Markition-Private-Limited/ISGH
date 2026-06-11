@@ -226,6 +226,43 @@
       font-size: 12px; color: var(--text-muted);
       text-align: center; padding: 8px 0 12px;
     }
+
+    /* ── Spouse disclaimer popup ── */
+    .confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(3px);
+      z-index: 10000;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .confirm-overlay.active { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      background: #fff; border-radius: 1.1rem;
+      padding: 2rem 2.2rem 1.6rem;
+      max-width: 380px; width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+      transform: scale(0.94); transition: transform 0.2s;
+    }
+    .confirm-overlay.active .confirm-box { transform: scale(1); }
+    .confirm-icon {
+      width: 52px; height: 52px;
+      background: #e6f4ee; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem;
+    }
+    .confirm-icon svg { width: 26px; height: 26px; color: #0d7a55; }
+    .confirm-title { font-size: 1.1rem; font-weight: 700; color: #111; margin-bottom: 0.5rem; }
+    .confirm-body { font-size: 0.82rem; color: #6b7280; line-height: 1.55; margin-bottom: 1.5rem; }
+    .confirm-actions { display: flex; gap: 0.75rem; }
+    .confirm-btn-yes {
+      flex: 1; padding: 0.7rem; border-radius: 999px; border: none;
+      background: #043d27; font-size: 0.84rem; font-weight: 600;
+      color: #fff; cursor: pointer; transition: background 0.15s;
+    }
+    .confirm-btn-yes:hover { background: #033020; }
 </style>
 {{-- Stripe.js — loaded unconditionally; both the renewal and level-change
      modals need it, and the level-change modal renders for all members
@@ -352,6 +389,15 @@
         <span class="amount" id="lvlAmountLabel">—</span>
       </div>
 
+      <label class="renew-card-label" for="lvlCardName">Cardholder name</label>
+      <input id="lvlCardName" type="text" placeholder="Full name on card"
+             autocomplete="cc-name"
+             style="width:100%;background:#fff;border:1px solid #e6ebe8;border-radius:10px;
+                    padding:11px 12px;font-size:14px;color:var(--text);font-family:inherit;
+                    outline:none;transition:border-color .15s,box-shadow .15s;margin-bottom:14px;"
+             onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(13,122,82,0.12)'"
+             onblur="this.style.borderColor='#e6ebe8';this.style.boxShadow='none'" />
+
       <label class="renew-card-label" for="lvl-card-element">Card details</label>
       <div id="lvl-card-element"></div>
 
@@ -450,6 +496,9 @@
 
     const lvlCsrf      = document.querySelector('meta[name="csrf-token"]').content;
     const lvlStripeKey = '{{ $stripePublishableKey ?? config("services.stripe.key") }}';
+    const lvlEnvStripeKey = '{{ config("services.stripe.key") }}';
+    const lvlMemberZone = @json($profile->zone ?? '');
+    const lvlStripeKeyUrl = '{{ route('membership.stripe-key') }}';
 
     const optionsUrl    = '{{ route('member-portal.change-level.options') }}';
     const changeUrl     = '{{ route('member-portal.change-level') }}';
@@ -493,6 +542,7 @@
     const reviewDue      = document.getElementById('lvlReviewDue');
     const reviewBack     = document.getElementById('lvlReviewBack');
     const reviewNext     = document.getElementById('lvlReviewNext');
+    const cardNameInput = document.getElementById('lvlCardName');
     const amountLabel   = document.getElementById('lvlAmountLabel');
     const payBack       = document.getElementById('lvlPayBack');
     const payBtn        = document.getElementById('lvlPayBtn');
@@ -548,6 +598,70 @@
         return;
       }
       _stripe = Stripe(lvlStripeKey);
+      _currentLvlPk = lvlStripeKey;
+      const elements = _stripe.elements();
+      _cardElement = elements.create('card', {
+        style: {
+          base: {
+            fontFamily: "'Inter', sans-serif",
+            fontSize: '14px',
+            color: '#111827',
+            '::placeholder': { color: '#9ca3af' },
+          },
+          invalid: { color: '#dc2626' },
+        },
+        hidePostalCode: true,
+      });
+      _cardElement.mount('#lvl-card-element');
+      _cardElement.on('change', e => {
+        if (e.error) showError(payError, e.error.message);
+        else hideError(payError);
+      });
+      _cardMounted = true;
+    }
+
+    // ── Per-zone publishable-key switch ─────────────────────────────────
+    // When the user changes the target level to checkomatic, the card
+    // element must tokenize against the zone's Stripe account. Switching
+    // away from checkomatic resets to the env key.
+    let _currentLvlPk = '';
+    async function syncLvlStripeForType(targetType) {
+      const isChk = (targetType === 'checkomatic_family' || targetType === 'checkomatic_individual');
+      // Non-checkomatic → always go back to env pk.
+      if (!isChk) {
+        if (_currentLvlPk && _currentLvlPk !== lvlEnvStripeKey) {
+          reinitLvlStripe(lvlEnvStripeKey);
+        }
+        return;
+      }
+      try {
+        const res = await fetch(lvlStripeKeyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': lvlCsrf,
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ zone: lvlMemberZone || '', type: targetType }),
+        });
+        const data = await res.json();
+        const newPk = (data && data.publishable_key) ? data.publishable_key : lvlEnvStripeKey;
+        if (newPk && newPk !== _currentLvlPk) {
+          reinitLvlStripe(newPk);
+        }
+      } catch (e) {
+        console.warn('[Level][Stripe] pk lookup failed, keeping current key', e);
+      }
+    }
+
+    function reinitLvlStripe(pk) {
+      if (!pk) return;
+      try { _cardElement?.unmount?.(); } catch (_) {}
+      try { _cardElement?.destroy?.(); } catch (_) {}
+      _cardElement = null;
+      _cardMounted = false;
+      _currentLvlPk = pk;
+      _stripe = Stripe(pk);
       const elements = _stripe.elements();
       _cardElement = elements.create('card', {
         style: {
@@ -623,6 +737,11 @@
       _selected = lvl;
       familyBox.innerHTML = '';
       _isCheckomatic = !!(lvl && lvl.isCheckomatic);
+
+      // Reconcile the card-element's publishable key for the new target.
+      // Fires for every selection (incl. the empty "— Choose…" reset) so the
+      // env key always wins when a non-checkomatic option is picked.
+      syncLvlStripeForType(type);
 
       // Checkomatic levels need a monthly amount entered here on Screen 1.
       if (_isCheckomatic) {
@@ -758,6 +877,7 @@
       amountBox.style.display = 'none';
       if (checkWarning) checkWarning.style.display = 'none';
       if (monthlyInput) monthlyInput.value = '';
+      if (cardNameInput) cardNameInput.value = '';
       if (successLabel) successLabel.textContent = '';
       familyBox.innerHTML = '';
       showScreen('pick');
@@ -782,7 +902,6 @@
 
     closeBtn?.addEventListener('click', closeModal);
     pickCancel?.addEventListener('click', closeModal);
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
     doneBtn?.addEventListener('click', () => { location.href = dashboardUrl; });
 
     levelSelect?.addEventListener('change', onLevelSelected);
@@ -812,7 +931,7 @@
     addMemberBtn?.addEventListener('click', () => {
       if (_isCheckomatic && !_spouseDisclaimerShown) {
         if (spouseDisclaimer) {
-          spouseDisclaimer.classList.add('open');
+          spouseDisclaimer.classList.add('active');
           spouseDisclaimer.setAttribute('aria-hidden', 'false');
         }
         return;
@@ -824,7 +943,7 @@
     spouseDisclaimerOk?.addEventListener('click', () => {
       _spouseDisclaimerShown = true;
       if (spouseDisclaimer) {
-        spouseDisclaimer.classList.remove('open');
+        spouseDisclaimer.classList.remove('active');
         spouseDisclaimer.setAttribute('aria-hidden', 'true');
       }
       addFamilyBlock(true);
@@ -1053,10 +1172,18 @@
           return;
         }
 
+        // Validate cardholder name
+        const cardName = cardNameInput ? cardNameInput.value.trim() : '';
+        if (!cardName) {
+          showError(payError, 'Please enter the name on your card.');
+          return;
+        }
+
         // Stripe createPaymentMethod — mirrors the renewal modal
         const { paymentMethod, error: pmError } = await _stripe.createPaymentMethod({
           type: 'card',
           card: _cardElement,
+          billing_details: { name: cardName },
         });
         if (pmError) {
           showError(payError, pmError.message);

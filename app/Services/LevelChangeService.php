@@ -51,8 +51,12 @@ class LevelChangeService
     /**
      * The membership types the member may switch to — restricted to the four
      * supported change-level targets. The member's current level is excluded.
-     * checkomatic_individual is labelled 'Checkomatic' and has includesFamily=true
-     * so the modal shows the optional spouse screen (type submitted stays individual).
+     *
+     * Checkomatic is always offered as `checkomatic_family` so the WA contact
+     * lands on the "Checkomatic Membership (Primary and Spouse only)" level
+     * regardless of whether a spouse is actually added in the modal — this
+     * keeps the spouse flow consistent and ensures the family screen + family
+     * persistence paths fire. Only one Checkomatic option is shown.
      *
      * @return array<int, array{type:string,label:string,fee:array,includesFamily:bool,isCheckomatic:bool}>
      */
@@ -61,7 +65,7 @@ class LevelChangeService
         $currentSlug = MembershipTypes::slugFromLevelName($profile->level);
 
         $allowed = [
-            'checkomatic_individual',
+            'checkomatic_family',
             'individual',
             'lifetime_family',
             'lifetime_individual',
@@ -72,20 +76,21 @@ class LevelChangeService
             if ($slug === $currentSlug) {
                 continue;
             }
+            // Members on checkomatic_individual (legacy) also shouldn't see a
+            // Checkomatic option, since switching to checkomatic_family is a
+            // no-op as far as the user is concerned.
+            if ($slug === 'checkomatic_family' && $currentSlug === 'checkomatic_individual') {
+                continue;
+            }
             $isCheckomatic = MembershipTypes::isCheckomatic($slug);
             $levels[] = [
                 'type'           => $slug,
-                // Override label for checkomatic_individual — show 'Checkomatic'
-                // not 'Checkomatic Individual' so the UI shows a single clean entry.
-                'label'          => $slug === 'checkomatic_individual'
+                // Single, clean "Checkomatic" label for the family variant too.
+                'label'          => $slug === 'checkomatic_family'
                                         ? 'Checkomatic'
                                         : MembershipTypes::labelForSlug($slug),
                 'fee'            => $this->resolveFee($slug, 0, $isCheckomatic ? null : 0.0),
-                // Force includesFamily=true for checkomatic_individual so the modal
-                // shows the optional spouse screen. The submitted type never changes.
-                'includesFamily' => $slug === 'checkomatic_individual'
-                                        ? true
-                                        : MembershipTypes::includesFamily($slug),
+                'includesFamily' => MembershipTypes::includesFamily($slug),
                 'isCheckomatic'  => $isCheckomatic,
             ];
         }
@@ -110,9 +115,11 @@ class LevelChangeService
         if (! in_array($toType, MembershipTypes::allSlugs(), true)) {
             return ['success' => false, 'message' => 'Unknown membership level.'];
         }
-        // Family Checkomatic and Flat Membership are not selectable level-change
-        // targets — reject server-side in case a crafted request bypasses the UI.
-        if ($toType === 'flat' || $toType === 'checkomatic_family') {
+        // Flat Membership and the legacy Checkomatic Individual variant are not
+        // selectable level-change targets — reject server-side in case a crafted
+        // request bypasses the UI. Checkomatic is always submitted as
+        // checkomatic_family so the spouse flow is consistent (see availableLevels).
+        if ($toType === 'flat' || $toType === 'checkomatic_individual') {
             return ['success' => false, 'message' => 'That membership type is not available as a level-change option.'];
         }
         if (MembershipTypes::isCheckomatic($toType) && (float) ($checkomaticAmount ?? 0) <= 0) {

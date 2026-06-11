@@ -147,7 +147,9 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) 320px;
       gap: 22px;
-      align-items: start;
+      /* align-items defaults to stretch so the right column matches the
+         left column's height; the Profile card uses flex:1 to fill any
+         leftover space below Quick Links. */
     }
     .left-col  { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
     .right-col { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
@@ -349,6 +351,21 @@
       box-shadow: var(--shadow);
       padding: 22px 22px 28px;
       text-align: center;
+    }
+    /* Stretch the profile card so its bottom aligns with the left column.
+       The right-col is a flex column; flex:1 lets the card consume the
+       leftover height once Quick Links has its natural size. The avatar
+       and text stay centred vertically inside the expanded box. */
+    .profile-card-fill {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .profile-card-fill .avatar-circle {
+      margin-top: auto;
+    }
+    .profile-card-fill .profile-sub {
+      margin-bottom: auto;
     }
     .profile-card-title {
       text-align: left;
@@ -580,7 +597,7 @@
         <h1 class="page-title">Profile</h1>
       </div>
       <div class="topbar-right">
-        <span class="user-name">Ahmed Hassan</span>
+        <span class="user-name">{{ ($profile->fullName ?? null) ?: 'Member' }}</span>
       </div>
     </header>
 
@@ -597,7 +614,7 @@
               <span class="badge-active">{{ $profile->isExpired() ? 'Expired' : $profile->status }}</span>
             </div>
             <div class="renewal-block">
-              <div class="renewal-label">Next Renewal</div>
+              <div class="renewal-label">{{ str_contains(strtolower($profile->level ?? ''), 'checkomatic') ? 'Next Payment Due' : 'Next Renewal' }}</div>
               <div class="renewal-date">{{ $profile->renewalFormatted() ?: '—' }}</div>
               @if($profile->daysLeft() !== null)
               <div class="renewal-remaining">{{ $profile->daysLeft() }} days remaining</div>
@@ -803,7 +820,7 @@
         </div>
 
         {{-- Primary Profile card --}}
-        <div class="profile-card">
+        <div class="profile-card profile-card-fill">
           <div class="profile-card-title">Profile</div>
           <div class="avatar-circle">
             <svg fill="currentColor" viewBox="0 0 24 24">
@@ -811,12 +828,12 @@
             </svg>
           </div>
           <div class="profile-name">{{ $profile->fullName ?: 'Member' }}</div>
-          <div class="profile-sub">Individual Member of ISGH</div>
+          <div class="profile-sub">{{ $profile->level ?: 'Member' }}</div>
         </div>
 
         {{-- Spouse Profile card --}}
         @if($profile->hasSpouse())
-        <div class="profile-card">
+        <div class="profile-card profile-card-fill">
           <div class="profile-card-title">Spouse Information</div>
           <div class="avatar-circle">
             <svg fill="currentColor" viewBox="0 0 24 24">
@@ -824,7 +841,7 @@
             </svg>
           </div>
           <div class="profile-name" id="spouseNameLabel">{{ $profile->spouse()->fullName }}</div>
-          <div class="profile-sub">Individual Member of ISGH</div>
+          <div class="profile-sub">{{ $profile->level ?: 'Member' }}</div>
         </div>
         @endif
 

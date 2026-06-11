@@ -29,6 +29,7 @@ Route::controller(MembershipController::class)->group(function () {
     Route::post('/membership/zip-lookup', 'zipLookup')->name('membership.zip-lookup');
     Route::post('/membership/verify', 'verifyMembership')->name('membership.verify');
     Route::post('/membership/upload-photo', 'uploadMemberPhoto')->name('membership.upload-photo');
+    Route::post('/membership/stripe-key', 'stripeKey')->name('membership.stripe-key');
     Route::post('/membership/check-email', 'checkEmail')->name('membership.check-email');
     Route::post('/membership/check-phone', 'checkPhone')->name('membership.check-phone');
     Route::post('/membership/ocr-id', 'ocrId')->name('membership.ocr-id');

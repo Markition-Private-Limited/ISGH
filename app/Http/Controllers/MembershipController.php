@@ -259,6 +259,29 @@ class MembershipController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    //  STRIPE PUBLISHABLE KEY LOOKUP  (AJAX — called when checkomatic + center change)
+    //
+    //  The signup form picks a center mid-flow via ZIP lookup; for
+    //  checkomatic the card element must tokenize against the *zone's*
+    //  Stripe account, not the global one. Returns the publishable key
+    //  the StripeKeyResolver would pair with the secret used at charge time.
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function stripeKey(Request $request)
+    {
+        $keys = app(\App\Services\StripeKeyResolver::class)->resolve(
+            (string) $request->input('zone', ''),
+            (string) $request->input('type', ''),
+        );
+
+        return response()->json([
+            'success'         => true,
+            'publishable_key' => $keys['publishable'],
+            'source'          => $keys['source'],
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     //  ZIP LOOKUP  (AJAX — called on ZIP blur)
     // ─────────────────────────────────────────────────────────────────────
 
@@ -542,6 +565,13 @@ class MembershipController extends Controller
                 'receipt_email' => $request->input('primary.email'),
             ]);
 
+            // Checkomatic charges must land in the zone's own Stripe account.
+            // For every other type the resolver returns the env keys and this
+            // is a no-op. See StripeKeyResolver for the lookup rules.
+            if (\App\Support\MembershipTypes::isCheckomatic($type)) {
+                $this->stripe->useKeysFor((string) $request->input('zone', ''), $type);
+            }
+
             // ── Step 1: Create Stripe Customer ────────────────────────────────
             try {
                 $customer = $this->stripe->createCustomer([
@@ -748,6 +778,12 @@ class MembershipController extends Controller
         $member = Member::find($paymentRecord->member_id);
         if (! $member) {
             return response()->json(['success' => false, 'message' => 'Member record not found.'], 404);
+        }
+
+        // Mirror the createCheckoutSession key switch — checkomatic intents
+        // live on the zone's Stripe account, not the env one.
+        if (\App\Support\MembershipTypes::isCheckomatic((string) $member->membership_type)) {
+            $this->stripe->useKeysFor((string) $member->zone, (string) $member->membership_type);
         }
 
         try {

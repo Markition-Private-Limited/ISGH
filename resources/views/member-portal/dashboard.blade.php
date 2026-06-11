@@ -1107,7 +1107,7 @@
             <div class="renewal-block">
               {{-- Active state --}}
               <div class="state-active">
-                <div class="renewal-label">Next Renewal</div>
+                <div class="renewal-label">{{ str_contains(strtolower($profile->level ?? ''), 'checkomatic') ? 'Next Payment Due' : 'Next Renewal' }}</div>
                 <div class="renewal-date">{{ $profile->renewalFormatted() ?: '—' }}</div>
                 @if($daysLeft !== null)
                   <div class="renewal-remaining">{{ $daysLeft }} days remaining</div>

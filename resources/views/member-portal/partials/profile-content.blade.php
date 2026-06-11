@@ -15,7 +15,7 @@
       <span class="badge-active">{{ $profile->isExpired() ? 'Expired' : $profile->status }}</span>
     </div>
     <div class="renewal-block">
-      <div class="renewal-label">Next Renewal</div>
+      <div class="renewal-label">{{ str_contains(strtolower($profile->level ?? ''), 'checkomatic') ? 'Next Payment Due' : 'Next Renewal' }}</div>
       <div class="renewal-date">{{ $profile->renewalFormatted() ?: '—' }}</div>
       @if($profile->daysLeft() !== null)
       <div class="renewal-remaining">{{ $profile->daysLeft() }} days remaining</div>
@@ -149,7 +149,7 @@
     </svg>
   </div>
   <div class="profile-name">{{ $profile->fullName ?: 'Member' }}</div>
-  <div class="profile-sub">Individual Member of ISGH</div>
+  <div class="profile-sub">{{ $profile->level ?: 'Member' }}</div>
   <button type="button" class="mobile-edit-link" onclick="document.getElementById('btnEditPrimary')?.click(); document.getElementById('formPrimary')?.scrollIntoView({behavior:'smooth', block:'start'});">
     <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
     Edit Profile
@@ -209,7 +209,7 @@
     </svg>
   </div>
   <div class="profile-name" id="spouseNameLabel">{{ $spouse->fullName }}</div>
-  <div class="profile-sub">Individual Member of ISGH</div>
+  <div class="profile-sub">{{ $profile->level ?: 'Member' }}</div>
   <button type="button" class="mobile-edit-link" onclick="document.getElementById('btnEditSpouse')?.click(); document.getElementById('formSpouse')?.scrollIntoView({behavior:'smooth', block:'start'});">
     <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
     Edit Profile

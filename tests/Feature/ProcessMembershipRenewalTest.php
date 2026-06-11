@@ -49,7 +49,7 @@ class ProcessMembershipRenewalTest extends TestCase
             'contact_id'      => 999,
             'member_email'    => 'tauqeer@example.com',
             'membership_type' => 'individual',
-            'amount_cents'    => 2500,
+            'amount_cents'    => 2000,
             'currency'        => 'usd',
             'status'          => 'paid',
             'stripe_charge_id'=> 'ch_test_123',

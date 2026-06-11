@@ -190,13 +190,67 @@ class MemberProfileTest extends TestCase
         $this->assertSame('Sarah Alam', $p->family[0]->fullName);
     }
 
-    public function test_spouse_is_first_family_member(): void
+    public function test_spouse_falls_back_to_first_family_member_when_no_roles_set(): void
     {
+        // Legacy fixture: family[0] carries no Role FieldValue.
         $p = new MemberProfile($this->bundle());
 
         $this->assertTrue($p->hasSpouse());
         $this->assertInstanceOf(MemberProfile::class, $p->spouse());
         $this->assertSame('Sarah Alam', $p->spouse()->fullName);
+    }
+
+    public function test_spouse_is_picked_by_role_not_position(): void
+    {
+        // Reproduces the bug: Individual member added "Father" during signup
+        // (index 0) then changed level to checkomatic and added a Spouse
+        // (index 1). The profile page must show the SPOUSE, not the father.
+        $b = $this->bundle();
+        $b['family'] = [
+            [
+                'Id'        => 2001,
+                'FirstName' => 'Ahmed',
+                'LastName'  => 'Alam',
+                'FieldValues' => [
+                    ['FieldName' => 'Role', 'SystemCode' => 'custom-16727578', 'Value' => ['Id' => 1, 'Label' => 'Father']],
+                ],
+            ],
+            [
+                'Id'        => 2002,
+                'FirstName' => 'Sarah',
+                'LastName'  => 'Alam',
+                'FieldValues' => [
+                    ['FieldName' => 'Role', 'SystemCode' => 'custom-16727578', 'Value' => ['Id' => 2, 'Label' => 'Spouse']],
+                ],
+            ],
+        ];
+        $p = new MemberProfile($b);
+
+        $this->assertTrue($p->hasSpouse());
+        $this->assertSame('Sarah Alam', $p->spouse()->fullName);
+    }
+
+    public function test_no_spouse_when_family_has_only_non_spouse_roles(): void
+    {
+        // All family members have Roles set, none is Spouse → no spouse, full stop.
+        // The legacy fallback must NOT pick family[0] here, otherwise we'd show
+        // a parent/sibling as a spouse.
+        $b = $this->bundle();
+        $b['family'] = [
+            [
+                'Id'        => 3001,
+                'FirstName' => 'Ahmed',
+                'LastName'  => 'Alam',
+                'FieldValues' => [
+                    ['FieldName' => 'Role', 'SystemCode' => 'custom-16727578', 'Value' => ['Id' => 1, 'Label' => 'Father']],
+                ],
+            ],
+        ];
+        $p = new MemberProfile($b);
+
+        $this->assertFalse($p->hasSpouse());
+        $this->assertNull($p->spouse());
+        $this->assertTrue($p->hasFamily());
     }
 
     public function test_no_spouse_when_family_empty(): void

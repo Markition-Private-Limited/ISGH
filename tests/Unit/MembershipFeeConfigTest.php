@@ -24,7 +24,7 @@ class MembershipFeeConfigTest extends TestCase
         $fees = config('membership.fees');
 
         $this->assertSame(4000, $fees['family']['cents']);
-        $this->assertSame(2500, $fees['individual']['cents']);
+        $this->assertSame(2000, $fees['individual']['cents']);
         $this->assertSame(2000, $fees['flat']['cents']);
         $this->assertSame(150000, $fees['lifetime_family']['cents']);
     }
