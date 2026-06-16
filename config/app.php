@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'otp_master_code' => env('OTP_MASTER_CODE', ''),
+
 ];
