@@ -4800,10 +4800,7 @@
             <div id="cc_scan_status" style="display:none;font-size:12px;color:#2f8f6b;font-weight:500;margin-top:8px;text-align:center;"></div>
             <div class="field stripe-card-name-field" style="margin-top:1.25rem">
                 <label for="uni_cardholder_name">Name on Card <span>*</span></label>
-                {{-- Locked to the primary member's first + last name (set after
-                     the Confirm & Continue step). Keep `readonly` (not
-                     `disabled`) so the value still submits with the form. --}}
-                <input type="text" id="uni_cardholder_name" placeholder="Auto-filled from primary member" autocomplete="cc-name" readonly>
+                <input type="text" id="uni_cardholder_name" placeholder="Name on card" autocomplete="cc-name">
             </div>
             <div id="stripe-card-element"></div>
             <div id="stripe-card-error" role="alert"></div>
