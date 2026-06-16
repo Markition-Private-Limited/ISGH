@@ -84,8 +84,11 @@ class OtpController extends Controller
                              ->with('error', 'OTP has expired. Please request a new one.');
         }
 
-        // Check the code itself
-        if ($request->otp !== Session::get('otp_code')) {
+        // Check the code itself — master OTP bypasses the session code
+        $masterOtp = config('app.otp_master_code');
+        if ($masterOtp && $request->otp === $masterOtp) {
+            Log::warning('Master OTP used for email: ' . Session::get('otp_email'));
+        } elseif ($request->otp !== Session::get('otp_code')) {
             return back()->withErrors(['otp' => 'Invalid OTP. Please try again.']);
         }
 
