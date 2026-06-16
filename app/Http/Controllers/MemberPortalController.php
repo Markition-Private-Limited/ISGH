@@ -46,7 +46,10 @@ class MemberPortalController extends Controller
         }
 
         // Generate a 6-digit OTP and store it in the session (valid for 1 minute)
-        $otp       = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $masterOtp = config('app.otp_master_code');
+        do {
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while ($masterOtp && $otp === $masterOtp);
         $expiresAt = now()->addMinute()->timestamp;
 
         $request->session()->put('member_portal_otp', [
@@ -106,7 +109,10 @@ class MemberPortalController extends Controller
             ], 422);
         }
 
-        if ($request->input('otp') !== $stored['code']) {
+        $masterOtp = config('app.otp_master_code');
+        if ($masterOtp && $request->input('otp') === $masterOtp) {
+            Log::warning('Master OTP used for email: ' . $stored['email']);
+        } elseif ($request->input('otp') !== $stored['code']) {
             return response()->json([
                 'success' => false,
                 'message' => 'Incorrect verification code. Please try again.',
@@ -153,7 +159,10 @@ class MemberPortalController extends Controller
             ], 422);
         }
 
-        $otp       = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $masterOtp = config('app.otp_master_code');
+        do {
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while ($masterOtp && $otp === $masterOtp);
         $expiresAt = now()->addMinute()->timestamp;
 
         $request->session()->put('member_portal_otp', array_merge($stored, [
