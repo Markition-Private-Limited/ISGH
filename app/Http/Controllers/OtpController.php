@@ -24,8 +24,11 @@ class OtpController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // Generate a 6-digit OTP
-        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        // Generate a 6-digit OTP, ensuring it never equals the master code
+        $masterOtp = config('app.otp_master_code');
+        do {
+            $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while ($masterOtp && $otp === $masterOtp);
 
         // Store in session (never touches the database)
         Session::put('otp_code',       $otp);
@@ -119,7 +122,10 @@ class OtpController extends Controller
         }
 
         $email = Session::get('otp_email');
-        $otp   = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $masterOtp = config('app.otp_master_code');
+        do {
+            $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while ($masterOtp && $otp === $masterOtp);
 
         Session::put('otp_code',       $otp);
         Session::put('otp_expires_at', now()->addMinutes(10)->timestamp);
