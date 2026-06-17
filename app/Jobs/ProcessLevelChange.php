@@ -101,7 +101,7 @@ class ProcessLevelChange implements ShouldQueue
         // ── Step 3: Switch the membership level ───────────────────────────
         $levelChange->update(['wa_step' => 'level']);
         try {
-            $updated  = $wa->updateMember($contactId, ['membership_type' => $toType]);
+            $updated  = $wa->updateMember($contactId, ['membership_type' => $toType, 'status' => 'Active']);
             $bundleId = (int) $wa->extractFieldValue($updated, 'BundleId');
             $levelId  = (int) ($updated['MembershipLevel']['Id'] ?? 0);
             if ($bundleId === 0 || $levelId === 0) {

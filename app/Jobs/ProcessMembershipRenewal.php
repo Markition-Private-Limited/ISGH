@@ -107,6 +107,7 @@ class ProcessMembershipRenewal implements ShouldQueue
             $wa->updateMember($contactId, [
                 'membership_type' => $type,
                 'renewal_due'     => $renewalDue,
+                'status'          => 'Active',
             ]);
         } catch (Throwable $e) {
             $fail('renewal', $e);
@@ -124,6 +125,7 @@ class ProcessMembershipRenewal implements ShouldQueue
                     $wa->updateMember($familyId, [
                         'membership_type' => $type,
                         'renewal_due'     => $renewalDue,
+                        'status'          => 'Active',
                     ]);
                 } catch (Throwable $e) {
                     // Non-fatal — one bad family record must not fail the renewal.
