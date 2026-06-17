@@ -193,6 +193,18 @@
     .renewal-date { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; color: var(--green); }
     .renewal-remaining { font-size: 11px; color: #ef4444; margin-top: 2px; }
 
+    /* ── Expired state ── */
+    .info-card.is-expired {
+      background: linear-gradient(135deg, #fde6e6 0%, #fcefef 45%, #ffffff 100%);
+      border: 1px solid #f5c2c7;
+    }
+    .info-card.is-expired .badge-active {
+      background: #dc2626;
+      box-shadow: 0 2px 8px rgba(220,38,38,0.25);
+    }
+    .info-card.is-expired .renewal-date { color: #b91c1c; }
+    .info-card.is-expired .renewal-remaining { color: #b91c1c; }
+
     .info-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -607,7 +619,7 @@
       <div class="left-col">
 
         {{-- Membership Information --}}
-        <div class="info-card">
+        <div class="info-card {{ $profile->isExpired() ? 'is-expired' : '' }}">
           <div class="info-head">
             <div class="info-title-row">
               <h2>Membership Information</h2>

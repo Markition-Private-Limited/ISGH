@@ -157,7 +157,7 @@ class MembershipController extends Controller
         if ($firstName === '' && $lastName === '' && $email === '' && $phone === '' && $dateOfBirth === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'First name, last name, email, phone, and date of birth are all required.',
+                'message' => 'Please provide your first name, last name, and email to verify your membership.',
             ], 422);
         }
 
