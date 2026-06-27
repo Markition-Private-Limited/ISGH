@@ -755,47 +755,47 @@
           </form>
         </div>
 
-        {{-- Spouse Information --}}
-        @if($profile->hasSpouse())
-        @php $spouse = $profile->spouse(); @endphp
+        {{-- Family Members --}}
+        @foreach($profile->family as $famIndex => $famMember)
+        @php $famTitle = $famMember->role !== '' ? $famMember->role : 'Family Member'; @endphp
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Spouse Information</h3>
+            <h3 class="card-title">{{ $famTitle }} Information</h3>
             <div class="form-actions">
-              <button type="button" class="btn-link" id="btnEditSpouse">
+              <button type="button" class="btn-link" id="btnEditFamily{{ $famIndex }}">
                 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
                 <span>Edit Profile</span>
               </button>
-              <button type="button" class="btn-link" id="btnSaveSpouse">
+              <button type="button" class="btn-link" id="btnSaveFamily{{ $famIndex }}">
                 <span>Save Changes</span>
               </button>
             </div>
           </div>
 
-          <div class="save-banner" id="saveSpouseBanner">
+          <div class="save-banner" id="saveFamilyBanner{{ $famIndex }}">
             <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-            Spouse details saved.
+            {{ $famTitle }} details saved.
           </div>
 
-          <form class="form-grid" id="formSpouse" novalidate>
-            <div class="field"><label for="s-first">First Name<span class="req">*</span></label><input type="text" id="s-first" value="{{ $spouse->firstName }}" readonly /></div>
-            <div class="field"><label for="s-last">Last Name<span class="req">*</span></label><input type="text" id="s-last" value="{{ $spouse->lastName }}" readonly /></div>
-            <div class="field"><label for="s-email">Email Address<span class="req">*</span></label><input type="email" id="s-email" value="{{ $spouse->email }}" readonly /></div>
-            <div class="field"><label for="s-phone">Phone Number<span class="req">*</span></label><input type="tel" id="s-phone" value="{{ $spouse->phone }}" readonly /></div>
-            <div class="field" style="grid-column: 1 / -1;"><label for="s-address">Street Address<span class="req">*</span></label><input type="text" id="s-address" value="{{ $spouse->street }}" data-editable readonly /></div>
-            <div class="field"><label for="s-tx">TX DL # / TX ID #<span class="req">*</span></label><input type="text" id="s-tx" value="{{ $spouse->txId }}" readonly /></div>
-            <div class="field"><label for="s-dob">Date of Birth<span class="req">*</span></label><input type="date" id="s-dob" value="{{ $spouse->dobInput() }}" readonly /></div>
-            <div class="field"><label for="s-zip">Zip Code<span class="req">*</span></label><input type="text" id="s-zip" value="{{ $spouse->zip }}" data-editable readonly /></div>
-            <div class="field"><label for="s-city">City<span class="req">*</span></label><input type="text" id="s-city" value="{{ $spouse->city }}" data-editable readonly /></div>
-            <div class="field"><label for="s-state">States<span class="req">*</span></label><input type="text" id="s-state" value="{{ $spouse->state }}" data-editable readonly /></div>
-            <div class="field"><label for="s-zone">Center / Zone<span class="req">*</span></label><input type="text" id="s-zone" value="{{ $spouse->zone }}" readonly /></div>
+          <form class="form-grid" id="formFamily{{ $famIndex }}" novalidate>
+            <div class="field"><label for="f{{ $famIndex }}-first">First Name<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-first" value="{{ $famMember->firstName }}" readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-last">Last Name<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-last" value="{{ $famMember->lastName }}" readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-email">Email Address<span class="req">*</span></label><input type="email" id="f{{ $famIndex }}-email" value="{{ $famMember->email }}" readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-phone">Phone Number<span class="req">*</span></label><input type="tel" id="f{{ $famIndex }}-phone" value="{{ $famMember->phone }}" readonly /></div>
+            <div class="field" style="grid-column: 1 / -1;"><label for="f{{ $famIndex }}-address">Street Address<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-address" value="{{ $famMember->street }}" data-editable readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-tx">TX DL # / TX ID #<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-tx" value="{{ $famMember->txId }}" readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-dob">Date of Birth<span class="req">*</span></label><input type="date" id="f{{ $famIndex }}-dob" value="{{ $famMember->dobInput() }}" readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-zip">Zip Code<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-zip" value="{{ $famMember->zip }}" data-editable readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-city">City<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-city" value="{{ $famMember->city }}" data-editable readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-state">States<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-state" value="{{ $famMember->state }}" data-editable readonly /></div>
+            <div class="field"><label for="f{{ $famIndex }}-zone">Center / Zone<span class="req">*</span></label><input type="text" id="f{{ $famIndex }}-zone" value="{{ $famMember->zone }}" readonly /></div>
           </form>
 
-          <a href="#" class="same-as-primary" id="sameAsPrimary">
+          <a href="#" class="same-as-primary" data-same-as-primary="{{ $famIndex }}">
             Street Address, states, zip code, city is same as primary member
           </a>
         </div>
-        @endif
+        @endforeach
 
       </div>
 
@@ -843,19 +843,20 @@
           <div class="profile-sub">{{ $profile->level ?: 'Member' }}</div>
         </div>
 
-        {{-- Spouse Profile card --}}
-        @if($profile->hasSpouse())
+        {{-- Family Member Profile cards --}}
+        @foreach($profile->family as $famIndex => $famMember)
+        @php $famTitle = $famMember->role !== '' ? $famMember->role : 'Family Member'; @endphp
         <div class="profile-card profile-card-fill">
-          <div class="profile-card-title">Spouse Information</div>
+          <div class="profile-card-title">{{ $famTitle }} Information</div>
           <div class="avatar-circle">
             <svg fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z"/>
             </svg>
           </div>
-          <div class="profile-name" id="spouseNameLabel">{{ $profile->spouse()->fullName }}</div>
+          <div class="profile-name" id="familyNameLabel{{ $famIndex }}">{{ $famMember->fullName }}</div>
           <div class="profile-sub">{{ $profile->level ?: 'Member' }}</div>
         </div>
-        @endif
+        @endforeach
 
       </aside>
 
@@ -990,39 +991,49 @@
     }
 
     setupForm({ formId: 'formPrimary', editBtnId: 'btnEditPrimary', saveBtnId: 'btnSavePrimary', bannerId: 'savePrimaryBanner' });
-    setupForm({ formId: 'formSpouse',  editBtnId: 'btnEditSpouse',  saveBtnId: 'btnSaveSpouse',  bannerId: 'saveSpouseBanner' });
 
-    // ── "Same as primary member" link ─────────────────────────────────────
-    const sameLink = document.getElementById('sameAsPrimary');
-    if (sameLink) {
-      sameLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        const map = {
-          'p-street': 's-address',
-          'p-city':   's-city',
-          'p-state':  's-state',
-          'p-zip':    's-zip',
-        };
-        Object.entries(map).forEach(([from, to]) => {
-          const src = document.getElementById(from);
-          const dst = document.getElementById(to);
-          if (src && dst) dst.value = src.value;
-        });
+    // ── Family member forms (one per associated family member) ────────────
+    document.querySelectorAll('[id^="formFamily"]').forEach(form => {
+      const idx = form.id.replace('formFamily', '');
+      setupForm({
+        formId:   form.id,
+        editBtnId: 'btnEditFamily' + idx,
+        saveBtnId: 'btnSaveFamily' + idx,
+        bannerId:  'saveFamilyBanner' + idx,
       });
-    }
 
-    // ── Mirror spouse first+last to the spouse profile card name ──────────
-    const sFirst = document.getElementById('s-first');
-    const sLast  = document.getElementById('s-last');
-    const sLabel = document.getElementById('spouseNameLabel');
-    function syncSpouseName() {
-      if (!sLabel) return;
-      const name = ((sFirst?.value || sFirst?.placeholder || '') + ' ' + (sLast?.value || sLast?.placeholder || '')).trim();
-      if (name) sLabel.textContent = name;
-    }
-    sFirst?.addEventListener('input', syncSpouseName);
-    sLast?.addEventListener('input', syncSpouseName);
-    syncSpouseName();
+      // "Same as primary member" link for this family member
+      const sameLink = document.querySelector('[data-same-as-primary="' + idx + '"]');
+      if (sameLink) {
+        sameLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          const map = {
+            'p-street': 'f' + idx + '-address',
+            'p-city':   'f' + idx + '-city',
+            'p-state':  'f' + idx + '-state',
+            'p-zip':    'f' + idx + '-zip',
+          };
+          Object.entries(map).forEach(([from, to]) => {
+            const src = document.getElementById(from);
+            const dst = document.getElementById(to);
+            if (src && dst) dst.value = src.value;
+          });
+        });
+      }
+
+      // Mirror first+last to this family member's profile card name
+      const fFirst = document.getElementById('f' + idx + '-first');
+      const fLast  = document.getElementById('f' + idx + '-last');
+      const fLabel = document.getElementById('familyNameLabel' + idx);
+      function syncFamilyName() {
+        if (!fLabel) return;
+        const name = ((fFirst?.value || fFirst?.placeholder || '') + ' ' + (fLast?.value || fLast?.placeholder || '')).trim();
+        if (name) fLabel.textContent = name;
+      }
+      fFirst?.addEventListener('input', syncFamilyName);
+      fLast?.addEventListener('input', syncFamilyName);
+      syncFamilyName();
+    });
   })();
 </script>
 

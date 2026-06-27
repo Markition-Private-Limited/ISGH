@@ -85,6 +85,24 @@ class WildApricotService
     }
 
     /**
+     * Returns a map of [label => choiceId] for the "Group participation" field.
+     * Cached for 24 h.
+     */
+    public function getGroupChoices(): array
+    {
+        return $this->getChoicesForField('wa_group_choices', 'Groups');
+    }
+
+    /**
+     * Resolves a single "Group participation" choice Id by its exact label.
+     * Returns null if the label isn't found among WA's AllowedValues.
+     */
+    public function getGroupChoiceId(string $label): ?int
+    {
+        return $this->getGroupChoices()[$label] ?? null;
+    }
+
+    /**
      * Generic helper: fetch AllowedValues for a contact field by SystemCode
      * and return [label => id] map, cached under $cacheKey for 24 h.
      */
@@ -246,7 +264,7 @@ class WildApricotService
             'MemberSince'       => now()->toIso8601String(),
             'RenewalDue'        => $this->calcRenewalDate($data['membership_type'], (int) ($data['duration_years'] ?? 1)),
             'MembershipLevel'   => ['Id' => $levelId],
-            'FieldValues'       => $this->buildFieldValues($data),
+            'FieldValues'       => $this->buildFieldValues($data, isNewContact: true),
             'RecreateInvoice' => $data['auto_renewal'] ?? false, // If true, WA will auto-renew next year and generate an invoice (which we won't pay via Stripe, but it keeps the contact in good standing and sends renewal reminders).
         ];
 
@@ -522,7 +540,7 @@ class WildApricotService
     // Searches WA contacts by email (primary) or first+last name (fallback).
     // Returns the first matching contact array, or null if none found.
 
-    public function searchContact(string $email, string $firstName, string $lastName, string $phone, string $dateOfBirth = ''): ?array
+    public function searchContact(string $email, string $firstName, string $lastName, string $streetNumber, string $dateOfBirth = ''): ?array
     {
         $accountId = $this->getAccountId();
 
@@ -556,7 +574,7 @@ class WildApricotService
         };
 
         // Helper: check that a candidate contact matches ALL provided fields
-        $matchesAll = function (array $c) use ($email, $firstName, $lastName, $phone, $dateOfBirth): bool {
+        $matchesAll = function (array $c) use ($email, $firstName, $lastName, $streetNumber, $dateOfBirth): bool {
             // Email must match (case-insensitive)
             if ($email !== '') {
                 $waEmail = strtolower(trim($c['Email'] ?? ''));
@@ -581,15 +599,16 @@ class WildApricotService
                     return false;
                 }
             }
-            // Phone: compare last 7 digits
-            // The list endpoint returns Phone at top-level; FieldValues only available on full contact.
-            if ($phone !== '') {
-                $normalizedInput = preg_replace('/\D/', '', $phone);
-                $waPhone = preg_replace('/\D/', '',
-                    $this->extractFieldValue($c, 'Phone') ?: ($c['Phone'] ?? '')
-                );
-                if (! $waPhone || ! str_ends_with($waPhone, substr($normalizedInput, -7))) {
-                    Log::debug('WA searchContact: phone mismatch', ['expected' => $phone, 'got_normalized' => $waPhone]);
+            // Street number: compare the leading numeric portion of the Street Address field
+            // (e.g. input "12345" must match the "12345" in "12345 Westheimer Rd.").
+            if ($streetNumber !== '') {
+                $waStreet = $this->extractFieldValue($c, 'Street Address') ?: $this->extractFieldValue($c, 'custom-9967566');
+                $waStreetNumber = null;
+                if (preg_match('/^\s*(\d+)/', $waStreet, $matches)) {
+                    $waStreetNumber = $matches[1];
+                }
+                if (! $waStreetNumber || $waStreetNumber !== preg_replace('/\D/', '', $streetNumber)) {
+                    Log::debug('WA searchContact: street number mismatch', ['expected' => $streetNumber, 'got' => $waStreet]);
                     return false;
                 }
             }
@@ -787,7 +806,7 @@ class WildApricotService
             'Status'            => 'Active',
             'MembershipEnabled' => true,
             'MembershipLevel'   => ['Id' => $levelId],
-            'FieldValues'       => array_merge($this->buildFieldValues($data), $bundleFieldValues),
+            'FieldValues'       => array_merge($this->buildFieldValues($data, isNewContact: true), $bundleFieldValues),
         ];
 
         Log::debug('WA addRelatedContact payload', [
@@ -870,6 +889,18 @@ class WildApricotService
             'Picture URL',
             $publicUrl,
         );
+
+        // 4. Uploading an ID card makes the member eligible for online voting —
+        //    add them to the "Online Voting Eligible 2026" group (preserving
+        //    any groups already assigned).
+        try {
+            $this->addGroupParticipation($contactId, 'Online Voting Eligible 2026');
+        } catch (\Throwable $e) {
+            Log::warning('uploadContactPicture: failed to add Online Voting Eligible 2026 group', [
+                'contact_id' => $contactId,
+                'error'      => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -924,6 +955,18 @@ class WildApricotService
             'Picture URL',
             $publicUrl,
         );
+
+        // Uploading an ID card makes the member eligible for online voting —
+        // add them to the "Online Voting Eligible 2026" group (preserving any
+        // groups already assigned).
+        try {
+            $this->addGroupParticipation($contactId, 'Online Voting Eligible 2026');
+        } catch (\Throwable $e) {
+            Log::warning('uploadIdCardFromLocalPath: failed to add Online Voting Eligible 2026 group', [
+                'contact_id' => $contactId,
+                'error'      => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -1142,6 +1185,47 @@ class WildApricotService
     }
 
     /**
+     * Adds a "Group participation" choice to a contact, preserving any groups
+     * already assigned. Unlike patchContactField(), this cannot simply send a
+     * single-item array for the Groups FieldValue — WA's multi-choice fields
+     * are replaced wholesale on PUT, so the existing choices must be read and
+     * merged in first (deduped by choice Id).
+     */
+    public function addGroupParticipation(int $contactId, string $groupLabel): void
+    {
+        $groupId = $this->getGroupChoiceId($groupLabel);
+        if (! $groupId) {
+            Log::warning('WA addGroupParticipation: group choice not found — skipping', ['group_label' => $groupLabel]);
+            return;
+        }
+
+        $accountId = $this->getAccountId();
+        $r = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+        if (! $r->successful()) {
+            throw new \RuntimeException("WA addGroupParticipation: fetch failed for contact {$contactId}: " . $r->body());
+        }
+        $contact = $r->json();
+
+        $existingGroups = [];
+        foreach ($contact['FieldValues'] ?? [] as $fv) {
+            if (($fv['SystemCode'] ?? '') === 'Groups') {
+                foreach ((array) ($fv['Value'] ?? []) as $choice) {
+                    if (isset($choice['Id'])) {
+                        $existingGroups[(int) $choice['Id']] = ['Id' => (int) $choice['Id'], 'Label' => $choice['Label'] ?? ''];
+                    }
+                }
+                break;
+            }
+        }
+
+        $existingGroups[$groupId] = ['Id' => $groupId, 'Label' => $groupLabel];
+
+        $this->patchContactFields($contactId, [
+            ['FieldName' => 'Group participation', 'SystemCode' => 'Groups', 'Value' => array_values($existingGroups)],
+        ]);
+    }
+
+    /**
      * Re-PUTs Street Address / City / State / ZIP on a contact whose level
      * just changed. WildApricot silently drops these fields on certain level
      * transitions (e.g. Individual → Checkomatic), so callers should invoke
@@ -1272,7 +1356,7 @@ class WildApricotService
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────
 
-    private function buildFieldValues(array $data): array
+    private function buildFieldValues(array $data, bool $isNewContact = false): array
     {
         $fields = [];
 
@@ -1394,6 +1478,23 @@ class WildApricotService
                     'zone_label'      => $zoneLabel,
                     'available_zones' => array_keys($choices),
                 ]);
+            }
+        }
+
+        // Group participation — every newly registered member (primary, spouse,
+        // flat member) is enrolled in "Voting Members 2026" on creation. This is
+        // a brand-new contact, so there are no prior group memberships to merge
+        // with (WA's Groups field expects an array of {Id, Label} choices).
+        if ($isNewContact) {
+            $votingGroupId = $this->getGroupChoiceId('Voting Members 2026');
+            if ($votingGroupId) {
+                $fields[] = [
+                    'FieldName'  => 'Group participation',
+                    'SystemCode' => 'Groups',
+                    'Value'      => [['Id' => $votingGroupId, 'Label' => 'Voting Members 2026']],
+                ];
+            } else {
+                Log::warning('WA "Voting Members 2026" group choice not found — skipping group assignment');
             }
         }
 

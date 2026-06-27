@@ -151,10 +151,10 @@ class MembershipController extends Controller
         $firstName = trim((string) $request->input('first_name', ''));
         $lastName = trim((string) $request->input('last_name', ''));
         $email = strtolower(trim((string) $request->input('email', '')));
-        $phone = trim((string) $request->input('phone', ''));
+        $streetNumber = trim((string) $request->input('street_number', ''));
         $dateOfBirth = trim((string) $request->input('date_of_birth', $request->input('dob', '')));
 
-        if ($firstName === '' && $lastName === '' && $email === '' && $phone === '' && $dateOfBirth === '') {
+        if ($firstName === '' && $lastName === '' && $email === '' && $streetNumber === '' && $dateOfBirth === '') {
             return response()->json([
                 'success' => false,
                 'message' => 'Please provide your first name, last name, and email to verify your membership.',
@@ -169,7 +169,7 @@ class MembershipController extends Controller
         // }
 
         try {
-            $contact = $this->wa->searchContact($email, $firstName, $lastName, $phone, $dateOfBirth);
+            $contact = $this->wa->searchContact($email, $firstName, $lastName, $streetNumber, $dateOfBirth);
         } catch (Throwable $e) {
             Log::error('WA membership verification failed', ['error' => $e->getMessage()]);
 

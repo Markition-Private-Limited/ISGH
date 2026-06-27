@@ -411,8 +411,9 @@
         </div>
 
         <div class="field">
-          <label>Phone Number</label>
-          <input type="tel" id="inp-phone" placeholder="(713) 555-1234" autocomplete="tel">
+          <label>Numerical street address</label>
+          <input type="text" id="inp-street-number" placeholder="12345" inputmode="numeric" autocomplete="address-line1">
+          <p style="font-size:0.7rem;color:#9ca3af;margin-top:0.4rem;font-style:italic;">e.g. Enter 12345 for address 12345 Westheimer Rd.</p>
         </div>
 
         <div class="field">
@@ -704,10 +705,10 @@
   }
 
   async function handleVerify() {
-    const firstName = document.getElementById('inp-first-name').value.trim();
-    const lastName  = document.getElementById('inp-last-name').value.trim();
-    const phone     = document.getElementById('inp-phone').value.trim();
-    const email     = document.getElementById('inp-email').value.trim();
+    const firstName    = document.getElementById('inp-first-name').value.trim();
+    const lastName     = document.getElementById('inp-last-name').value.trim();
+    const streetNumber = document.getElementById('inp-street-number').value.trim();
+    const email        = document.getElementById('inp-email').value.trim();
 
     // Clear previous errors
     document.querySelectorAll('.field input').forEach(input => input.classList.remove('field-error'));
@@ -746,7 +747,7 @@
           'X-CSRF-TOKEN': CSRF,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, phone, email }),
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, street_number: streetNumber, email }),
       });
 
       const data = await res.json();
@@ -814,7 +815,7 @@
 
   // Allow Enter key to submit from any input
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-phone','inp-email'].includes(e.target.id)) {
+    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-street-number','inp-email'].includes(e.target.id)) {
       handleVerify();
     }
   });

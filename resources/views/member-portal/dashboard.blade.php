@@ -71,7 +71,7 @@
       padding: 22px 16px;
       position: sticky;
       top: 0;
-      height: 100vh;
+      max-height: 100vh;
       display: flex;
       flex-direction: column;
       gap: 18px;
@@ -952,23 +952,23 @@
       /* On mobile, the row-based grid flattens to a single flex column so we
          can reorder the cards (profile cards sit between forms per the design).
          Desktop DOM child order of #profilePage:
-           1 info-card · 2 Quick Links · 3 Primary form
-           4 Primary Profile · 5 Spouse form · 6 Spouse Profile */
+           1 info-card, 2 Quick Links, 3 Primary form, 4 Primary Profile,
+           then for each family member: [form, profile card] pair appended in order. */
       #profilePage { display: flex; flex-direction: column; gap: 16px; }
 
       /* Mobile stacking order:
          1. Membership Information (info-card)
          2. Primary Profile card
          3. Primary Member Information (form)
-         4. Spouse Profile card
-         5. Spouse Information (form)
-         6. Quick Links */
+         4..N. Family member pairs (profile card before its form)
+         N+1. Quick Links */
       #profilePage > :nth-child(1) { order: 1; }  /* info-card */
       #profilePage > :nth-child(4) { order: 2; }  /* Primary Profile card */
       #profilePage > :nth-child(3) { order: 3; }  /* Primary form */
-      #profilePage > :nth-child(6) { order: 4; }  /* Spouse Profile card */
-      #profilePage > :nth-child(5) { order: 5; }  /* Spouse form */
-      #profilePage > :nth-child(2) { order: 6; }  /* Quick Links */
+      #profilePage > :nth-child(2) { order: 999; }  /* Quick Links, always last */
+      /* Family member pairs (children 5+): each pair is [form, profile card]; show the card first. */
+      #profilePage > :nth-child(n+5):nth-child(odd)  { order: 5; }  /* family form */
+      #profilePage > :nth-child(n+5):nth-child(even) { order: 4; }  /* family profile card */
     }
 
     @media (max-width: 520px) {
@@ -1620,31 +1620,47 @@
       });
     }
     setupForm({ formId: 'formPrimary', editBtnId: 'btnEditPrimary', saveBtnId: 'btnSavePrimary', bannerId: 'savePrimaryBanner' });
-    setupForm({ formId: 'formSpouse',  editBtnId: 'btnEditSpouse',  saveBtnId: 'btnSaveSpouse',  bannerId: 'saveSpouseBanner' });
 
-    const sameLink = document.getElementById('sameAsPrimary');
-    if (sameLink) {
-      sameLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        const map = { 'p-street':'s-address', 'p-city':'s-city', 'p-state':'s-state', 'p-zip':'s-zip' };
-        Object.entries(map).forEach(([from, to]) => {
-          const src = document.getElementById(from);
-          const dst = document.getElementById(to);
-          if (src && dst) dst.value = src.value;
-        });
+    // ── Family member forms (one per associated family member) ────────────
+    document.querySelectorAll('[id^="formFamily"]').forEach(form => {
+      const idx = form.id.replace('formFamily', '');
+      setupForm({
+        formId:   form.id,
+        editBtnId: 'btnEditFamily' + idx,
+        saveBtnId: 'btnSaveFamily' + idx,
+        bannerId:  'saveFamilyBanner' + idx,
       });
-    }
-    const sFirst = document.getElementById('s-first');
-    const sLast  = document.getElementById('s-last');
-    const sLabel = document.getElementById('spouseNameLabel');
-    function syncSpouseName() {
-      if (!sLabel) return;
-      const name = ((sFirst?.value || sFirst?.placeholder || '') + ' ' + (sLast?.value || sLast?.placeholder || '')).trim();
-      if (name) sLabel.textContent = name;
-    }
-    sFirst?.addEventListener('input', syncSpouseName);
-    sLast?.addEventListener('input', syncSpouseName);
-    syncSpouseName();
+
+      const sameLink = document.querySelector('[data-same-as-primary="' + idx + '"]');
+      if (sameLink) {
+        sameLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          const map = {
+            'p-street': 'f' + idx + '-address',
+            'p-city':   'f' + idx + '-city',
+            'p-state':  'f' + idx + '-state',
+            'p-zip':    'f' + idx + '-zip',
+          };
+          Object.entries(map).forEach(([from, to]) => {
+            const src = document.getElementById(from);
+            const dst = document.getElementById(to);
+            if (src && dst) dst.value = src.value;
+          });
+        });
+      }
+
+      const fFirst = document.getElementById('f' + idx + '-first');
+      const fLast  = document.getElementById('f' + idx + '-last');
+      const fLabel = document.getElementById('familyNameLabel' + idx);
+      function syncFamilyName() {
+        if (!fLabel) return;
+        const name = ((fFirst?.value || fFirst?.placeholder || '') + ' ' + (fLast?.value || fLast?.placeholder || '')).trim();
+        if (name) fLabel.textContent = name;
+      }
+      fFirst?.addEventListener('input', syncFamilyName);
+      fLast?.addEventListener('input', syncFamilyName);
+      syncFamilyName();
+    });
   })();
 </script>
 
