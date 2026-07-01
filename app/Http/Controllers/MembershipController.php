@@ -135,7 +135,7 @@ class MembershipController extends Controller
         }
 
         try {
-            $contact = $this->wa->searchContact($email, '', '', '');
+            $contact = $this->wa->findMemberByEmail($email);
 
             return response()->json(['exists' => $contact !== null]);
         } catch (Throwable $e) {
@@ -150,14 +150,13 @@ class MembershipController extends Controller
     {
         $firstName = trim((string) $request->input('first_name', ''));
         $lastName = trim((string) $request->input('last_name', ''));
-        $email = strtolower(trim((string) $request->input('email', '')));
         $streetNumber = trim((string) $request->input('street_number', ''));
         $dateOfBirth = trim((string) $request->input('date_of_birth', $request->input('dob', '')));
 
-        if ($firstName === '' && $lastName === '' && $email === '' && $streetNumber === '' && $dateOfBirth === '') {
+        if ($firstName === '' && $lastName === '' && $dateOfBirth === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'Please provide your first name, last name, and email to verify your membership.',
+                'message' => 'Please provide your first name, last name, and date of birth to verify your membership.',
             ], 422);
         }
 
@@ -169,7 +168,7 @@ class MembershipController extends Controller
         // }
 
         try {
-            $contact = $this->wa->searchContact($email, $firstName, $lastName, $streetNumber, $dateOfBirth);
+            $contact = $this->wa->searchContact($firstName, $lastName, $streetNumber, $dateOfBirth);
         } catch (Throwable $e) {
             Log::error('WA membership verification failed', ['error' => $e->getMessage()]);
 
@@ -453,7 +452,7 @@ class MembershipController extends Controller
                     continue;
                 }
 
-                $spouseEmail=$this->wa->searchContact($spouse['email'],'','','','');
+                $spouseEmail=$this->wa->findMemberByEmail($spouse['email']);
                 if($spouseEmail){
                     return response()->json(['success' => false, 'message' => 'Spouse email '.$spouse['email'].' is already in use.']);
                 }
@@ -466,7 +465,7 @@ class MembershipController extends Controller
                 // Name + DOB duplicate. `duplicate.index` is the DOM field-prefix
                 // index sent by the frontend (_field_idx) — used so the offending
                 // member's First/Last/DOB fields can be marked invalid (turn red).
-                $spouseData=$this->wa->searchContact('',$spouse['first_name'],$spouse['last_name'],'',$spouse['dob']);
+                $spouseData=$this->wa->searchContact($spouse['first_name'],$spouse['last_name'],'',$spouse['dob']);
                 if($spouseData){
                     return response()->json([
                         'success'   => false,
@@ -505,7 +504,7 @@ class MembershipController extends Controller
                     continue;
                 }
 
-                $flatEmail=$this->wa->searchContact($flat['email'],'','','','');
+                $flatEmail=$this->wa->findMemberByEmail($flat['email']);
                 if($flatEmail){
                     return response()->json(['success' => false, 'message' => 'Family member email '.$flat['email'].' is already in use.']);
                 }
@@ -519,7 +518,7 @@ class MembershipController extends Controller
                 // index sent by the frontend (_field_idx) — matches the flat-member
                 // field id prefix (flat_member_{N}_*) so the frontend can mark
                 // those fields red, even after blocks were removed.
-                $flatData=$this->wa->searchContact('',$flat['first_name'],$flat['last_name'],'',$flat['dob']);
+                $flatData=$this->wa->searchContact($flat['first_name'],$flat['last_name'],'',$flat['dob']);
                 if($flatData){
                     return response()->json([
                         'success'   => false,

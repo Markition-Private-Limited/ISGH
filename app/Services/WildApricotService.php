@@ -540,7 +540,7 @@ class WildApricotService
     // Searches WA contacts by email (primary) or first+last name (fallback).
     // Returns the first matching contact array, or null if none found.
 
-    public function searchContact(string $email, string $firstName, string $lastName, string $streetNumber, string $dateOfBirth = ''): ?array
+    public function searchContact(string $firstName, string $lastName, string $streetNumber, string $dateOfBirth = ''): ?array
     {
         $accountId = $this->getAccountId();
 
@@ -574,15 +574,7 @@ class WildApricotService
         };
 
         // Helper: check that a candidate contact matches ALL provided fields
-        $matchesAll = function (array $c) use ($email, $firstName, $lastName, $streetNumber, $dateOfBirth): bool {
-            // Email must match (case-insensitive)
-            if ($email !== '') {
-                $waEmail = strtolower(trim($c['Email'] ?? ''));
-                if ($waEmail !== strtolower($email)) {
-                    Log::debug('WA searchContact: email mismatch', ['expected' => $email, 'got' => $waEmail]);
-                    return false;
-                }
-            }
+        $matchesAll = function (array $c) use ($firstName, $lastName, $streetNumber, $dateOfBirth): bool {
             // First name must match (case-insensitive)
             if ($firstName !== '') {
                 $waFirst = strtolower(trim($c['FirstName'] ?? ''));
@@ -630,18 +622,8 @@ class WildApricotService
 
         $contact = null;
 
-        // 1. Search by email (most precise), then validate all other fields
-        if ($email !== '') {
-            $safe     = str_replace("'", "''", $email); // OData single-quote escape
-            $contacts = $query("Email eq '{$safe}'");
-            foreach ($contacts as $c) {
-                $fullContact = $fetchFullContact($c);
-                if ($matchesAll($fullContact)) { $contact = $fullContact; break; }
-            }
-        }
-
-        // 2. Search by first + last name, then validate email and phone
-        if (! $contact && $firstName !== '' && $lastName !== '') {
+        // Search by first + last name, then validate DOB and street number against full contact
+        if ($firstName !== '' && $lastName !== '') {
             $fn       = str_replace("'", "''", $firstName);
             $ln       = str_replace("'", "''", $lastName);
             $contacts = $query("FirstName eq '{$fn}' AND LastName eq '{$ln}'");

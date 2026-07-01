@@ -417,8 +417,8 @@
         </div>
 
         <div class="field">
-          <label>Email <span>*</span></label>
-          <input type="email" id="inp-email" placeholder="ali44@gmail.com" autocomplete="email">
+          <label>Date of Birth <span>*</span></label>
+          <input type="text" id="inp-dob" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10" autocomplete="bday">
         </div>
 
       </div>
@@ -708,12 +708,12 @@
     const firstName    = document.getElementById('inp-first-name').value.trim();
     const lastName     = document.getElementById('inp-last-name').value.trim();
     const streetNumber = document.getElementById('inp-street-number').value.trim();
-    const email        = document.getElementById('inp-email').value.trim();
+    const dob          = document.getElementById('inp-dob').value.trim();
 
     // Clear previous errors
     document.querySelectorAll('.field input').forEach(input => input.classList.remove('field-error'));
 
-    // Check all fields are filled
+    // Check all fields are filled and valid
     let hasErrors = false;
     if (!firstName) {
       document.getElementById('inp-first-name').classList.add('field-error');
@@ -723,8 +723,8 @@
       document.getElementById('inp-last-name').classList.add('field-error');
       hasErrors = true;
     }
-    if (!email) {
-      document.getElementById('inp-email').classList.add('field-error');
+    if (!dob || !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
+      document.getElementById('inp-dob').classList.add('field-error');
       hasErrors = true;
     }
 
@@ -747,7 +747,7 @@
           'X-CSRF-TOKEN': CSRF,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, street_number: streetNumber, email }),
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, street_number: streetNumber, date_of_birth: dob }),
       });
 
       const data = await res.json();
@@ -815,10 +815,35 @@
 
   // Allow Enter key to submit from any input
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-street-number','inp-email'].includes(e.target.id)) {
+    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-street-number','inp-dob'].includes(e.target.id)) {
       handleVerify();
     }
   });
+
+  // ── DOB auto-formatter (MM/DD/YYYY) ──────────────────────────────────────
+  (function () {
+    const dobInput = document.getElementById('inp-dob');
+    if (!dobInput) return;
+
+    dobInput.addEventListener('input', function () {
+      let v = this.value.replace(/\D/g, '').slice(0, 8);
+      if (v.length >= 5)      v = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+      else if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2);
+      this.value = v;
+    });
+
+    dobInput.addEventListener('blur', function () {
+      if (this.value && !/^\d{2}\/\d{2}\/\d{4}$/.test(this.value)) {
+        this.classList.add('field-error');
+      } else {
+        this.classList.remove('field-error');
+      }
+    });
+
+    dobInput.addEventListener('focus', function () {
+      this.classList.remove('field-error');
+    });
+  })();
 </script>
 
 <div id="mobileMenu" class="fixed inset-0 z-[200] hidden">

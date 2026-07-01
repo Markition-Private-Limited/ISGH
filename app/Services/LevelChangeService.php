@@ -141,7 +141,7 @@ class LevelChangeService
             ];
 
             $email = trim((string) ($m['email'] ?? ''));
-            if ($email !== '' && $this->wa->searchContact($email, '', '', '', '')) {
+            if ($email !== '' && $this->wa->findMemberByEmail($email)) {
                 return $dupe('email') + ['message' => 'Family member email ' . $email . ' is already registered as an ISGH member.'];
             }
 
@@ -151,7 +151,7 @@ class LevelChangeService
             }
 
             // Name + DOB combination duplicate.
-            if (! empty($m['first_name']) && $this->wa->searchContact('', $m['first_name'], $m['last_name'] ?? '', '', $m['dob'] ?? '')) {
+            if (! empty($m['first_name']) && $this->wa->searchContact($m['first_name'], $m['last_name'] ?? '', '', $m['dob'] ?? '')) {
                 return $dupe('name_dob') + ['message' => 'The family member information you entered (' . trim(($m['first_name'] ?? '') . ' ' . ($m['last_name'] ?? '')) . ') matches an existing member. Please verify the details or contact ISGH support.'];
             }
         }
