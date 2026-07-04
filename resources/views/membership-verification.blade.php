@@ -417,7 +417,7 @@
         </div>
 
         <div class="field">
-          <label>Date of Birth <span>*</span></label>
+          <label>Date of Birth</label>
           <input type="text" id="inp-dob" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10" autocomplete="bday">
         </div>
 
@@ -723,7 +723,7 @@
       document.getElementById('inp-last-name').classList.add('field-error');
       hasErrors = true;
     }
-    if (!dob || !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
+    if (dob && !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
       document.getElementById('inp-dob').classList.add('field-error');
       hasErrors = true;
     }
