@@ -1208,6 +1208,31 @@ class WildApricotService
     }
 
     /**
+     * Sets the Zone / Center dropdown field on a contact.
+     * No-ops (with a warning) when the label is not found in WA's choice list.
+     */
+    public function setContactZone(int $contactId, string $zoneLabel): void
+    {
+        $choices  = $this->getZoneChoices();
+        $choiceId = $choices[$zoneLabel] ?? null;
+        if (! $choiceId) {
+            Log::warning('WA setContactZone: zone label not found in choices — skipping', [
+                'contact_id'      => $contactId,
+                'zone_label'      => $zoneLabel,
+                'available_zones' => array_keys($choices),
+            ]);
+            return;
+        }
+        $this->patchContactFields($contactId, [
+            [
+                'FieldName'  => 'Zone / Center',
+                'SystemCode' => 'custom-9967573',
+                'Value'      => ['Id' => $choiceId, 'Label' => $zoneLabel],
+            ],
+        ]);
+    }
+
+    /**
      * Re-PUTs Street Address / City / State / ZIP on a contact whose level
      * just changed. WildApricot silently drops these fields on certain level
      * transitions (e.g. Individual → Checkomatic), so callers should invoke
