@@ -217,19 +217,22 @@ class MembershipController extends Controller
         // Voting eligibility: Active status only
         $isActive = strtolower($status) === 'active';
 
+        $pictureUrl = $get('Picture URL') ?: $get('custom-17977092');
+
         return response()->json([
             'success' => true,
             'member' => [
-                'id' => $contact['Id'] ?? null,
-                'name' => trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? '')),
-                'email' => $contact['Email'] ?? $get('Email'),
-                'phone' => $get('Phone') ?: ($contact['Phone'] ?? ''),
-                'type' => $levelName,
-                'status' => $status,
-                'since' => $since,
-                'expiry' => $expiry,
-                'zone' => $get('Zone / Center') ?: $get('custom-9967573'),
-                'voting' => $isActive ? 'Yes' : 'No',
+                'id'          => $contact['Id'] ?? null,
+                'name'        => trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? '')),
+                'email'       => $contact['Email'] ?? $get('Email'),
+                'phone'       => $get('Phone') ?: ($contact['Phone'] ?? ''),
+                'type'        => $levelName,
+                'status'      => $status,
+                'since'       => $since,
+                'expiry'      => $expiry,
+                'zone'        => $get('Zone / Center') ?: $get('custom-9967573'),
+                'voting'      => $isActive ? 'Yes' : 'No',
+                'has_id_card' => $pictureUrl !== '',
             ],
         ]);
     }

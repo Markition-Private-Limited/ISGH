@@ -72,6 +72,7 @@ class PortalController extends Controller
             $data = [
                 'stats'          => ['total' => 0, 'active' => 0, 'lapsed' => 0],
                 'levelBreakdown' => [],
+                'groupBreakdown' => [],
                 'profileStatus'  => ['active' => 0, 'lapsed' => 0, 'active_pct' => 0, 'lapsed_pct' => 0],
                 'zipStats'       => ['total' => 0],
                 'zipData'        => collect(),
@@ -109,6 +110,7 @@ class PortalController extends Controller
         };
 
         $data['levelBreakdown'] = $toArray($data['levelBreakdown'] ?? []);
+        $data['groupBreakdown'] = $toArray($data['groupBreakdown'] ?? []);
 
         if (!empty($data['zones']) && is_array($data['zones'])) {
             foreach ($data['zones'] as $zi => $zone) {
@@ -268,6 +270,7 @@ class PortalController extends Controller
             'zip'    => $request->input('zip', ''),
             'type'   => $request->input('type', ''),
             'level'  => $request->input('level', ''),
+            'group'  => $request->input('group', ''),
         ]);
 
         // Always enforce zone/center from the user's authorised scope —
@@ -341,7 +344,15 @@ class PortalController extends Controller
             $membershipLevels = [];
         }
 
-        return view('portal.members.index', compact('members', 'totalCount', 'filteredCount', 'masjids', 'zipCodes', 'membershipLevels'));
+        try {
+            $groupChoices = $wa->getGroupChoices();
+            ksort($groupChoices);
+        } catch (\Throwable $e) {
+            Log::error('Portal members: failed to load WA group choices', ['error' => $e->getMessage()]);
+            $groupChoices = [];
+        }
+
+        return view('portal.members.index', compact('members', 'totalCount', 'filteredCount', 'masjids', 'zipCodes', 'membershipLevels', 'groupChoices'));
     }
 
     // ── Members filter options ────────────────────────────────────────────

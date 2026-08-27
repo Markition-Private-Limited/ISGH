@@ -872,13 +872,13 @@ class WildApricotService
             $publicUrl,
         );
 
-        // 4. Uploading an ID card makes the member eligible for online voting —
-        //    add them to the "Online Voting Eligible 2026" group (preserving
+        // 4. Uploading an ID card marks the member as a non-voting member —
+        //    add them to the "NON VOTING MEMBERS 2026" group (preserving
         //    any groups already assigned).
         try {
-            $this->addGroupParticipation($contactId, 'Online Voting Eligible 2026');
+            $this->addGroupParticipation($contactId, 'NON VOTING MEMBERS 2026');
         } catch (\Throwable $e) {
-            Log::warning('uploadContactPicture: failed to add Online Voting Eligible 2026 group', [
+            Log::warning('uploadContactPicture: failed to add NON VOTING MEMBERS 2026 group', [
                 'contact_id' => $contactId,
                 'error'      => $e->getMessage(),
             ]);
@@ -938,13 +938,13 @@ class WildApricotService
             $publicUrl,
         );
 
-        // Uploading an ID card makes the member eligible for online voting —
-        // add them to the "Online Voting Eligible 2026" group (preserving any
+        // Uploading an ID card marks the member as a non-voting member —
+        // add them to the "NON VOTING MEMBERS 2026" group (preserving any
         // groups already assigned).
         try {
-            $this->addGroupParticipation($contactId, 'Online Voting Eligible 2026');
+            $this->addGroupParticipation($contactId, 'NON VOTING MEMBERS 2026');
         } catch (\Throwable $e) {
-            Log::warning('uploadIdCardFromLocalPath: failed to add Online Voting Eligible 2026 group', [
+            Log::warning('uploadIdCardFromLocalPath: failed to add NON VOTING MEMBERS 2026 group', [
                 'contact_id' => $contactId,
                 'error'      => $e->getMessage(),
             ]);
@@ -1627,6 +1627,7 @@ class WildApricotService
                 ['name' => 'Checkomatic', 'count' => $stat->checkmatic_members],
                 ['name' => 'Lifetime', 'count' => $stat->lifetime_members],
             ],
+            'groupBreakdown' => $stat->group_breakdown ?? [],
             'profileStatus'  => [
                 'active'     => $active,
                 'lapsed'     => $lapsed,
@@ -1679,6 +1680,16 @@ class WildApricotService
                 elseif (str_contains($n, 'checkomatic') || str_contains($n, 'checkmatic')) $checkmatic += $cnt;
                 else                                                                        $individual += $cnt;
             }
+
+            // ── Group participation breakdown — active members only ───────────────
+            $groupBreakdown = [];
+            foreach ($this->getGroupChoices() as $groupLabel => $groupChoiceId) {
+                $gcnt = $countOf("Member eq true AND Status eq 'Active' AND 'Groups' eq {$groupChoiceId}");
+                if ($gcnt > 0) {
+                    $groupBreakdown[] = ['name' => $groupLabel, 'count' => $gcnt];
+                }
+            }
+            usort($groupBreakdown, fn($a, $b) => $b['count'] <=> $a['count']);
 
             // ── Zone + ZIP breakdown ──────────────────────────────────────────────
             // For each zone choice: count members (fast), then page through contacts
@@ -1816,7 +1827,7 @@ class WildApricotService
         // ── Write to DB (truncate + re-insert for atomicity) ─────────────────
         DB::transaction(function () use (
             $total, $active, $lapsed, $individual, $checkmatic, $lifetime,
-            $levelBreakdown, $zoneMap, $globalZipCount
+            $levelBreakdown, $groupBreakdown, $zoneMap, $globalZipCount
         ) {
             $statData = [
                 'total_members'      => $total,
@@ -1826,6 +1837,7 @@ class WildApricotService
                 'checkmatic_members' => $checkmatic,
                 'lifetime_members'   => $lifetime,
                 'level_breakdown'    => json_encode($levelBreakdown),
+                'group_breakdown'    => json_encode($groupBreakdown),
                 'total_zips'         => count($globalZipCount),
                 'last_synced_at'     => now(),
             ];
@@ -2016,6 +2028,15 @@ class WildApricotService
                     $filterParts[] = 'MembershipLevelId eq ' . (int) $lvl['Id'];
                     break;
                 }
+            }
+        }
+
+        // Group participation filter — filters by WA group choice ID.
+        // WA OData supports "'Groups' eq {choiceId}" for multi-select choice fields.
+        if (!empty($filters['group'])) {
+            $groupId = $this->getGroupChoiceId((string) $filters['group']);
+            if ($groupId) {
+                $filterParts[] = "'Groups' eq {$groupId}";
             }
         }
 

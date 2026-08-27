@@ -522,6 +522,14 @@
         <!-- ── PHOTO UPLOAD SECTION ── -->
         <div id="photo-upload-section" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
           <p style="font-family:'SF Pro bold';font-size:0.88rem;color:#374151;margin-bottom:0.6rem;">Upload ID</p>
+
+          <div id="id-card-already-uploaded" style="display:none;align-items:center;gap:0.5rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.6rem;padding:0.6rem 0.9rem;margin-bottom:0.9rem;font-size:0.8rem;color:#15803d;">
+            <svg style="width:16px;height:16px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>Your ID card has already been uploaded. You can upload a new one below to replace it.</span>
+          </div>
+
           <p style="font-size:0.78rem;color:#9ca3af;margin-bottom:1rem;">Upload your Texas ID or Driver License to get verified and receive your online voting ballot.</p>
 
           <label id="photo-drop-label" for="photo-input"
@@ -678,9 +686,10 @@
       try { data = raw ? JSON.parse(raw) : {}; } catch (_) { /* non-JSON (e.g. 413 HTML) */ }
 
       if (res.ok && data.success) {
-        showPhotoMsg('Photo uploaded successfully!', '#15803d');
+        showPhotoMsg('Photo uploaded successfully! Reloading…', '#15803d');
         btn.style.display = 'none';
         document.getElementById('photo-drop-label').style.borderColor = '#10b981';
+        setTimeout(() => window.location.reload(), 1500);
       } else if (res.status === 413 || /request entity too large/i.test(raw)) {
         showPhotoMsg('Photo is too large for the server. Please use an image under 8 MB.', '#991b1b');
       } else {
@@ -772,6 +781,10 @@
         // Status with colour badge
         document.getElementById('res-status').innerHTML = statusBadge(m.status);
 
+        // Show notice if ID card already on file
+        const idNotice = document.getElementById('id-card-already-uploaded');
+        if (idNotice) idNotice.style.display = m.has_id_card ? 'flex' : 'none';
+
         showCard('card-found');
       } else {
         document.getElementById('not-found-msg').textContent =
@@ -797,6 +810,8 @@
     document.getElementById('btn-photo-submit').style.display = 'none';
     document.getElementById('photo-upload-msg').style.display = 'none';
     document.getElementById('photo-drop-label').style.borderColor = '#d1d5db';
+    const idNotice = document.getElementById('id-card-already-uploaded');
+    if (idNotice) idNotice.style.display = 'none';
   }
 
   // Drag-and-drop support on the photo label

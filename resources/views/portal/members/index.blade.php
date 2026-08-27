@@ -176,6 +176,16 @@
           </select>
         </div>
 
+        <div class="filter-select-wrap">
+          <label class="filter-label" for="filter-group">Group Participation</label>
+          <select id="filter-group" name="group" class="filter-select" aria-label="Filter by group participation">
+            <option value="">All Groups</option>
+            @foreach (($groupChoices ?? []) as $groupLabel => $groupId)
+              <option value="{{ $groupLabel }}" {{ request('group') === $groupLabel ? 'selected' : '' }}>{{ $groupLabel }}</option>
+            @endforeach
+          </select>
+        </div>
+
       </div>
 
     </form>
