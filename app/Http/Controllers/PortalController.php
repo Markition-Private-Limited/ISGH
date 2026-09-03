@@ -7,6 +7,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -58,6 +59,27 @@ class PortalController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route('portal.login');
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password'          => ['required'],
+            'new_password'              => ['required', 'min:8', 'confirmed'],
+            'new_password_confirmation' => ['required'],
+        ]);
+
+        $user = Auth::user();
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return back()
+                ->withErrors(['current_password' => 'The current password is incorrect.'])
+                ->with('open_change_password_modal', true);
+        }
+
+        $user->update(['password' => $request->new_password]);
+
+        return redirect()->back()->with('success', 'Password updated successfully.');
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────
@@ -270,7 +292,7 @@ class PortalController extends Controller
             'zip'    => $request->input('zip', ''),
             'type'   => $request->input('type', ''),
             'level'  => $request->input('level', ''),
-            'group'  => $request->input('group', ''),
+            'group'  => $request->input('group', 'Voting Members 2026'),
         ]);
 
         // Always enforce zone/center from the user's authorised scope —
