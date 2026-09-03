@@ -299,9 +299,9 @@
           id="cp_confirm"
           name="new_password_confirmation"
           autocomplete="new-password"
-          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('new_password_confirmation') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
+          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('new_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
         />
-        @error('new_password_confirmation')
+        @error('new_password')
           <div style="color:#ef4444;font-size:.78rem;margin-top:4px;">{{ $message }}</div>
         @enderror
       </div>
