@@ -152,20 +152,21 @@ class MembershipController extends Controller
         $lastName = trim((string) $request->input('last_name', ''));
         $streetNumber = trim((string) $request->input('street_number', ''));
         $dateOfBirth = trim((string) $request->input('date_of_birth', $request->input('dob', '')));
+        $enteredEmail = trim((string) $request->input('email', ''));
 
-        if ($firstName === '' && $lastName === '' && $dateOfBirth === '') {
+        if ($firstName === '' || $lastName === '' || $dateOfBirth === '' || $enteredEmail === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'Please provide your first name, last name, and date of birth to verify your membership.',
+                'message' => 'Please provide your first name, last name, date of birth, and email to verify your membership.',
             ], 422);
         }
 
-        // if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Please enter a valid email address.',
-        //     ], 422);
-        // }
+        if (! filter_var($enteredEmail, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a valid email address.',
+            ], 422);
+        }
 
         try {
             $contact = $this->wa->searchContact($firstName, $lastName, $streetNumber, $dateOfBirth);
@@ -183,6 +184,32 @@ class MembershipController extends Controller
                 'success' => false,
                 'message' => 'No membership record found matching your details. Please check the information entered or contact ISGH support.',
             ]);
+        }
+
+        // Update email fields on WA based on whether the contact already has an email
+        $contactId   = $contact['Id'] ?? null;
+        $existingEmail = $contact['Email'] ?? '';
+
+        if ($contactId) {
+            try {
+                if ($existingEmail === '' || $existingEmail === null) {
+                    // No email on record — set it
+                    $this->wa->updateMember($contactId, ['email' => $enteredEmail]);
+                    Log::info('WA verification: set email', ['contact_id' => $contactId, 'email' => $enteredEmail]);
+                } elseif (strtolower($existingEmail) !== strtolower($enteredEmail)) {
+                    // Different email — write entered email into Alternate Email field
+                    $altEmailCode = $this->wa->getFieldSystemCodePublic('Alternate Email');
+                    if ($altEmailCode) {
+                        $this->wa->updateMemberRaw($contactId, [
+                            ['FieldName' => 'Alternate Email', 'SystemCode' => $altEmailCode, 'Value' => $enteredEmail],
+                        ]);
+                    }
+                    Log::info('WA verification: set alternate email', ['contact_id' => $contactId, 'alt_email' => $enteredEmail]);
+                }
+            } catch (Throwable $e) {
+                Log::warning('WA verification: email update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+                // Non-fatal — verification result is still returned
+            }
         }
 
         // Extract dynamic field values from WA response
@@ -217,22 +244,34 @@ class MembershipController extends Controller
         // Voting eligibility: Active status only
         $isActive = strtolower($status) === 'active';
 
+        // Online Opt-in: member must have "Online Voting eligible 2026" group participation
+        $onlineOptIn = false;
+        foreach ($contact['FieldValues'] ?? [] as $fv) {
+            if (($fv['SystemCode'] ?? '') === 'Groups') {
+                foreach ((array) ($fv['Value'] ?? []) as $choice) {
+                    if (strcasecmp($choice['Label'] ?? '', 'Online Voting eligible 2026') === 0) {
+                        $onlineOptIn = true;
+                        break 2;
+                    }
+                }
+                break;
+            }
+        }
+
         $pictureUrl = $get('Picture URL') ?: $get('custom-17977092');
 
         return response()->json([
             'success' => true,
             'member' => [
-                'id'          => $contact['Id'] ?? null,
-                'name'        => trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? '')),
-                'email'       => $contact['Email'] ?? $get('Email'),
-                'phone'       => $get('Phone') ?: ($contact['Phone'] ?? ''),
-                'type'        => $levelName,
-                'status'      => $status,
-                'since'       => $since,
-                'expiry'      => $expiry,
-                'zone'        => $get('Zone / Center') ?: $get('custom-9967573'),
-                'voting'      => $isActive ? 'Yes' : 'No',
-                'has_id_card' => $pictureUrl !== '',
+                'id'            => $contact['Id'] ?? null,
+                'name'          => trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? '')),
+                'type'          => $levelName,
+                'status'        => $status,
+                'online_opt_in' => $onlineOptIn ? 'Yes' : 'No',
+                'expiry'        => $expiry,
+                'zone'          => $get('Zone / Center') ?: $get('custom-9967573'),
+                'voting'        => $isActive ? 'Yes' : 'No',
+                'has_id_card'   => $pictureUrl !== '',
             ],
         ]);
     }

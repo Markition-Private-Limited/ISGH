@@ -73,6 +73,28 @@
         </a>
       </div>
 
+      {{-- Voting Members 2026 --}}
+      @php
+        $votingCount = 0;
+        foreach ($groupBreakdown ?? [] as $g) {
+          if (strcasecmp($g['name'] ?? '', 'Voting Members 2026') === 0) {
+            $votingCount = (int) ($g['count'] ?? 0);
+            break;
+          }
+        }
+      @endphp
+      <div class="stat-card" data-slide="3">
+        <a href="{{ route('portal.members', ['group' => 'Voting Members 2026']) }}" class="stat-card-inner" style="text-decoration:none;color:inherit;">
+          <div class="stat-card-text">
+            <div class="stat-card-label">Voting Members 2026</div>
+            <div class="stat-card-value" style="color:var(--clr-primary);">{{ number_format($votingCount) }}</div>
+          </div>
+          <div class="stat-sparkline-wrap" aria-hidden="true">
+            <canvas class="sparkline-canvas" id="spark-voting"></canvas>
+          </div>
+        </a>
+      </div>
+
     </div>
 
     {{-- Dots — only visible on mobile --}}
@@ -80,6 +102,7 @@
       <button class="carousel-dot active" data-dot="0" aria-label="Slide 1"></button>
       <button class="carousel-dot"        data-dot="1" aria-label="Slide 2"></button>
       <button class="carousel-dot"        data-dot="2" aria-label="Slide 3"></button>
+      <button class="carousel-dot"        data-dot="3" aria-label="Slide 4"></button>
     </div>
 
   </div>
@@ -182,59 +205,6 @@
       </div>
     </div>
 
-  </div>
-
-  {{-- ── Group Participation Row ────────────────────────────── --}}
-  <div class="mb-5">
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Members by Group Participation</div>
-          <div class="card-subtitle">Real-time breakdown of active members by group participation</div>
-        </div>
-      </div>
-      <div class="card-body" style="display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;">
-
-        @php
-          $groupPalette = ['#1a5c42','#f59e0b','#3aab7b','#6366f1','#ec4899','#0ea5e9','#f97316','#a855f7','#14b8a6','#84cc16','#ef4444','#64748b'];
-          $groups = array_values(array_filter($groupBreakdown ?? [], function ($g) {
-            return (int) ($g['count'] ?? 0) > 0;
-          }));
-        @endphp
-
-        {{-- Legend table (left) --}}
-        <div style="flex:1;min-width:200px;max-height:260px;overflow-y:auto;">
-          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--clr-text-3);margin-bottom:var(--sp-4);display:flex;justify-content:space-between;">
-            <span>Group</span><span>Count (N)</span>
-          </div>
-          <table class="level-table" aria-label="Group participation breakdown">
-            <tbody>
-              @forelse ($groups as $i => $group)
-              <tr>
-                <td>
-                  <span class="level-dot" style="background:{{ $groupPalette[$i % count($groupPalette)] }};" aria-hidden="true"></span>
-                  {{ $group['name'] }}
-                </td>
-                <td style="font-weight:700;text-align:right;padding-left:1rem;">
-                  <a href="{{ route('portal.members', ['group' => $group['name']]) }}" style="color:inherit;text-decoration:none;font-weight:700;" class="drill-link">
-                    {{ number_format($group['count']) }}
-                  </a>
-                </td>
-              </tr>
-              @empty
-              <tr><td colspan="2" style="color:var(--clr-text-3);font-size:.85rem;">No data yet</td></tr>
-              @endforelse
-            </tbody>
-          </table>
-        </div>
-
-        {{-- Pie chart (right) --}}
-        <div style="width:190px;height:190px;flex-shrink:0;position:relative;">
-          <canvas id="group-pie" aria-label="Group participation breakdown pie chart" role="img"></canvas>
-        </div>
-
-      </div>
-    </div>
   </div>
 
   {{-- ── Bottom Row: ZIP Table (left) + Zone Accordion (right) --}}
@@ -570,72 +540,6 @@ makeSparkline('spark-lapsed', [1,2,1,3,2,3,2,4,3,5], { solid:'#c4b5a0', faded:'r
             title: function (ctxs) {
               return ctxs.length ? ctxs[0].label : '';
             },
-            label: function (ctx) {
-              var n = (ctx.parsed != null ? ctx.parsed : 0);
-              var total = (ctx.dataset.data || []).reduce(function (a, b) { return a + (Number(b) || 0); }, 0);
-              var pct = total > 0 ? Math.round((n / total) * 100) : 0;
-              return ' ' + Number(n).toLocaleString() + ' members (' + pct + '%)';
-            },
-          },
-        },
-      },
-    },
-  });
-})();
-
-/* ── Group participation pie chart ───────────────────────── */
-(function () {
-  var canvas = document.getElementById('group-pie');
-  if (!canvas || typeof Chart === 'undefined') return;
-  var palette = {!! json_encode($groupPalette) !!};
-  var groups  = {!! json_encode(array_values($groups)) !!};
-  if (!groups.length) return;
-  var pieSliceLabelPlugin = {
-    id: 'groupPieSliceLabels',
-    afterDatasetsDraw: function (chart) {
-      var ctx = chart.ctx;
-      var meta = chart.getDatasetMeta(0);
-      if (!meta || !meta.data) return;
-      var dataset = chart.data.datasets[0] || {};
-      var total = (dataset.data || []).reduce(function (a, b) { return a + (Number(b) || 0); }, 0);
-      if (total <= 0) return;
-      ctx.save();
-      ctx.fillStyle = '#fff';
-      ctx.font = '600 11px system-ui, -apple-system, Segoe UI, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,.35)';
-      ctx.shadowBlur = 2;
-      meta.data.forEach(function (arc, i) {
-        var value = Number(dataset.data[i]) || 0;
-        var pct = (value / total) * 100;
-        if (pct < 4) return;
-        var pos = arc.tooltipPosition ? arc.tooltipPosition() : { x: arc.x, y: arc.y };
-        ctx.fillText(Math.round(pct) + '%', pos.x, pos.y);
-      });
-      ctx.restore();
-    },
-  };
-  new Chart(canvas, {
-    type: 'pie',
-    data: {
-      labels: groups.map(function(g){ return g.name; }),
-      datasets: [{
-        data: groups.map(function(g){ return g.count; }),
-        backgroundColor: groups.map(function(_, i){ return palette[i % palette.length]; }),
-        borderWidth: 0,
-        hoverOffset: 6,
-      }],
-    },
-    plugins: [pieSliceLabelPlugin],
-    options: {
-      cutout: 0,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          position: 'nearest',
-          callbacks: {
-            title: function (ctxs) { return ctxs.length ? ctxs[0].label : ''; },
             label: function (ctx) {
               var n = (ctx.parsed != null ? ctx.parsed : 0);
               var total = (ctx.dataset.data || []).reduce(function (a, b) { return a + (Number(b) || 0); }, 0);

@@ -178,11 +178,13 @@
 
         <div class="filter-select-wrap">
           <label class="filter-label" for="filter-group">Group Participation</label>
+          @php
+            $activeGroup = request()->has('group') ? request('group') : 'Voting Members 2026';
+          @endphp
           <select id="filter-group" name="group" class="filter-select" aria-label="Filter by group participation">
-            <option value="">All Groups</option>
-            @foreach (($groupChoices ?? []) as $groupLabel => $groupId)
-              <option value="{{ $groupLabel }}" {{ request('group') === $groupLabel ? 'selected' : '' }}>{{ $groupLabel }}</option>
-            @endforeach
+            <option value=""                            {{ $activeGroup === ''                            ? 'selected' : '' }}>All Groups</option>
+            <option value="Voting Members 2026"         {{ $activeGroup === 'Voting Members 2026'         ? 'selected' : '' }}>Voting Members 2026</option>
+            <option value="Online Voting eligible 2026" {{ $activeGroup === 'Online Voting eligible 2026' ? 'selected' : '' }}>Online Voting eligible 2026</option>
           </select>
         </div>
 

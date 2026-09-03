@@ -64,9 +64,8 @@ class PortalController extends Controller
     public function changePassword(Request $request)
     {
         $request->validate([
-            'current_password'          => ['required'],
-            'new_password'              => ['required', 'min:8', 'confirmed'],
-            'new_password_confirmation' => ['required'],
+            'current_password' => ['required'],
+            'new_password'     => ['required', 'min:8', 'confirmed'],
         ]);
 
         $user = Auth::user();
@@ -79,7 +78,7 @@ class PortalController extends Controller
 
         $user->update(['password' => $request->new_password]);
 
-        return redirect()->back()->with('success', 'Password updated successfully.');
+        return back()->with('success', 'Password updated successfully.');
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────

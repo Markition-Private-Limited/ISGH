@@ -807,17 +807,17 @@ ul, ol { list-style: none; }
   position: relative;
 }
 
-/* Desktop: 3-column grid */
+/* Desktop: 4-column grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--sp-4);
 }
 
 .stat-card {
   background: var(--clr-surface);
   border-radius: var(--r-lg);
-  padding: var(--sp-5) var(--sp-6);
+  padding: var(--sp-4) var(--sp-5);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--clr-border-light);
   overflow: hidden;
@@ -844,7 +844,7 @@ ul, ol { list-style: none; }
 }
 
 .stat-card-value {
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 800;
   color: var(--clr-text);
   line-height: 1.1;

@@ -417,8 +417,13 @@
         </div>
 
         <div class="field">
-          <label>Date of Birth</label>
+          <label>Date of Birth <span>*</span></label>
           <input type="text" id="inp-dob" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10" autocomplete="bday">
+        </div>
+
+        <div class="field">
+          <label>Email Address <span>*</span></label>
+          <input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email">
         </div>
 
       </div>
@@ -478,16 +483,6 @@
           </div>
 
           <div class="result-field">
-            <p class="result-label">Email</p>
-            <p class="result-value" id="res-email" style="font-size:0.83rem;word-break:break-all;">—</p>
-          </div>
-
-          <div class="result-field">
-            <p class="result-label">Phone</p>
-            <p class="result-value" id="res-phone">—</p>
-          </div>
-
-          <div class="result-field">
             <p class="result-label">Membership Type</p>
             <p class="result-value" id="res-type">—</p>
           </div>
@@ -498,8 +493,8 @@
           </div>
 
           <div class="result-field">
-            <p class="result-label">Member Since</p>
-            <p class="result-value" id="res-since">—</p>
+            <p class="result-label">Online Opt-in</p>
+            <p class="result-value" id="res-online-opt-in">—</p>
           </div>
 
           <div class="result-field">
@@ -518,6 +513,11 @@
           </div>
 
         </div>
+
+        <!-- ── DISCLAIMER ── -->
+        <p style="margin-top:1.5rem;font-size:0.75rem;color:#9ca3af;font-style:italic;text-align:center;line-height:1.5;">
+          You will not be opted for online voting until the administration verifies your identity.
+        </p>
 
         <!-- ── PHOTO UPLOAD SECTION ── -->
         <div id="photo-upload-section" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
@@ -718,6 +718,7 @@
     const lastName     = document.getElementById('inp-last-name').value.trim();
     const streetNumber = document.getElementById('inp-street-number').value.trim();
     const dob          = document.getElementById('inp-dob').value.trim();
+    const email        = document.getElementById('inp-email').value.trim();
 
     // Clear previous errors
     document.querySelectorAll('.field input').forEach(input => input.classList.remove('field-error'));
@@ -736,8 +737,12 @@
       document.getElementById('inp-street-number').classList.add('field-error');
       hasErrors = true;
     }
-    if (dob && !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
+    if (!dob || !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
       document.getElementById('inp-dob').classList.add('field-error');
+      hasErrors = true;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.getElementById('inp-email').classList.add('field-error');
       hasErrors = true;
     }
 
@@ -760,7 +765,7 @@
           'X-CSRF-TOKEN': CSRF,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, street_number: streetNumber, date_of_birth: dob }),
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, street_number: streetNumber, date_of_birth: dob, email: email }),
       });
 
       const data = await res.json();
@@ -768,15 +773,13 @@
       if (data.success) {
         const m = data.member;
         verifiedContactId = m.id || null;
-        setVal('res-member-id', m.id ? String(m.id) : '—');
-        setVal('res-name',   m.name);
-        setVal('res-email',  m.email);
-        setVal('res-phone',  m.phone);
-        setVal('res-type',   m.type);
-        setVal('res-since',  m.since);
-        setVal('res-expiry', m.expiry);
-        setVal('res-zone',   m.zone || '—');
-        setVal('res-voting', m.voting);
+        setVal('res-member-id',      m.id ? String(m.id) : '—');
+        setVal('res-name',           m.name);
+        setVal('res-type',           m.type);
+        setVal('res-online-opt-in',  m.online_opt_in);
+        setVal('res-expiry',         m.expiry);
+        setVal('res-zone',           m.zone || '—');
+        setVal('res-voting',         m.voting);
 
         // Status with colour badge
         document.getElementById('res-status').innerHTML = statusBadge(m.status);
@@ -834,7 +837,7 @@
 
   // Allow Enter key to submit from any input
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-street-number','inp-dob'].includes(e.target.id)) {
+    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-street-number','inp-dob','inp-email'].includes(e.target.id)) {
       handleVerify();
     }
   });

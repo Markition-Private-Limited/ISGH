@@ -677,6 +677,61 @@ class WildApricotService
     }
 
     // ─── UPDATE MEMBER ───────────────────────────────────────────────────────
+    // Public wrapper around the private getFieldSystemCode so controllers can
+    // resolve a field's system code without duplicating the API call logic.
+    public function getFieldSystemCodePublic(string $fieldName): ?string
+    {
+        return $this->getFieldSystemCode($fieldName);
+    }
+
+    // Merges a set of raw FieldValue entries (already in WA shape) into the
+    // contact without going through buildFieldValues. Use this when you have
+    // the exact SystemCode and Value ready and don't need the key-mapping layer.
+    public function updateMemberRaw(int $contactId, array $fieldValues): array
+    {
+        $accountId = $this->getAccountId();
+
+        $current = $this->apiGet("/accounts/{$accountId}/contacts/{$contactId}");
+        if (! $current->successful()) {
+            throw new \RuntimeException("WA updateMemberRaw: could not fetch contact {$contactId}: " . $current->body());
+        }
+        $existing = $current->json();
+
+        $existingFVMap = [];
+        foreach ($existing['FieldValues'] ?? [] as $fv) {
+            $key = $fv['SystemCode'] ?? $fv['FieldName'] ?? null;
+            if ($key) $existingFVMap[$key] = $fv;
+        }
+        foreach ($fieldValues as $fv) {
+            $key = $fv['SystemCode'] ?? $fv['FieldName'] ?? null;
+            if ($key) $existingFVMap[$key] = $fv;
+        }
+
+        $payload = [
+            'Id'          => $contactId,
+            'Status'      => $existing['Status']            ?? 'Active',
+            'MembershipEnabled' => $existing['MembershipEnabled'] ?? true,
+            'FieldValues' => $this->stripStalePictureFields(array_values($existingFVMap)),
+        ];
+        if (! empty($existing['MembershipLevel'])) {
+            $payload['MembershipLevel'] = $existing['MembershipLevel'];
+        }
+        if (! empty($existing['RenewalDue'])) {
+            $payload['RenewalDue'] = $existing['RenewalDue'];
+        }
+
+        $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
+        if (! $r->successful() && $this->isStalePictureError($r->body())) {
+            $payload['FieldValues'] = $this->stripStalePictureFields($payload['FieldValues'], force: true);
+            $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
+        }
+        if (! $r->successful()) {
+            throw new \RuntimeException("WA updateMemberRaw failed for contact {$contactId}: " . $r->body());
+        }
+
+        return $r->json() ?? [];
+    }
+
     // PUT /accounts/{accountId}/contacts/{contactId}
     // Updates an existing contact's profile and membership fields.
     // Only fields included in $data are changed; omitted keys are left as-is
