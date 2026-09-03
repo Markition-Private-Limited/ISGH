@@ -264,13 +264,18 @@
       {{-- Current Password --}}
       <div style="margin-bottom:16px;">
         <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px;" for="cp_current">Current Password</label>
-        <input
-          type="password"
-          id="cp_current"
-          name="current_password"
-          autocomplete="current-password"
-          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('current_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
-        />
+        <div style="position:relative;">
+          <input
+            type="password"
+            id="cp_current"
+            name="current_password"
+            autocomplete="current-password"
+            style="width:100%;padding:9px 40px 9px 12px;border:1px solid {{ $errors->has('current_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
+          />
+          <button type="button" onclick="cpToggle('cp_current',this)" tabindex="-1" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:#9ca3af;" aria-label="Toggle password visibility">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         @error('current_password')
           <div style="color:#ef4444;font-size:.78rem;margin-top:4px;">{{ $message }}</div>
         @enderror
@@ -279,13 +284,18 @@
       {{-- New Password --}}
       <div style="margin-bottom:16px;">
         <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px;" for="cp_new">New Password</label>
-        <input
-          type="password"
-          id="cp_new"
-          name="new_password"
-          autocomplete="new-password"
-          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('new_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
-        />
+        <div style="position:relative;">
+          <input
+            type="password"
+            id="cp_new"
+            name="new_password"
+            autocomplete="new-password"
+            style="width:100%;padding:9px 40px 9px 12px;border:1px solid {{ $errors->has('new_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
+          />
+          <button type="button" onclick="cpToggle('cp_new',this)" tabindex="-1" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:#9ca3af;" aria-label="Toggle password visibility">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         @error('new_password')
           <div style="color:#ef4444;font-size:.78rem;margin-top:4px;">{{ $message }}</div>
         @enderror
@@ -294,13 +304,18 @@
       {{-- Confirm New Password --}}
       <div style="margin-bottom:24px;">
         <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px;" for="cp_confirm">Confirm New Password</label>
-        <input
-          type="password"
-          id="cp_confirm"
-          name="new_password_confirmation"
-          autocomplete="new-password"
-          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('new_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
-        />
+        <div style="position:relative;">
+          <input
+            type="password"
+            id="cp_confirm"
+            name="new_password_confirmation"
+            autocomplete="new-password"
+            style="width:100%;padding:9px 40px 9px 12px;border:1px solid {{ $errors->has('new_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
+          />
+          <button type="button" onclick="cpToggle('cp_confirm',this)" tabindex="-1" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:#9ca3af;" aria-label="Toggle password visibility">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         @error('new_password')
           <div style="color:#ef4444;font-size:.78rem;margin-top:4px;">{{ $message }}</div>
         @enderror
@@ -328,6 +343,13 @@ function hideLogoutModal() {
   var m = document.getElementById('logout-modal');
   m.style.display = 'none';
   document.body.style.overflow = '';
+}
+
+function cpToggle(id, btn) {
+  var inp = document.getElementById(id);
+  var showing = inp.type === 'text';
+  inp.type = showing ? 'password' : 'text';
+  btn.style.color = showing ? '#9ca3af' : '#3b82f6';
 }
 
 function showChangePasswordModal() {
