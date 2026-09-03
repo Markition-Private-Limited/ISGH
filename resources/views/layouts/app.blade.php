@@ -170,6 +170,10 @@
           </button>
 
           <div class="role-dropdown-menu" id="role-menu" role="menu" aria-label="User menu">
+            <a class="role-dropdown-item" href="#" role="menuitem"
+               onclick="event.preventDefault();showChangePasswordModal();">
+              Change Password
+            </a>
             <hr style="border:none;border-top:1px solid var(--clr-border-light);margin:4px 0;" />
             <a class="role-dropdown-item" href="#" role="menuitem"
                onclick="event.preventDefault();showLogoutModal();">
@@ -239,6 +243,81 @@
   </div>
 </div>
 
+{{-- ── Change Password Modal ──────────────────────────────────── --}}
+<div id="change-password-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;">
+  {{-- Backdrop --}}
+  <div onclick="hideChangePasswordModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);"></div>
+  {{-- Dialog --}}
+  <div style="position:relative;background:#fff;border-radius:16px;padding:32px 28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    {{-- Icon --}}
+    <div style="width:56px;height:56px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <div style="font-size:1.15rem;font-weight:700;color:#111827;margin-bottom:20px;text-align:center;">Change Password</div>
+
+    <form method="POST" action="{{ route('portal.change-password') }}">
+      @csrf
+
+      {{-- Current Password --}}
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px;" for="cp_current">Current Password</label>
+        <input
+          type="password"
+          id="cp_current"
+          name="current_password"
+          autocomplete="current-password"
+          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('current_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
+        />
+        @error('current_password')
+          <div style="color:#ef4444;font-size:.78rem;margin-top:4px;">{{ $message }}</div>
+        @enderror
+      </div>
+
+      {{-- New Password --}}
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px;" for="cp_new">New Password</label>
+        <input
+          type="password"
+          id="cp_new"
+          name="new_password"
+          autocomplete="new-password"
+          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('new_password') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
+        />
+        @error('new_password')
+          <div style="color:#ef4444;font-size:.78rem;margin-top:4px;">{{ $message }}</div>
+        @enderror
+      </div>
+
+      {{-- Confirm New Password --}}
+      <div style="margin-bottom:24px;">
+        <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px;" for="cp_confirm">Confirm New Password</label>
+        <input
+          type="password"
+          id="cp_confirm"
+          name="new_password_confirmation"
+          autocomplete="new-password"
+          style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('new_password_confirmation') ? '#ef4444' : '#d1d5db' }};border-radius:8px;font-size:.875rem;box-sizing:border-box;outline:none;"
+        />
+        @error('new_password_confirmation')
+          <div style="color:#ef4444;font-size:.78rem;margin-top:4px;">{{ $message }}</div>
+        @enderror
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <button type="button" onclick="hideChangePasswordModal()" style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:.875rem;font-weight:600;color:#374151;cursor:pointer;">
+          Cancel
+        </button>
+        <button type="submit" style="flex:1;padding:10px;border:none;border-radius:8px;background:#3b82f6;font-size:.875rem;font-weight:600;color:#fff;cursor:pointer;">
+          Update Password
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 function showLogoutModal() {
   var m = document.getElementById('logout-modal');
@@ -250,9 +329,31 @@ function hideLogoutModal() {
   m.style.display = 'none';
   document.body.style.overflow = '';
 }
+
+function showChangePasswordModal() {
+  var m = document.getElementById('change-password-modal');
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function hideChangePasswordModal() {
+  var m = document.getElementById('change-password-modal');
+  m.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') hideLogoutModal();
+  if (e.key === 'Escape') {
+    hideLogoutModal();
+    hideChangePasswordModal();
+  }
 });
+
+// Auto-open change-password modal if validation errors were returned for it
+@if($errors->hasAny(['current_password', 'new_password', 'new_password_confirmation']) || session('open_change_password_modal'))
+document.addEventListener('DOMContentLoaded', function() {
+  showChangePasswordModal();
+});
+@endif
 </script>
 </body>
 </html>
