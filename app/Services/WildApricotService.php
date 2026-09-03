@@ -684,6 +684,13 @@ class WildApricotService
         return $this->getFieldSystemCode($fieldName);
     }
 
+    // Public wrapper around apiGet for use in controllers that need a raw
+    // contact fetch without duplicating authentication logic.
+    public function apiGetPublic(string $path): \Illuminate\Http\Client\Response
+    {
+        return $this->apiGet($path);
+    }
+
     // Merges a set of raw FieldValue entries (already in WA shape) into the
     // contact without going through buildFieldValues. Use this when you have
     // the exact SystemCode and Value ready and don't need the key-mapping layer.

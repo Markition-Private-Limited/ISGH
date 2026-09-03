@@ -521,7 +521,7 @@
 
         <!-- ── PHOTO UPLOAD SECTION ── -->
         <div id="photo-upload-section" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
-          <p style="font-family:'SF Pro bold';font-size:0.88rem;color:#374151;margin-bottom:0.6rem;">Upload ID</p>
+          <p style="font-family:'SF Pro bold';font-size:0.88rem;color:#374151;margin-bottom:0.6rem;">Upload TX DL/ID</p>
 
           <div id="id-card-already-uploaded" style="display:none;align-items:center;gap:0.5rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.6rem;padding:0.6rem 0.9rem;margin-bottom:0.9rem;font-size:0.8rem;color:#15803d;">
             <svg style="width:16px;height:16px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -686,10 +686,9 @@
       try { data = raw ? JSON.parse(raw) : {}; } catch (_) { /* non-JSON (e.g. 413 HTML) */ }
 
       if (res.ok && data.success) {
-        showPhotoMsg('Photo uploaded successfully! Reloading…', '#15803d');
         btn.style.display = 'none';
         document.getElementById('photo-drop-label').style.borderColor = '#10b981';
-        setTimeout(() => window.location.reload(), 1500);
+        showSubmissionPopup();
       } else if (res.status === 413 || /request entity too large/i.test(raw)) {
         showPhotoMsg('Photo is too large for the server. Please use an image under 8 MB.', '#991b1b');
       } else {
@@ -868,6 +867,32 @@
   })();
 </script>
 
+<!-- ══════════ SUBMISSION SUCCESS POPUP ══════════ -->
+<div id="submission-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:1.5rem;padding:2.25rem 2rem 2rem;max-width:440px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.18);text-align:center;position:relative;">
+    <!-- green checkmark circle -->
+    <div style="width:64px;height:64px;background:linear-gradient(135deg,#0a5e3a,#12a060);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h3 style="font-family:'SF Pro bold',sans-serif;font-size:1.2rem;color:#111827;margin-bottom:0.65rem;">Submission Successful!</h3>
+    <p style="font-size:0.84rem;color:#6b7280;line-height:1.7;margin-bottom:0.9rem;">
+      Your information has been successfully submitted to our membership team for review. We are currently processing your details to ensure your profile is up to date and your online voting eligibility is verified.
+    </p>
+    <p style="font-size:0.84rem;color:#6b7280;line-height:1.7;margin-bottom:0.9rem;">
+      We will follow up with a confirmation email within <strong style="color:#374151;">3 to 5 business days</strong> once the process is complete.
+    </p>
+    <p style="font-size:0.84rem;color:#374151;font-style:italic;line-height:1.6;margin-bottom:1.5rem;">
+      Jazakallah khair for your patience and for being a valued member of our community!
+    </p>
+    <button onclick="closeSubmissionPopup()"
+            style="background:#043d27;color:white;border:none;border-radius:999px;padding:0.75rem 2rem;font-size:0.9rem;font-family:'SF Pro bold',sans-serif;cursor:pointer;transition:background 0.2s;">
+      Close
+    </button>
+  </div>
+</div>
+
 <div id="mobileMenu" class="fixed inset-0 z-[200] hidden">
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeMobileMenu()"></div>
   <div class="absolute top-0 right-0 w-72 h-full bg-[#0d1f14] flex flex-col p-6 shadow-2xl overflow-y-auto">
@@ -889,6 +914,8 @@
 <script>
 function openMobileMenu(){document.getElementById('mobileMenu').classList.remove('hidden');document.body.style.overflow='hidden';}
 function closeMobileMenu(){document.getElementById('mobileMenu').classList.add('hidden');document.body.style.overflow='';}
+function showSubmissionPopup(){const p=document.getElementById('submission-popup');p.style.display='flex';document.body.style.overflow='hidden';}
+function closeSubmissionPopup(){const p=document.getElementById('submission-popup');p.style.display='none';document.body.style.overflow='';window.location.reload();}
 </script>
 
 </body>

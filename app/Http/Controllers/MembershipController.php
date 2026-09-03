@@ -296,6 +296,28 @@ class MembershipController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to upload photo: ' . $e->getMessage()], 500);
         }
 
+        // Grant "Online Voting eligible 2026" group participation
+        try {
+            $this->wa->addGroupParticipation($contactId, 'Online Voting eligible 2026');
+        } catch (Throwable $e) {
+            Log::warning('WA uploadMemberPhoto: group participation update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+        }
+
+        // Send thank-you email
+        try {
+            $accountId = $this->wa->getAccountId();
+            $contact   = $this->wa->apiGetPublic("/accounts/{$accountId}/contacts/{$contactId}")->json();
+            $firstName = $contact['FirstName'] ?? 'Member';
+            $email     = $contact['Email'] ?? null;
+
+            if ($email) {
+                \Illuminate\Support\Facades\Mail::to($email)
+                    ->send(new \App\Mail\VerificationThankYouMail($firstName));
+            }
+        } catch (Throwable $e) {
+            Log::warning('WA uploadMemberPhoto: thank-you email failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+        }
+
         return response()->json(['success' => true]);
     }
 
