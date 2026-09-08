@@ -152,19 +152,11 @@ class MembershipController extends Controller
         $lastName = trim((string) $request->input('last_name', ''));
         $streetNumber = trim((string) $request->input('street_number', ''));
         $dateOfBirth = trim((string) $request->input('date_of_birth', $request->input('dob', '')));
-        $enteredEmail = trim((string) $request->input('email', ''));
 
-        if ($firstName === '' || $lastName === '' || $dateOfBirth === '' || $enteredEmail === '') {
+        if ($firstName === '' || $lastName === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'Please provide your first name, last name, date of birth, and email to verify your membership.',
-            ], 422);
-        }
-
-        if (! filter_var($enteredEmail, FILTER_VALIDATE_EMAIL)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please enter a valid email address.',
+                'message' => 'Please provide your first name and last name to verify your membership.',
             ], 422);
         }
 
@@ -184,32 +176,6 @@ class MembershipController extends Controller
                 'success' => false,
                 'message' => 'No membership record found matching your details. Please check the information entered or contact ISGH support.',
             ]);
-        }
-
-        // Update email fields on WA based on whether the contact already has an email
-        $contactId   = $contact['Id'] ?? null;
-        $existingEmail = $contact['Email'] ?? '';
-
-        if ($contactId) {
-            try {
-                if ($existingEmail === '' || $existingEmail === null) {
-                    // No email on record — set it
-                    $this->wa->updateMember($contactId, ['email' => $enteredEmail]);
-                    Log::info('WA verification: set email', ['contact_id' => $contactId, 'email' => $enteredEmail]);
-                } elseif (strtolower($existingEmail) !== strtolower($enteredEmail)) {
-                    // Different email — write entered email into Alternate Email field
-                    $altEmailCode = $this->wa->getFieldSystemCodePublic('Alternate Email');
-                    if ($altEmailCode) {
-                        $this->wa->updateMemberRaw($contactId, [
-                            ['FieldName' => 'Alternate Email', 'SystemCode' => $altEmailCode, 'Value' => $enteredEmail],
-                        ]);
-                    }
-                    Log::info('WA verification: set alternate email', ['contact_id' => $contactId, 'alt_email' => $enteredEmail]);
-                }
-            } catch (Throwable $e) {
-                Log::warning('WA verification: email update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
-                // Non-fatal — verification result is still returned
-            }
         }
 
         // Extract dynamic field values from WA response
@@ -285,9 +251,11 @@ class MembershipController extends Controller
         $request->validate([
             'contact_id' => 'required|integer|min:1',
             'photo'      => 'required|image|max:10240',
+            'email'      => 'required|email',
         ]);
 
-        $contactId = (int) $request->input('contact_id');
+        $contactId    = (int) $request->input('contact_id');
+        $enteredEmail = trim((string) $request->input('email', ''));
 
         try {
             $this->wa->uploadContactPicture($contactId, $request->file('photo'));
@@ -303,19 +271,40 @@ class MembershipController extends Controller
             Log::warning('WA uploadMemberPhoto: group participation update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
         }
 
-        // Send thank-you email
+        // Fetch fresh contact to check existing email, then send thank-you
+        $accountId = $this->wa->getAccountId();
         try {
-            $accountId = $this->wa->getAccountId();
-            $contact   = $this->wa->apiGetPublic("/accounts/{$accountId}/contacts/{$contactId}")->json();
-            $firstName = $contact['FirstName'] ?? 'Member';
-            $email     = $contact['Email'] ?? null;
+            $contact       = $this->wa->apiGetPublic("/accounts/{$accountId}/contacts/{$contactId}")->json();
+            $firstName     = $contact['FirstName'] ?? 'Member';
+            $existingEmail = $contact['Email'] ?? '';
 
-            if ($email) {
-                \Illuminate\Support\Facades\Mail::to($email)
+            // Update email on WA based on what's already stored
+            if ($existingEmail === '' || $existingEmail === null) {
+                // No email on record — set the entered email
+                $this->wa->updateMember($contactId, ['email' => $enteredEmail]);
+                Log::info('WA upload: set email', ['contact_id' => $contactId, 'email' => $enteredEmail]);
+                $emailForThankYou = $enteredEmail;
+            } elseif (strtolower($existingEmail) !== strtolower($enteredEmail)) {
+                // Different email — store entered email in Alternate Email field
+                $altEmailCode = $this->wa->getFieldSystemCodePublic('Alternate Email');
+                if ($altEmailCode) {
+                    $this->wa->updateMemberRaw($contactId, [
+                        ['FieldName' => 'Alternate Email', 'SystemCode' => $altEmailCode, 'Value' => $enteredEmail],
+                    ]);
+                }
+                Log::info('WA upload: set alternate email', ['contact_id' => $contactId, 'alt_email' => $enteredEmail]);
+                $emailForThankYou = $existingEmail;
+            } else {
+                // Same email — no update needed
+                $emailForThankYou = $existingEmail;
+            }
+
+            if ($emailForThankYou) {
+                \Illuminate\Support\Facades\Mail::to($emailForThankYou)
                     ->send(new \App\Mail\VerificationThankYouMail($firstName));
             }
         } catch (Throwable $e) {
-            Log::warning('WA uploadMemberPhoto: thank-you email failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+            Log::warning('WA uploadMemberPhoto: post-upload steps failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
         }
 
         return response()->json(['success' => true]);

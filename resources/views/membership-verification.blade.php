@@ -417,13 +417,8 @@
         </div>
 
         <div class="field">
-          <label>Date of Birth <span>*</span></label>
+          <label>Date of Birth</label>
           <input type="text" id="inp-dob" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10" autocomplete="bday">
-        </div>
-
-        <div class="field">
-          <label>Email Address <span>*</span></label>
-          <input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email">
         </div>
 
       </div>
@@ -531,6 +526,11 @@
           </div>
 
           <p style="font-size:0.78rem;color:#9ca3af;margin-bottom:1rem;">Upload your Texas ID or Driver License to get verified and receive your online voting ballot.</p>
+
+          <div class="field" style="margin-bottom:1rem;">
+            <label>Email Address <span>*</span></label>
+            <input type="email" id="inp-upload-email" placeholder="you@example.com" autocomplete="email">
+          </div>
 
           <label id="photo-drop-label" for="photo-input"
                  style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;border:2px dashed #d1d5db;border-radius:1rem;padding:1.5rem 1rem;cursor:pointer;background:#fafafa;transition:border-color 0.2s;">
@@ -666,6 +666,15 @@
       return;
     }
 
+    const uploadEmail = document.getElementById('inp-upload-email').value.trim();
+    const emailEl     = document.getElementById('inp-upload-email');
+    emailEl.classList.remove('field-error');
+    if (!uploadEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(uploadEmail)) {
+      emailEl.classList.add('field-error');
+      showPhotoMsg('Please enter a valid email address before submitting.', '#991b1b');
+      return;
+    }
+
     const btn = document.getElementById('btn-photo-submit');
     btn.disabled = true;
     btn.textContent = 'Uploading…';
@@ -673,6 +682,7 @@
     const formData = new FormData();
     formData.append('contact_id', verifiedContactId);
     formData.append('photo', file);
+    formData.append('email', uploadEmail);
     formData.append('_token', CSRF);
 
     try {
@@ -717,12 +727,11 @@
     const lastName     = document.getElementById('inp-last-name').value.trim();
     const streetNumber = document.getElementById('inp-street-number').value.trim();
     const dob          = document.getElementById('inp-dob').value.trim();
-    const email        = document.getElementById('inp-email').value.trim();
 
     // Clear previous errors
     document.querySelectorAll('.field input').forEach(input => input.classList.remove('field-error'));
 
-    // Check all fields are filled and valid
+    // Check required fields
     let hasErrors = false;
     if (!firstName) {
       document.getElementById('inp-first-name').classList.add('field-error');
@@ -736,12 +745,8 @@
       document.getElementById('inp-street-number').classList.add('field-error');
       hasErrors = true;
     }
-    if (!dob || !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
+    if (dob && !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
       document.getElementById('inp-dob').classList.add('field-error');
-      hasErrors = true;
-    }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      document.getElementById('inp-email').classList.add('field-error');
       hasErrors = true;
     }
 
@@ -764,7 +769,7 @@
           'X-CSRF-TOKEN': CSRF,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, street_number: streetNumber, date_of_birth: dob, email: email }),
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, street_number: streetNumber, date_of_birth: dob }),
       });
 
       const data = await res.json();
@@ -836,7 +841,7 @@
 
   // Allow Enter key to submit from any input
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-street-number','inp-dob','inp-email'].includes(e.target.id)) {
+    if (e.key === 'Enter' && ['inp-first-name','inp-last-name','inp-street-number','inp-dob'].includes(e.target.id)) {
       handleVerify();
     }
   });
