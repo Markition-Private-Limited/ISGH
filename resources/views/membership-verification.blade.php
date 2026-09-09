@@ -510,7 +510,7 @@
         </div>
 
         <!-- ── DISCLAIMER ── -->
-        <p style="margin-top:1.5rem;font-size:0.75rem;color:#9ca3af;font-style:italic;text-align:center;line-height:1.5;">
+        <p style="margin-top:1.5rem;font-size:0.85rem;color:#9ca3af;font-style:italic;text-align:center;line-height:1.5;">
           You will not be opted for online voting until the administration verifies your identity.
         </p>
 
