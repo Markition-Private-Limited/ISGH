@@ -510,9 +510,14 @@
         </div>
 
         <!-- ── DISCLAIMER ── -->
-        <p style="margin-top:1.5rem;font-size:0.85rem;color:#9ca3af;font-style:italic;text-align:center;line-height:1.5;">
-          You will not be opted for online voting until the administration verifies your identity.
-        </p>
+        <div style="margin-top:1.5rem;display:flex;align-items:flex-start;gap:0.6rem;background:#fff5f5;border:1px solid #fecaca;border-radius:0.75rem;padding:0.85rem 1rem;">
+          <svg style="width:18px;height:18px;color:#dc2626;flex-shrink:0;margin-top:1px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+          <p style="font-size:0.85rem;color:#dc2626;font-style:italic;line-height:1.55;margin:0;">
+            You will not be opted for online voting until the administration verifies your identity.
+          </p>
+        </div>
 
         <!-- ── PHOTO UPLOAD SECTION ── -->
         <div id="photo-upload-section" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
@@ -546,8 +551,8 @@
           <div id="photo-upload-msg" style="display:none;margin-top:0.75rem;font-size:0.8rem;"></div>
 
           <button id="btn-photo-submit" onclick="handlePhotoSubmit()"
-                  style="display:none;margin-top:1rem;width:100%;padding:0.9rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;">
-            Submit Photo
+                  style="margin-top:1rem;width:100%;padding:0.9rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;">
+            Submit
           </button>
         </div>
         <!-- /photo-upload-section -->
@@ -654,7 +659,6 @@
     preview.style.display = 'block';
     labelText.style.display = 'none';
     document.getElementById('photo-upload-msg').style.display = 'none';
-    document.getElementById('btn-photo-submit').style.display = 'block';
   }
 
   async function handlePhotoSubmit() {
@@ -696,7 +700,6 @@
       try { data = raw ? JSON.parse(raw) : {}; } catch (_) { /* non-JSON (e.g. 413 HTML) */ }
 
       if (res.ok && data.success) {
-        btn.style.display = 'none';
         document.getElementById('photo-drop-label').style.borderColor = '#10b981';
         showSubmissionPopup();
       } else if (res.status === 413 || /request entity too large/i.test(raw)) {
@@ -814,7 +817,6 @@
     preview.src = '';
     preview.style.display = 'none';
     document.getElementById('photo-label-text').style.display = '';
-    document.getElementById('btn-photo-submit').style.display = 'none';
     document.getElementById('photo-upload-msg').style.display = 'none';
     document.getElementById('photo-drop-label').style.borderColor = '#d1d5db';
     const idNotice = document.getElementById('id-card-already-uploaded');
