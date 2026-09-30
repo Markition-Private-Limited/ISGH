@@ -545,7 +545,7 @@
             </svg>
             <span id="photo-label-text" style="font-size:0.82rem;color:#6b7280;">Click to choose an image or drag & drop</span>
             <img id="photo-preview" src="" alt="" style="display:none;max-height:140px;border-radius:0.6rem;margin-top:0.5rem;object-fit:contain;" />
-            <input type="file" id="photo-input" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
+            <input type="file" id="photo-input" accept="image/*,.heic,.heif,.pdf" style="display:none;" onchange="handlePhotoSelect(event)">
           </label>
 
           <div id="photo-upload-msg" style="display:none;margin-top:0.75rem;font-size:0.8rem;"></div>
@@ -653,12 +653,18 @@
   function handlePhotoSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
-    const preview = document.getElementById('photo-preview');
+    const preview  = document.getElementById('photo-preview');
     const labelText = document.getElementById('photo-label-text');
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = 'block';
-    labelText.style.display = 'none';
     document.getElementById('photo-upload-msg').style.display = 'none';
+    if (file.type === 'application/pdf' || /\.heic$|\.heif$/i.test(file.name)) {
+      preview.style.display = 'none';
+      labelText.textContent = '📄 ' + file.name;
+      labelText.style.display = '';
+    } else {
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+      labelText.style.display = 'none';
+    }
   }
 
   async function handlePhotoSubmit() {

@@ -1362,6 +1362,9 @@ class WildApricotService
         $payload = array_merge($contact, [
             'FieldValues' => $this->stripStalePictureFields(array_values($fvMap)),
         ]);
+        // WA rejects any PUT that echoes back MemberRenewalType=Automatic — the
+        // API only allows Manual. Unset it entirely so WA keeps the existing value.
+        unset($payload['MemberRenewalType']);
 
         $r = $this->apiPut("/accounts/{$accountId}/contacts/{$contactId}", $payload);
         $names = implode(', ', array_column($fields, 'FieldName'));
