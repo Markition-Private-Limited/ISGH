@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
-            '/membership/webhook',
+            '*',
         ]);
         $middleware->alias([
             'admin.token'          => \App\Http\Middleware\AdminToken::class,
