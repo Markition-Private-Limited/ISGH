@@ -226,18 +226,24 @@ class MembershipController extends Controller
 
         $pictureUrl = $get('Picture URL') ?: $get('custom-17977092');
 
+        // Upload is only allowed when the member is Active and voting-eligible.
+        // Lapsed/expired memberships and ineligible members should use the inquiry flow.
+        $isLapsed        = in_array(strtolower($status), ['lapsed', 'expired']);
+        $uploadAllowed   = $isActive && ! $isLapsed;
+
         return response()->json([
             'success' => true,
             'member' => [
-                'id'            => $contact['Id'] ?? null,
-                'name'          => trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? '')),
-                'type'          => $levelName,
-                'status'        => $status,
-                'online_opt_in' => $onlineOptIn ? 'Yes' : 'No',
-                'expiry'        => $expiry,
-                'zone'          => $get('Zone / Center') ?: $get('custom-9967573'),
-                'voting'        => $isActive ? 'Yes' : 'No',
-                'has_id_card'   => $pictureUrl !== '',
+                'id'             => $contact['Id'] ?? null,
+                'name'           => trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? '')),
+                'type'           => $levelName,
+                'status'         => $status,
+                'online_opt_in'  => $onlineOptIn ? 'Yes' : 'No',
+                'expiry'         => $expiry,
+                'zone'           => $get('Zone / Center') ?: $get('custom-9967573'),
+                'voting'         => $isActive ? 'Yes' : 'No',
+                'has_id_card'    => $pictureUrl !== '',
+                'upload_allowed' => $uploadAllowed,
             ],
         ]);
     }
@@ -252,6 +258,7 @@ class MembershipController extends Controller
             'contact_id' => 'required|integer|min:1',
             'photo'      => 'required|file|mimes:jpeg,jpg,png,gif,bmp,webp,heic,heif,pdf|max:10240',
             'email'      => 'required|email',
+            'consent'    => 'required|in:1,true',
         ]);
 
         $contactId    = (int) $request->input('contact_id');
@@ -266,7 +273,7 @@ class MembershipController extends Controller
 
         // Grant "Online Voting eligible 2026" group participation
         try {
-            $this->wa->addGroupParticipation($contactId, 'Online Voting eligible 2026');
+            $this->wa->addGroupParticipation($contactId, 'Online Voting Opt-in Waiting for Approval');
         } catch (Throwable $e) {
             Log::warning('WA uploadMemberPhoto: group participation update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
         }
@@ -307,16 +314,70 @@ class MembershipController extends Controller
             Log::warning('WA uploadMemberPhoto: post-upload steps failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
         }
 
+        // Record identity verification policy consent on WA
+        try {
+            $consentCode = $this->wa->getFieldSystemCodePublic('ISGH Identity verification policy consent');
+            if ($consentCode) {
+                $this->wa->updateMemberRaw($contactId, [
+                    ['FieldName' => 'ISGH Identity verification policy consent', 'SystemCode' => $consentCode, 'Value' => true],
+                ]);
+            } else {
+                Log::warning('WA uploadMemberPhoto: consent field not found on WA', ['contact_id' => $contactId]);
+            }
+        } catch (Throwable $e) {
+            Log::warning('WA uploadMemberPhoto: consent field update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+        }
+
         return response()->json(['success' => true]);
     }
 
     // ─────────────────────────────────────────────────────────────────────
     //  STRIPE PUBLISHABLE KEY LOOKUP  (AJAX — called when checkomatic + center change)
     //
+    // ─────────────────────────────────────────────────────────────────────
+    //  SEND INQUIRY  (AJAX — called when member is not found / ineligible)
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function sendInquiry(Request $request)
+    {
+        $request->validate([
+            'first_name'    => 'required|string|max:100',
+            'last_name'     => 'required|string|max:100',
+            'street_number' => 'nullable|string|max:20',
+            'date_of_birth' => 'nullable|string|max:20',
+            'email'         => 'required|email|max:255',
+            'reason'        => 'nullable|string|max:500',
+        ]);
+
+        $data = [
+            'first_name'    => $request->input('first_name'),
+            'last_name'     => $request->input('last_name'),
+            'street_number' => $request->input('street_number', '—'),
+            'date_of_birth' => $request->input('date_of_birth', '—'),
+            'email'         => $request->input('email'),
+            'reason'        => $request->input('reason', 'Member not found / ineligible for upload'),
+        ];
+
+        try {
+            // Notify the membership team
+            \Illuminate\Support\Facades\Mail::to('membership@isgh.org')
+                ->send(new \App\Mail\MemberInquiryStaffMail($data));
+
+            // Acknowledge to the user
+            \Illuminate\Support\Facades\Mail::to($data['email'])
+                ->send(new \App\Mail\MemberInquiryAckMail($data['first_name']));
+        } catch (Throwable $e) {
+            Log::error('sendInquiry: mail failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to send inquiry. Please try again.'], 500);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     //  The signup form picks a center mid-flow via ZIP lookup; for
     //  checkomatic the card element must tokenize against the *zone's*
     //  Stripe account, not the global one. Returns the publishable key
-    //  the StripeKeyResolver would pair with the secret used at charge time.
+    //  the StripeKeyResolver would pair with the secret used at range time.
     // ─────────────────────────────────────────────────────────────────────
 
     public function stripeKey(Request $request)

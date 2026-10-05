@@ -447,6 +447,16 @@
           Please double-check your information or contact
           <strong style="color:#374151;">ISGH support</strong> for assistance.
         </p>
+        <div style="padding-left:2.7rem;margin-top:1.25rem;">
+          <div id="inquiry-email-prompt-notfound" style="display:none;margin-bottom:0.75rem;" class="field">
+            <label>Your Email <span>*</span></label>
+            <input type="email" id="inp-inquiry-email-notfound" placeholder="you@example.com" autocomplete="email" style="border:1.5px solid #e2e8f0;border-radius:0.75rem;padding:0.9rem 1rem;font-size:0.86rem;width:100%;outline:none;">
+          </div>
+          <button onclick="handleInquiryNotFound(this)"
+                  style="padding:0.75rem 1.5rem;background:#b91c1c;color:white;border:none;border-radius:999px;font-size:0.85rem;font-family:'SF Pro bold';cursor:pointer;transition:background 0.2s;">
+            If you feel this information is incorrect send an inquiry
+          </button>
+        </div>
       </div>
     </div>
 
@@ -519,8 +529,21 @@
           </p>
         </div>
 
+        <!-- ── INQUIRY BUTTON (shown when not upload_allowed) ── -->
+        <div id="inquiry-section" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
+          <div id="inquiry-email-prompt" style="display:none;margin-bottom:0.75rem;" class="field">
+            <label>Your Email <span>*</span></label>
+            <input type="email" id="inp-inquiry-email" placeholder="you@example.com" autocomplete="email"
+                   style="border:1.5px solid #e2e8f0;border-radius:0.75rem;padding:0.9rem 1rem;font-size:0.86rem;width:100%;outline:none;">
+          </div>
+          <button onclick="handleInquiry(this)"
+                  style="width:100%;padding:0.9rem;background:#b91c1c;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:pointer;transition:background 0.2s;">
+            If you feel this information is incorrect send an inquiry
+          </button>
+        </div>
+
         <!-- ── PHOTO UPLOAD SECTION ── -->
-        <div id="photo-upload-section" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
+        <div id="photo-upload-section" style="display:none;margin-top:2rem;padding-top:1.5rem;border-top:1px solid #f1f3f5;">
           <p style="font-family:'SF Pro bold';font-size:0.88rem;color:#374151;margin-bottom:0.6rem;">Upload TX DL/ID</p>
 
           <div id="id-card-already-uploaded" style="display:none;align-items:center;gap:0.5rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0.6rem;padding:0.6rem 0.9rem;margin-bottom:0.9rem;font-size:0.8rem;color:#15803d;">
@@ -550,8 +573,21 @@
 
           <div id="photo-upload-msg" style="display:none;margin-top:0.75rem;font-size:0.8rem;"></div>
 
-          <button id="btn-photo-submit" onclick="handlePhotoSubmit()"
-                  style="margin-top:1rem;width:100%;padding:0.9rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;">
+          <!-- ── CONSENT CHECKBOX ── -->
+          <label id="consent-label"
+                 style="display:flex;align-items:flex-start;gap:0.65rem;margin-top:1.1rem;padding:0.9rem 1rem;background:#f8fdf9;border:1.5px solid #d1fae5;border-radius:0.85rem;cursor:pointer;">
+            <input type="checkbox" id="consent-checkbox" onchange="handleConsentChange()"
+                   style="width:17px;height:17px;flex-shrink:0;margin-top:2px;accent-color:#0a5e3a;cursor:pointer;">
+            <span style="font-size:0.8rem;color:#374151;line-height:1.6;">
+              By checking this box, I consent to the Islamic Society of Greater Houston (ISGH) collecting and using
+              my provided ID and personal information solely to verify my identity and membership status.
+              I have read and agree to the
+              <a href="#" onclick="event.preventDefault();" style="color:#0a5e3a;font-weight:600;text-decoration:underline;">Identity Verification Policy</a>.
+            </span>
+          </label>
+
+          <button id="btn-photo-submit" onclick="handlePhotoSubmit()" disabled
+                  style="margin-top:1rem;width:100%;padding:0.9rem;background:#9ca3af;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:not-allowed;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;opacity:0.7;">
             Submit
           </button>
         </div>
@@ -693,6 +729,7 @@
     formData.append('contact_id', verifiedContactId);
     formData.append('photo', file);
     formData.append('email', uploadEmail);
+    formData.append('consent', '1');
     formData.append('_token', CSRF);
 
     try {
@@ -801,6 +838,10 @@
         const idNotice = document.getElementById('id-card-already-uploaded');
         if (idNotice) idNotice.style.display = m.has_id_card ? 'flex' : 'none';
 
+        // Show upload or inquiry section based on eligibility
+        document.getElementById('photo-upload-section').style.display = m.upload_allowed ? 'block' : 'none';
+        document.getElementById('inquiry-section').style.display = m.upload_allowed ? 'none' : 'block';
+
         showCard('card-found');
       } else {
         document.getElementById('not-found-msg').textContent =
@@ -817,6 +858,15 @@
     }
   }
 
+  function handleConsentChange() {
+    const checked = document.getElementById('consent-checkbox').checked;
+    const btn     = document.getElementById('btn-photo-submit');
+    btn.disabled  = !checked;
+    btn.style.background  = checked ? '#043d27' : '#9ca3af';
+    btn.style.cursor      = checked ? 'pointer'  : 'not-allowed';
+    btn.style.opacity     = checked ? '1'        : '0.7';
+  }
+
   function resetPhotoSection() {
     document.getElementById('photo-input').value = '';
     const preview = document.getElementById('photo-preview');
@@ -827,6 +877,82 @@
     document.getElementById('photo-drop-label').style.borderColor = '#d1d5db';
     const idNotice = document.getElementById('id-card-already-uploaded');
     if (idNotice) idNotice.style.display = 'none';
+    document.getElementById('photo-upload-section').style.display = 'none';
+    document.getElementById('inquiry-section').style.display = 'none';
+    // Reset consent checkbox and disable submit button
+    const cb = document.getElementById('consent-checkbox');
+    if (cb) { cb.checked = false; handleConsentChange(); }
+  }
+
+  async function sendInquiryRequest(email, btn) {
+    const payload = {
+      first_name:    document.getElementById('inp-first-name').value.trim(),
+      last_name:     document.getElementById('inp-last-name').value.trim(),
+      street_number: document.getElementById('inp-street-number').value.trim(),
+      date_of_birth: document.getElementById('inp-dob').value.trim(),
+      email:         email,
+      _token:        CSRF,
+    };
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      const res = await fetch('{{ route("membership.inquiry") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showInquiryPopup();
+      } else {
+        alert(data.message || 'Failed to send inquiry. Please try again.');
+      }
+    } catch (err) {
+      alert('A network error occurred. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
+  // Called from found card (ineligible/lapsed)
+  async function handleInquiry(btn) {
+    // Try upload email field first; if not visible/filled, show inline prompt
+    const uploadEmailEl = document.getElementById('inp-upload-email');
+    const inlineEmailEl = document.getElementById('inp-inquiry-email');
+    const emailPrompt   = document.getElementById('inquiry-email-prompt');
+
+    let email = (uploadEmailEl ? uploadEmailEl.value.trim() : '') ||
+                (inlineEmailEl ? inlineEmailEl.value.trim() : '');
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (emailPrompt) { emailPrompt.style.display = 'block'; }
+      email = inlineEmailEl ? inlineEmailEl.value.trim() : '';
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (inlineEmailEl) inlineEmailEl.focus();
+        return;
+      }
+    }
+    await sendInquiryRequest(email, btn);
+  }
+
+  // Called from not-found card
+  async function handleInquiryNotFound(btn) {
+    const emailPrompt   = document.getElementById('inquiry-email-prompt-notfound');
+    const inlineEmailEl = document.getElementById('inp-inquiry-email-notfound');
+
+    let email = inlineEmailEl ? inlineEmailEl.value.trim() : '';
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (emailPrompt) { emailPrompt.style.display = 'block'; }
+      email = inlineEmailEl ? inlineEmailEl.value.trim() : '';
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (inlineEmailEl) inlineEmailEl.focus();
+        return;
+      }
+    }
+    await sendInquiryRequest(email, btn);
   }
 
   // Drag-and-drop support on the photo label
@@ -906,6 +1032,29 @@
   </div>
 </div>
 
+<!-- ══════════ INQUIRY SUCCESS POPUP ══════════ -->
+<div id="inquiry-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:1.5rem;padding:2.25rem 2rem 2rem;max-width:440px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.18);text-align:center;position:relative;">
+    <div style="width:64px;height:64px;background:linear-gradient(135deg,#b91c1c,#ef4444);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+    </div>
+    <h3 style="font-family:'SF Pro bold',sans-serif;font-size:1.2rem;color:#111827;margin-bottom:0.65rem;">Inquiry Sent!</h3>
+    <p style="font-size:0.84rem;color:#6b7280;line-height:1.7;margin-bottom:0.9rem;">
+      Your inquiry has been sent to our membership team at <strong style="color:#374151;">membership@isgh.org</strong>. We have also sent you a confirmation email.
+    </p>
+    <p style="font-size:0.84rem;color:#6b7280;line-height:1.7;margin-bottom:1.5rem;">
+      Our team will review your information and respond within <strong style="color:#374151;">3–5 working days</strong>.
+    </p>
+    <button onclick="closeInquiryPopup()"
+            style="background:#043d27;color:white;border:none;border-radius:999px;padding:0.75rem 2rem;font-size:0.9rem;font-family:'SF Pro bold',sans-serif;cursor:pointer;transition:background 0.2s;">
+      Close
+    </button>
+  </div>
+</div>
+
 <div id="mobileMenu" class="fixed inset-0 z-[200] hidden">
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeMobileMenu()"></div>
   <div class="absolute top-0 right-0 w-72 h-full bg-[#0d1f14] flex flex-col p-6 shadow-2xl overflow-y-auto">
@@ -929,6 +1078,8 @@ function openMobileMenu(){document.getElementById('mobileMenu').classList.remove
 function closeMobileMenu(){document.getElementById('mobileMenu').classList.add('hidden');document.body.style.overflow='';}
 function showSubmissionPopup(){const p=document.getElementById('submission-popup');p.style.display='flex';document.body.style.overflow='hidden';}
 function closeSubmissionPopup(){const p=document.getElementById('submission-popup');p.style.display='none';document.body.style.overflow='';window.location.reload();}
+function showInquiryPopup(){const p=document.getElementById('inquiry-popup');p.style.display='flex';document.body.style.overflow='hidden';}
+function closeInquiryPopup(){const p=document.getElementById('inquiry-popup');p.style.display='none';document.body.style.overflow='';}
 </script>
 
 </body>
