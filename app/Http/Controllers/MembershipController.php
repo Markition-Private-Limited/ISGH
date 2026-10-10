@@ -6,6 +6,13 @@ use App\Jobs\ProcessWildApricotRegistration;
 use App\Models\Member;
 use App\Models\Payment;
 use App\Models\PendingRegistration;
+use App\Support\MembershipVerification as MV;
+use App\Mail\Membership\MembershipDisputeInternalMail;
+use App\Mail\Membership\MembershipDisputeReceivedMail;
+use App\Mail\Membership\MembershipInquiryInternalMail;
+use App\Mail\Membership\MembershipInquiryReceivedMail;
+use App\Mail\Membership\MembershipStatusNoticeMail;
+use Illuminate\Support\Facades\Mail;
 use App\Services\StripeService;
 use App\Services\WildApricotService;
 use App\Services\ZipCenterService;
@@ -174,6 +181,7 @@ class MembershipController extends Controller
         if (! $contact) {
             return response()->json([
                 'success' => false,
+                'not_found' => true,
                 'message' => 'No membership record found matching your details. Please check the information entered or contact ISGH support.',
             ]);
         }
@@ -207,8 +215,10 @@ class MembershipController extends Controller
         $expiry = $parseDisplayDate($renewalRaw);
         $since  = $parseDisplayDate($sinceRaw);
 
-        // Voting eligibility: Active status only
-        $isActive = strtolower($status) === 'active';
+        // Scenario + voting eligibility. Only Active members registered on or
+        // before the cutoff (June 30, 2026) are eligible.
+        $scenario   = MV::scenario($status, $sinceRaw);
+        $isEligible = $scenario === MV::ACTIVE_ELIGIBLE;
 
         // Online Opt-in: member must have "Online Voting eligible 2026" group participation
         $onlineOptIn = false;
@@ -226,6 +236,17 @@ class MembershipController extends Controller
 
         $pictureUrl = $get('Picture URL') ?: $get('custom-17977092');
 
+        $details = $this->verificationDetails($contact, $onlineOptIn);
+
+        // Remember what was verified so a later dispute cannot be raised
+        // against an arbitrary contact id.
+        $request->session()->put('membership_verified', [
+            'contact_id' => $contact['Id'] ?? null,
+            'scenario'   => $scenario,
+        ]);
+
+        $this->sendStatusNotice($scenario, $details, (string) ($contact['Email'] ?? ''));
+
         return response()->json([
             'success' => true,
             'member' => [
@@ -236,10 +257,138 @@ class MembershipController extends Controller
                 'online_opt_in' => $onlineOptIn ? 'Yes' : 'No',
                 'expiry'        => $expiry,
                 'zone'          => $get('Zone / Center') ?: $get('custom-9967573'),
-                'voting'        => $isActive ? 'Yes' : 'No',
+                'voting'        => $isEligible ? 'Yes' : 'No',
                 'has_id_card'   => $pictureUrl !== '',
+                'scenario'      => $scenario,
+                'registration'  => $details['registration'],
+                'renewal_link'  => $scenario === MV::LAPSED ? MV::renewalLink() : null,
+                'contact_email' => config('membership.verification.internal_email'),
             ],
         ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  VERIFICATION EMAILS  (disputes + not-found inquiries)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /** Member disputes an Active-late or Lapsed result. */
+    public function disputeResult(Request $request)
+    {
+        $data = $request->validate([
+            'message' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $verified = $request->session()->get('membership_verified');
+        $scenario = $verified['scenario'] ?? null;
+
+        if (! $verified || ! in_array($scenario, [MV::ACTIVE_LATE, MV::LAPSED], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please verify your membership again before submitting this request.',
+            ], 422);
+        }
+
+        try {
+            $accountId = $this->wa->getAccountId();
+            $contact   = $this->wa->apiGetPublic("/accounts/{$accountId}/contacts/{$verified['contact_id']}")->json();
+        } catch (Throwable $e) {
+            Log::error('Membership dispute: contact fetch failed', ['error' => $e->getMessage()]);
+            $contact = null;
+        }
+
+        if (! is_array($contact) || empty($contact['Id'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to process your request right now. Please try again or contact membership.verify@isgh.org.',
+            ], 500);
+        }
+
+        $d           = $this->verificationDetails($contact, false);
+        $submittedAt = now()->format('m-d-Y h:i A T');
+        $message     = trim((string) ($data['message'] ?? '')) ?: MV::NOT_ON_FILE;
+
+        $this->safeSend(MV::internalEmail(), new MembershipDisputeInternalMail($scenario, $d, $message, $submittedAt));
+        if ($contact['Email'] ?? '') {
+            $this->safeSend($contact['Email'], new MembershipDisputeReceivedMail($scenario, $d['name']));
+        }
+
+        // One dispute per verification.
+        $request->session()->forget('membership_verified');
+
+        return response()->json(['success' => true]);
+    }
+
+    /** Person with no matching record submits an inquiry. */
+    public function submitInquiry(Request $request)
+    {
+        $data = $request->validate([
+            'first_name'    => ['required', 'string', 'max:100'],
+            'last_name'     => ['required', 'string', 'max:100'],
+            'street_number' => ['required', 'string', 'max:20'],
+            'date_of_birth' => ['required', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}$/'],
+            'email'         => ['required', 'email', 'max:255'],
+        ], [
+            'email.required' => 'Please enter your email address so we can respond to your inquiry.',
+            'email.email'    => 'Please enter a valid email address.',
+        ]);
+
+        $args = [
+            trim($data['first_name']),
+            trim($data['last_name']),
+            trim($data['street_number']),
+            $data['date_of_birth'],
+            trim($data['email']),
+            now()->format('m-d-Y h:i A T'),
+        ];
+
+        $this->safeSend(MV::internalEmail(), new MembershipInquiryInternalMail(...$args));
+        $this->safeSend($args[4], new MembershipInquiryReceivedMail(...$args));
+
+        return response()->json(['success' => true]);
+    }
+
+    /** Placeholder values shared by the verification emails. */
+    private function verificationDetails(array $contact, bool $onlineOptIn): array
+    {
+        $get = fn (string $name) => $this->wa->extractFieldValue($contact, $name);
+
+        return [
+            'member_id'    => MV::display((string) ($contact['Id'] ?? '')),
+            'name'         => MV::display(trim(($contact['FirstName'] ?? '').' '.($contact['LastName'] ?? ''))),
+            'type'         => MV::display($contact['MembershipLevel']['Name'] ?? ''),
+            'center'       => MV::display($get('Zone / Center') ?: $get('custom-9967573')),
+            'expiry'       => MV::formatDate($contact['RenewalDue'] ?? $get('RenewalDue')),
+            'registration' => MV::formatDate($contact['MemberSince'] ?? $get('MemberSince')),
+            'email'        => MV::display((string) ($contact['Email'] ?? '')),
+            'opt_in'       => $onlineOptIn ? 'Yes' : 'No',
+        ];
+    }
+
+    /** Email sent to the member after a lookup (scenarios 1, 3, 4). */
+    private function sendStatusNotice(string $scenario, array $details, string $memberEmail): void
+    {
+        if (! in_array($scenario, [MV::ACTIVE_LATE, MV::LAPSED, MV::ACTIVE_ELIGIBLE], true)) {
+            return;
+        }
+        if ($memberEmail === '') {
+            Log::info('Membership verification: no email on file, status notice skipped', ['scenario' => $scenario]);
+            return;
+        }
+
+        $this->safeSend($memberEmail, new MembershipStatusNoticeMail($scenario, $details));
+    }
+
+    /** Email failures must never break the verification response. */
+    private function safeSend(string $to, \Illuminate\Mail\Mailable $mailable): void
+    {
+        try {
+            Mail::to($to)->send($mailable);
+        } catch (Throwable $e) {
+            Log::error('Membership verification email failed', [
+                'mailable' => class_basename($mailable),
+                'error'    => $e->getMessage(),
+            ]);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────

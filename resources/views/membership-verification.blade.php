@@ -447,6 +447,19 @@
           Please double-check your information or contact
           <strong style="color:#374151;">ISGH support</strong> for assistance.
         </p>
+
+        <!-- Inquiry form (shown only when the lookup found no record) -->
+        <div id="inquiry-section" style="display:none;margin-top:1.25rem;padding:1.25rem 0 0 2.7rem;border-top:1px solid #f1f3f5;">
+          <div class="field" style="margin-bottom:0.9rem;">
+            <label>Email Address <span>*</span></label>
+            <input type="email" id="inp-inquiry-email" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div id="inquiry-msg" style="display:none;margin-bottom:0.75rem;font-size:0.8rem;"></div>
+          <button id="btn-inquiry" onclick="handleInquiry()"
+                  style="width:100%;padding:0.85rem 1rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.85rem;font-family:'SF Pro bold';cursor:pointer;">
+            If you feel this information is incorrect send an inquiry.
+          </button>
+        </div>
       </div>
     </div>
 
@@ -510,13 +523,18 @@
         </div>
 
         <!-- ── DISCLAIMER ── -->
-        <div style="margin-top:1.5rem;display:flex;align-items:flex-start;gap:0.6rem;background:#fff5f5;border:1px solid #fecaca;border-radius:0.75rem;padding:0.85rem 1rem;">
+        <div id="voting-warning" style="margin-top:1.5rem;display:flex;align-items:flex-start;gap:0.6rem;background:#fff5f5;border:1px solid #fecaca;border-radius:0.75rem;padding:0.85rem 1rem;">
           <svg style="width:18px;height:18px;color:#dc2626;flex-shrink:0;margin-top:1px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           </svg>
           <p style="font-size:0.85rem;color:#dc2626;font-style:italic;line-height:1.55;margin:0;">
             You will not be opted for online voting until the administration verifies your identity.
           </p>
+        </div>
+
+        <!-- Renew button (lapsed members only) -->
+        <div id="renew-section" style="display:none;margin-top:1.5rem;">
+          <a id="btn-renew" href="#" style="display:block;text-align:center;padding:0.9rem;background:#043d27;color:white;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';text-decoration:none;">Renew Membership</a>
         </div>
 
         <!-- ── PHOTO UPLOAD SECTION ── -->
@@ -731,6 +749,150 @@
     el.style.display = 'block';
   }
 
+  // ── Scenario handling (active after cutoff / lapsed / not found) ───────────
+  let lastSearch = null;
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function applyScenario(m) {
+    const notEligible = m.scenario === 'active_late' || m.scenario === 'lapsed';
+    document.getElementById('voting-warning').style.display = notEligible ? 'none' : 'flex';
+    document.getElementById('photo-upload-section').style.display = notEligible ? 'none' : 'block';
+    if (notEligible) setVal('res-online-opt-in', 'Not applicable');
+
+    const renew = document.getElementById('renew-section');
+    renew.style.display = m.scenario === 'lapsed' ? 'block' : 'none';
+    if (m.renewal_link) document.getElementById('btn-renew').href = m.renewal_link;
+  }
+
+  function popupButton(label, primary, onclick) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = onclick;
+    b.style.cssText = 'border-radius:999px;padding:0.7rem 1.4rem;font-size:0.85rem;font-family:"SF Pro bold",sans-serif;cursor:pointer;border:1px solid #043d27;'
+      + (primary ? 'background:#043d27;color:white;' : 'background:white;color:#043d27;');
+    return b;
+  }
+
+  function closeStatusPopup() {
+    document.getElementById('status-popup').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function showStatusPopup(m) {
+    const email = esc(m.contact_email);
+    const lapsed = m.scenario === 'lapsed';
+    document.getElementById('status-popup-title').textContent = lapsed
+      ? 'Membership Lapsed: Not Eligible to Vote in 2026'
+      : 'Membership Active: Not Eligible to Vote in This Election';
+    document.getElementById('status-popup-body').innerHTML = lapsed
+      ? `Your membership lapsed on ${esc(m.expiry)}. Voting in the 2026 ISGH elections required an active, renewed membership on or before June 30, 2026. Renewing now returns your membership to active status and does not change 2026 voting eligibility. If you believe this is incorrect, please contact ${email}.`
+      : `Voting eligibility required membership registration on or before June 30, 2026. Our records show your registration date falls after this deadline. If you believe this is incorrect, please contact ${email}.`;
+
+    document.getElementById('dispute-form').style.display = 'none';
+    document.getElementById('inp-dispute-message').value = '';
+    document.getElementById('dispute-msg').style.display = 'none';
+
+    const actions = document.getElementById('status-popup-actions');
+    actions.innerHTML = '';
+    const dispute = popupButton('I Believe This Is Incorrect', false, () => showDisputeForm(m));
+    const close   = popupButton('Close', !lapsed, closeStatusPopup);
+    if (lapsed) {
+      const renew = popupButton('Renew Membership', true, () => { window.location.href = m.renewal_link; });
+      actions.append(renew, dispute, close);
+    } else {
+      actions.append(close, dispute);
+    }
+
+    document.getElementById('status-popup').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function showDisputeForm(m) {
+    document.getElementById('dispute-form').style.display = 'block';
+    const actions = document.getElementById('status-popup-actions');
+    actions.innerHTML = '';
+    const send = popupButton('Submit Request', true, () => submitDispute(send));
+    actions.append(send, popupButton('Cancel', false, () => showStatusPopup(m)));
+  }
+
+  async function submitDispute(btn) {
+    const msgEl = document.getElementById('dispute-msg');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+    try {
+      const res = await fetch('{{ route("membership.dispute") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        body: JSON.stringify({ message: document.getElementById('inp-dispute-message').value.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        document.getElementById('status-popup-title').textContent = 'Request Received: Under Review';
+        document.getElementById('status-popup-body').textContent =
+          'We have received your request to verify your membership status. Our Membership Department is currently reviewing your record and will contact you within 3 to 5 business days. A confirmation has been sent to the email address on file.';
+        document.getElementById('dispute-form').style.display = 'none';
+        const actions = document.getElementById('status-popup-actions');
+        actions.innerHTML = '';
+        actions.append(popupButton('Close', true, closeStatusPopup));
+        return;
+      }
+      msgEl.textContent = data.message || 'Unable to submit your request. Please try again.';
+    } catch (e) {
+      msgEl.textContent = 'A network error occurred. Please try again.';
+    }
+    msgEl.style.color = '#dc2626';
+    msgEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit Request';
+  }
+
+  function setupInquiry(show) {
+    document.getElementById('inquiry-section').style.display = show ? 'block' : 'none';
+    document.getElementById('inp-inquiry-email').value = '';
+    document.getElementById('inquiry-msg').style.display = 'none';
+    document.getElementById('btn-inquiry').disabled = false;
+  }
+
+  async function handleInquiry() {
+    const emailEl = document.getElementById('inp-inquiry-email');
+    const msgEl   = document.getElementById('inquiry-msg');
+    const btn     = document.getElementById('btn-inquiry');
+    const email   = emailEl.value.trim();
+    msgEl.style.display = 'none';
+    emailEl.classList.remove('field-error');
+
+    if (!lastSearch) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      emailEl.classList.add('field-error');
+      msgEl.textContent = 'Please enter a valid email address.';
+      msgEl.style.color = '#dc2626';
+      msgEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    try {
+      const res = await fetch('{{ route("membership.inquiry") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        body: JSON.stringify({ ...lastSearch, email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        msgEl.textContent = 'Thank you. Your inquiry has been received. Our Membership Department will follow up by email within 3 to 5 business days.';
+        msgEl.style.color = '#15803d';
+        msgEl.style.display = 'block';
+        return;
+      }
+      msgEl.textContent = (data.errors && Object.values(data.errors)[0][0]) || data.message || 'Unable to send your inquiry. Please try again.';
+    } catch (e) {
+      msgEl.textContent = 'A network error occurred. Please try again.';
+    }
+    msgEl.style.color = '#dc2626';
+    msgEl.style.display = 'block';
+    btn.disabled = false;
+  }
+
   async function handleVerify() {
     const firstName    = document.getElementById('inp-first-name').value.trim();
     const lastName     = document.getElementById('inp-last-name').value.trim();
@@ -767,6 +929,7 @@
     btn.disabled = true;
     btn.textContent = 'Verifying…';
     showCard(null);
+    lastSearch = { first_name: firstName, last_name: lastName, street_number: streetNumber, date_of_birth: dob };
     verifiedContactId = null;
     resetPhotoSection();
 
@@ -801,15 +964,20 @@
         const idNotice = document.getElementById('id-card-already-uploaded');
         if (idNotice) idNotice.style.display = m.has_id_card ? 'flex' : 'none';
 
+        applyScenario(m);
         showCard('card-found');
+        if (m.scenario === 'active_late' || m.scenario === 'lapsed') showStatusPopup(m);
       } else {
         document.getElementById('not-found-msg').textContent =
           data.message || 'No membership record found.';
+        // Only a genuine "no match" result offers the inquiry form.
+        setupInquiry(!!data.not_found);
         showCard('card-not-found');
       }
     } catch (err) {
       document.getElementById('not-found-msg').textContent =
         'A network error occurred. Please try again.';
+      setupInquiry(false);
       showCard('card-not-found');
     } finally {
       btn.disabled = false;
@@ -881,6 +1049,28 @@
 </script>
 
 <!-- ══════════ SUBMISSION SUCCESS POPUP ══════════ -->
+<!-- Verification status popup (active-late / lapsed) -->
+<div id="status-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:1.5rem;padding:2.25rem 2rem 2rem;max-width:480px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.18);text-align:center;max-height:90vh;overflow:auto;">
+    <div style="width:64px;height:64px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <h3 id="status-popup-title" style="font-family:'SF Pro bold',sans-serif;font-size:1.2rem;color:#111827;margin-bottom:0.65rem;"></h3>
+    <p id="status-popup-body" style="font-size:0.84rem;color:#6b7280;line-height:1.7;margin-bottom:1.25rem;"></p>
+
+    <div id="dispute-form" style="display:none;text-align:left;margin-bottom:1.25rem;">
+      <label for="inp-dispute-message" style="font-size:0.8rem;color:#374151;font-family:'SF Pro bold';">Message (optional)</label>
+      <textarea id="inp-dispute-message" rows="3" maxlength="2000" placeholder="Tell us why you believe this result is incorrect"
+                style="width:100%;margin-top:0.35rem;border:1px solid #d1d5db;border-radius:0.75rem;padding:0.7rem 0.9rem;font-size:0.85rem;"></textarea>
+      <div id="dispute-msg" style="display:none;margin-top:0.5rem;font-size:0.8rem;"></div>
+    </div>
+
+    <div id="status-popup-actions" style="display:flex;flex-wrap:wrap;gap:0.6rem;justify-content:center;"></div>
+  </div>
+</div>
+
 <div id="submission-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1.5rem;">
   <div style="background:white;border-radius:1.5rem;padding:2.25rem 2rem 2rem;max-width:440px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.18);text-align:center;position:relative;">
     <!-- green checkmark circle -->

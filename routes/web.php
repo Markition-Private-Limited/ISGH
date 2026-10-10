@@ -27,7 +27,9 @@ Route::controller(MembershipController::class)->group(function () {
     Route::post('/membership/finalize-payment', 'finalizePayment')->name('membership.finalize-payment');
     Route::get('/membership/success/{id}', 'success')->name('membership.success');
     Route::post('/membership/zip-lookup', 'zipLookup')->name('membership.zip-lookup');
-    Route::post('/membership/verify', 'verifyMembership')->name('membership.verify');
+    Route::post('/membership/verify', 'verifyMembership')->middleware('throttle:20,1')->name('membership.verify');
+    Route::post('/membership/dispute', 'disputeResult')->middleware('throttle:5,1')->name('membership.dispute');
+    Route::post('/membership/inquiry', 'submitInquiry')->middleware('throttle:5,1')->name('membership.inquiry');
     Route::post('/membership/upload-photo', 'uploadMemberPhoto')->name('membership.upload-photo');
     Route::post('/membership/stripe-key', 'stripeKey')->name('membership.stripe-key');
     Route::post('/membership/check-email', 'checkEmail')->name('membership.check-email');
