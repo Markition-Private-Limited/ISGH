@@ -302,6 +302,8 @@
       .result-grid  { grid-template-columns: 1fr; gap: 1.1rem; }
     }
 
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ─── MOBILE (≤ 768px) ────────────────────────── */
     @media (max-width: 768px) {
       .page-outer-wrapper {
@@ -456,8 +458,12 @@
           </div>
           <div id="inquiry-msg" style="display:none;margin-bottom:0.75rem;font-size:0.8rem;"></div>
           <button id="btn-inquiry" onclick="handleInquiry()"
-                  style="width:100%;padding:0.85rem 1rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.85rem;font-family:'SF Pro bold';cursor:pointer;">
-            If you feel this information is incorrect send an inquiry.
+                  style="width:100%;padding:0.85rem 1rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.85rem;font-family:'SF Pro bold';cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+            <svg id="inquiry-spinner" style="display:none;width:16px;height:16px;animation:spin 0.8s linear infinite;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10" opacity="0.25"/>
+              <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+            </svg>
+            <span id="inquiry-btn-label">If you feel this information is incorrect send an inquiry.</span>
           </button>
         </div>
       </div>
@@ -870,7 +876,13 @@
       return;
     }
 
-    btn.disabled = true;
+    const spinner  = document.getElementById('inquiry-spinner');
+    const btnLabel = document.getElementById('inquiry-btn-label');
+    btn.disabled         = true;
+    btn.style.opacity    = '0.75';
+    btn.style.cursor     = 'not-allowed';
+    spinner.style.display  = 'block';
+    btnLabel.textContent   = 'Sending…';
     try {
       const res = await fetch('{{ route("membership.inquiry") }}', {
         method: 'POST',
@@ -882,6 +894,8 @@
         msgEl.textContent = 'Thank you. Your inquiry has been received. Our Membership Department will follow up by email within 3 to 5 business days.';
         msgEl.style.color = '#15803d';
         msgEl.style.display = 'block';
+        spinner.style.display = 'none';
+        btnLabel.textContent  = 'Inquiry Sent';
         return;
       }
       msgEl.textContent = (data.errors && Object.values(data.errors)[0][0]) || data.message || 'Unable to send your inquiry. Please try again.';
@@ -890,7 +904,11 @@
     }
     msgEl.style.color = '#dc2626';
     msgEl.style.display = 'block';
-    btn.disabled = false;
+    spinner.style.display  = 'none';
+    btnLabel.textContent   = 'If you feel this information is incorrect send an inquiry.';
+    btn.disabled        = false;
+    btn.style.opacity   = '1';
+    btn.style.cursor    = 'pointer';
   }
 
   async function handleVerify() {
