@@ -401,10 +401,32 @@ class MembershipController extends Controller
             'contact_id' => 'required|integer|min:1',
             'photo'      => 'required|file|mimes:jpeg,jpg,png,gif,bmp,webp,heic,heif,pdf|max:10240',
             'email'      => 'required|email',
+            'consent'    => 'required|in:1,true',
+        ], [
+            'consent.required' => 'Please accept the Identity Verification Policy to continue.',
+            'consent.in'       => 'Please accept the Identity Verification Policy to continue.',
         ]);
 
         $contactId    = (int) $request->input('contact_id');
         $enteredEmail = trim((string) $request->input('email', ''));
+
+        // Only the Active, eligible member that was just looked up in this
+        // session may upload an ID. Ineligible results (registered after the
+        // cutoff, lapsed) never see the upload section, and the endpoint must
+        // enforce the same rule so it cannot be called directly.
+        $verified = $request->session()->get('membership_verified');
+        if (
+            ! $verified
+            || ($verified['scenario'] ?? null) !== MV::ACTIVE_ELIGIBLE
+            || (int) ($verified['contact_id'] ?? 0) !== $contactId
+        ) {
+            Log::warning('WA uploadMemberPhoto: rejected, contact not verified as eligible', ['contact_id' => $contactId]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Please verify your membership again. ID upload is only available to active, eligible members.',
+            ], 403);
+        }
 
         try {
             $this->wa->uploadContactPicture($contactId, $request->file('photo'));
@@ -413,9 +435,9 @@ class MembershipController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to upload photo: ' . $e->getMessage()], 500);
         }
 
-        // Grant "Online Voting eligible 2026" group participation
+        // Queue the opt-in for membership approval
         try {
-            $this->wa->addGroupParticipation($contactId, 'Online Voting eligible 2026');
+            $this->wa->addGroupParticipation($contactId, 'Online Voting Opt-in Waiting for Approval');
         } catch (Throwable $e) {
             Log::warning('WA uploadMemberPhoto: group participation update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
         }
@@ -454,6 +476,20 @@ class MembershipController extends Controller
             }
         } catch (Throwable $e) {
             Log::warning('WA uploadMemberPhoto: post-upload steps failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
+        }
+
+        // Record identity verification policy consent on WA
+        try {
+            $consentCode = $this->wa->getFieldSystemCodePublic('ISGH Identity verification policy consent');
+            if ($consentCode) {
+                $this->wa->updateMemberRaw($contactId, [
+                    ['FieldName' => 'ISGH Identity verification policy consent', 'SystemCode' => $consentCode, 'Value' => true],
+                ]);
+            } else {
+                Log::warning('WA uploadMemberPhoto: consent field not found on WA', ['contact_id' => $contactId]);
+            }
+        } catch (Throwable $e) {
+            Log::warning('WA uploadMemberPhoto: consent field update failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
         }
 
         return response()->json(['success' => true]);

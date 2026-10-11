@@ -574,8 +574,21 @@
 
           <div id="photo-upload-msg" style="display:none;margin-top:0.75rem;font-size:0.8rem;"></div>
 
-          <button id="btn-photo-submit" onclick="handlePhotoSubmit()"
-                  style="margin-top:1rem;width:100%;padding:0.9rem;background:#043d27;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;">
+          <!-- ── CONSENT CHECKBOX ── -->
+          <label id="consent-label"
+                 style="display:flex;align-items:flex-start;gap:0.65rem;margin-top:1.1rem;padding:0.9rem 1rem;background:#f8fdf9;border:1.5px solid #d1fae5;border-radius:0.85rem;cursor:pointer;">
+            <input type="checkbox" id="consent-checkbox" onchange="handleConsentChange()"
+                   style="width:17px;height:17px;flex-shrink:0;margin-top:2px;accent-color:#0a5e3a;cursor:pointer;">
+            <span style="font-size:0.8rem;color:#374151;line-height:1.6;">
+              By checking this box, I consent to the Islamic Society of Greater Houston (ISGH) collecting and using
+              my provided ID and personal information solely to verify my identity and membership status.
+              I have read and agree to the
+              <a href="#" onclick="event.preventDefault();" style="color:#0a5e3a;font-weight:600;text-decoration:underline;">Identity Verification Policy</a>.
+            </span>
+          </label>
+
+          <button id="btn-photo-submit" onclick="handlePhotoSubmit()" disabled
+                  style="margin-top:1rem;width:100%;padding:0.9rem;background:#9ca3af;color:white;border:none;border-radius:999px;font-size:0.9rem;font-family:'SF Pro bold';cursor:not-allowed;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;">
             Submit
           </button>
         </div>
@@ -717,6 +730,7 @@
     formData.append('contact_id', verifiedContactId);
     formData.append('photo', file);
     formData.append('email', uploadEmail);
+    formData.append('consent', '1');
     formData.append('_token', CSRF);
 
     try {
@@ -1003,7 +1017,19 @@
     }
   }
 
+  function handleConsentChange() {
+    const checked = document.getElementById('consent-checkbox').checked;
+    const btn     = document.getElementById('btn-photo-submit');
+    btn.disabled  = !checked;
+    btn.style.background = checked ? '#043d27' : '#9ca3af';
+    btn.style.cursor     = checked ? 'pointer' : 'not-allowed';
+    btn.style.opacity    = checked ? '1'       : '0.7';
+  }
+
   function resetPhotoSection() {
+    // Reset consent checkbox and disable submit button
+    const cb = document.getElementById('consent-checkbox');
+    if (cb) { cb.checked = false; handleConsentChange(); }
     document.getElementById('photo-input').value = '';
     const preview = document.getElementById('photo-preview');
     preview.src = '';

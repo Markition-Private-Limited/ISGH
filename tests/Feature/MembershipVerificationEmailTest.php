@@ -55,6 +55,45 @@ class MembershipVerificationEmailTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    private function uploadPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'contact_id' => 1001,
+            'photo'      => \Illuminate\Http\UploadedFile::fake()->image('id.jpg'),
+            'email'      => 'ali@example.com',
+            'consent'    => '1',
+        ], $overrides);
+    }
+
+    public function test_upload_requires_consent(): void
+    {
+        $this->withSession(['membership_verified' => ['contact_id' => 1001, 'scenario' => MV::ACTIVE_ELIGIBLE]])
+            ->postJson(route('membership.upload-photo'), $this->uploadPayload(['consent' => '']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('consent');
+    }
+
+    public function test_upload_rejected_without_a_verified_session(): void
+    {
+        $this->postJson(route('membership.upload-photo'), $this->uploadPayload())->assertStatus(403);
+    }
+
+    public function test_upload_rejected_for_ineligible_scenarios(): void
+    {
+        foreach ([MV::ACTIVE_LATE, MV::LAPSED, MV::OTHER] as $scenario) {
+            $this->withSession(['membership_verified' => ['contact_id' => 1001, 'scenario' => $scenario]])
+                ->postJson(route('membership.upload-photo'), $this->uploadPayload())
+                ->assertStatus(403);
+        }
+    }
+
+    public function test_upload_rejected_for_a_different_contact_than_verified(): void
+    {
+        $this->withSession(['membership_verified' => ['contact_id' => 2002, 'scenario' => MV::ACTIVE_ELIGIBLE]])
+            ->postJson(route('membership.upload-photo'), $this->uploadPayload())
+            ->assertStatus(403);
+    }
+
     public function test_status_notice_renders_each_scenario(): void
     {
         foreach ([MV::ACTIVE_ELIGIBLE, MV::ACTIVE_LATE, MV::LAPSED] as $scenario) {
