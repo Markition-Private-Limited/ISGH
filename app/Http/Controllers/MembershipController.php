@@ -364,10 +364,14 @@ class MembershipController extends Controller
         ];
     }
 
-    /** Email sent to the member after a lookup (scenarios 1, 3, 4). */
+    /**
+     * Email sent to the member right after a lookup (scenarios 1 and 3).
+     * Eligible members (scenario 4) get no email at lookup; their only email
+     * is the confirmation sent once they have uploaded their ID card.
+     */
     private function sendStatusNotice(string $scenario, array $details, string $memberEmail): void
     {
-        if (! in_array($scenario, [MV::ACTIVE_LATE, MV::LAPSED, MV::ACTIVE_ELIGIBLE], true)) {
+        if (! in_array($scenario, [MV::ACTIVE_LATE, MV::LAPSED], true)) {
             return;
         }
         if ($memberEmail === '') {
