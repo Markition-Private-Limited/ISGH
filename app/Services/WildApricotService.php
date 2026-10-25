@@ -24,6 +24,11 @@ class WildApricotService
     private string  $baseUrl = 'https://api.wildapricot.org/v2.3';
     private string  $authUrl = 'https://oauth.wildapricot.org/auth/token';
 
+    // searchContact() pages through name matches in chunks of this size, up to
+    // SEARCH_MAX_PAGES chunks (250 contacts sharing one first + last name).
+    private const SEARCH_PAGE_SIZE = 50;
+    private const SEARCH_MAX_PAGES = 5;
+
     public function __construct()
     {
         $this->apiKey              = config('services.wild_apricot.api_key',    env('WILD_APRICOT_API_KEY', ''));
@@ -544,17 +549,22 @@ class WildApricotService
     {
         $accountId = $this->getAccountId();
 
-        // Helper: query contacts with an OData filter, return contacts array
-        $query = function (string $filter) use ($accountId): array {
+        // Helper: query one page of contacts with an OData filter, return contacts array
+        $query = function (string $filter, int $skip = 0) use ($accountId): array {
             $r = $this->apiGet(
                 "/accounts/{$accountId}/contacts?" . http_build_query([
                     '$filter' => $filter,
                     '$async'  => 'false',
-                    '$top'    => 10,
+                    '$top'    => self::SEARCH_PAGE_SIZE,
+                    '$skip'   => $skip,
                 ])
             );
             Log::debug('WA searchContact response', ['status' => $r->status(), 'body' => substr($r->body(), 0, 2000)]);
-            if (! $r->successful()) return [];
+            // A failed lookup must not read as "no such member": throw so the
+            // caller reports a connection problem instead of a false not-found.
+            if (! $r->successful()) {
+                throw new \RuntimeException("WA searchContact query failed ({$r->status()}): " . substr($r->body(), 0, 300));
+            }
             $body = $r->json();
             // WA wraps results in {Contacts:[...]} object
             return $body['Contacts'] ?? (is_array($body) ? array_filter($body, 'is_array') : []);
@@ -626,10 +636,17 @@ class WildApricotService
         if ($firstName !== '' && $lastName !== '') {
             $fn       = str_replace("'", "''", $firstName);
             $ln       = str_replace("'", "''", $lastName);
-            $contacts = $query("FirstName eq '{$fn}' AND LastName eq '{$ln}'");
-            foreach ($contacts as $c) {
-                $fullContact = $fetchFullContact($c);
-                if ($matchesAll($fullContact)) { $contact = $fullContact; break; }
+            // Archived contacts are removed records, and common names can have
+            // many of them (e.g. 15 archived duplicates of one member), so they
+            // are excluded here and results are paged instead of cut at one page.
+            $filter = "FirstName eq '{$fn}' AND LastName eq '{$ln}' AND Archived eq false";
+            for ($page = 0; $page < self::SEARCH_MAX_PAGES && ! $contact; $page++) {
+                $contacts = $query($filter, $page * self::SEARCH_PAGE_SIZE);
+                foreach ($contacts as $c) {
+                    $fullContact = $fetchFullContact($c);
+                    if ($matchesAll($fullContact)) { $contact = $fullContact; break; }
+                }
+                if (count($contacts) < self::SEARCH_PAGE_SIZE) break;
             }
         }
 
