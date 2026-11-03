@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ProcessWildApricotRegistration;
 use App\Models\Member;
+use App\Models\MemberOptIn;
+use Illuminate\Database\UniqueConstraintViolationException;
 use App\Models\Payment;
 use App\Models\PendingRegistration;
 use App\Support\MembershipVerification as MV;
@@ -243,6 +245,10 @@ class MembershipController extends Controller
         $request->session()->put('membership_verified', [
             'contact_id' => $contact['Id'] ?? null,
             'scenario'   => $scenario,
+            'first_name' => $contact['FirstName'] ?? null,
+            'last_name'  => $contact['LastName'] ?? null,
+            'type'       => $levelName,
+            'center'     => $get('Zone / Center') ?: $get('custom-9967573'),
         ]);
 
         $this->sendStatusNotice($scenario, $details, (string) ($contact['Email'] ?? ''));
@@ -432,9 +438,45 @@ class MembershipController extends Controller
             ], 403);
         }
 
+        // One opt-in per email. Checked on every upload, before anything is
+        // written to Wild Apricot.
+        $emailUsedMessage = 'The email entered has already been used for opt-in. Please use a different email address or contact membership.verify@isgh.org.';
+        if (MemberOptIn::emailExists($enteredEmail)) {
+            return response()->json([
+                'success' => false,
+                'message' => $emailUsedMessage,
+                'errors'  => ['email' => [$emailUsedMessage]],
+            ], 422);
+        }
+
+        // Reserve the email first. The unique index makes this safe against two
+        // simultaneous uploads with the same email; the row is removed again if
+        // the ID upload to Wild Apricot fails so the member can retry.
+        try {
+            $optIn = MemberOptIn::create([
+                'contact_id'      => $contactId,
+                'member_email'    => MemberOptIn::normalizeEmail($enteredEmail),
+                'first_name'      => $verified['first_name'] ?? null,
+                'last_name'       => $verified['last_name'] ?? null,
+                'membership_type' => $verified['type'] ?? null,
+                'center'          => $verified['center'] ?? null,
+                'consent_given'   => true,
+                'consent_at'      => now(),
+                'ip_address'      => $request->ip(),
+                'status'          => MemberOptIn::STATUS_WAITING,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            return response()->json([
+                'success' => false,
+                'message' => $emailUsedMessage,
+                'errors'  => ['email' => [$emailUsedMessage]],
+            ], 422);
+        }
+
         try {
             $this->wa->uploadContactPicture($contactId, $request->file('photo'));
         } catch (Throwable $e) {
+            $optIn->delete();
             Log::error('WA uploadMemberPhoto failed', ['contact_id' => $contactId, 'error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Failed to upload photo: ' . $e->getMessage()], 500);
         }
