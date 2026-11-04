@@ -528,15 +528,8 @@
 
         </div>
 
-        <!-- ── DISCLAIMER ── -->
-        <div id="voting-warning" style="margin-top:1.5rem;display:flex;align-items:flex-start;gap:0.6rem;background:#fff5f5;border:1px solid #fecaca;border-radius:0.75rem;padding:0.85rem 1rem;">
-          <svg style="width:18px;height:18px;color:#dc2626;flex-shrink:0;margin-top:1px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          </svg>
-          <p style="font-size:0.85rem;color:#dc2626;font-style:italic;line-height:1.55;margin:0;">
-            You will not be opted for online voting until the administration verifies your identity.
-          </p>
-        </div>
+        <!-- The "not opted in until verified" warning is shown in the
+             submission-success popup, after the ID has been uploaded. -->
 
         <!-- Renew button (lapsed members only) -->
         <div id="renew-section" style="display:none;margin-top:1.5rem;">
@@ -747,7 +740,7 @@
         document.getElementById('photo-drop-label').style.borderColor = '#10b981';
         showSubmissionPopup();
       } else if (res.status === 413 || /request entity too large/i.test(raw)) {
-        showPhotoMsg('Photo is too large for the server. Please use an image under 8 MB.', '#991b1b');
+        showPhotoMsg('Photo is too large for the server. Please use a file under 30 MB.', '#991b1b');
       } else {
         showPhotoMsg(
           data.message || ('Upload failed (HTTP ' + res.status + '). Please try again.'),
@@ -775,7 +768,6 @@
 
   function applyScenario(m) {
     const notEligible = m.scenario === 'active_late' || m.scenario === 'lapsed';
-    document.getElementById('voting-warning').style.display = notEligible ? 'none' : 'flex';
     document.getElementById('photo-upload-section').style.display = notEligible ? 'none' : 'block';
     if (notEligible) setVal('res-online-opt-in', 'Not applicable');
 
@@ -1130,6 +1122,14 @@
     <p style="font-size:0.84rem;color:#6b7280;line-height:1.7;margin-bottom:0.9rem;">
       We will follow up with a confirmation email within <strong style="color:#374151;">3 to 5 business days</strong> once the process is complete.
     </p>
+    <div style="display:flex;align-items:flex-start;gap:0.6rem;text-align:left;background:#fff5f5;border:1px solid #fecaca;border-radius:0.75rem;padding:0.85rem 1rem;margin-bottom:0.9rem;">
+      <svg style="width:18px;height:18px;color:#dc2626;flex-shrink:0;margin-top:1px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      <p style="font-size:0.85rem;color:#dc2626;font-style:italic;line-height:1.55;margin:0;">
+        You will not be opted for online voting until the administration verifies your identity.
+      </p>
+    </div>
     <p style="font-size:0.84rem;color:#374151;font-style:italic;line-height:1.6;margin-bottom:1.5rem;">
       Jazakallah khair for your patience and for being a valued member of our community!
     </p>

@@ -409,7 +409,7 @@ class MembershipController extends Controller
     {
         $request->validate([
             'contact_id' => 'required|integer|min:1',
-            'photo'      => 'required|file|mimes:jpeg,jpg,png,gif,bmp,webp,heic,heif,pdf|max:10240',
+            'photo'      => 'required|file|mimes:jpeg,jpg,png,gif,bmp,webp,heic,heif,pdf|max:30720',
             'email'      => 'required|email',
             'consent'    => 'required|in:1,true',
         ], [
