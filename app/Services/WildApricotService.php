@@ -951,17 +951,9 @@ class WildApricotService
             $publicUrl,
         );
 
-        // 4. Uploading an ID card marks the member as a non-voting member —
-        //    add them to the "NON VOTING MEMBERS 2026" group (preserving
-        //    any groups already assigned).
-        try {
-            $this->addGroupParticipation($contactId, 'NON VOTING MEMBERS 2026');
-        } catch (\Throwable $e) {
-            Log::warning('uploadContactPicture: failed to add NON VOTING MEMBERS 2026 group', [
-                'contact_id' => $contactId,
-                'error'      => $e->getMessage(),
-            ]);
-        }
+        // No group is applied here. This is the online voting opt-in upload, so
+        // the member must not be marked "NON VOTING MEMBERS 2026"; the caller
+        // adds the opt-in group instead.
     }
 
     /**
@@ -1020,14 +1012,14 @@ class WildApricotService
         // Uploading an ID card marks the member as a non-voting member —
         // add them to the "NON VOTING MEMBERS 2026" group (preserving any
         // groups already assigned).
-        try {
-            $this->addGroupParticipation($contactId, 'NON VOTING MEMBERS 2026');
-        } catch (\Throwable $e) {
-            Log::warning('uploadIdCardFromLocalPath: failed to add NON VOTING MEMBERS 2026 group', [
-                'contact_id' => $contactId,
-                'error'      => $e->getMessage(),
-            ]);
-        }
+        // try {
+        //     $this->addGroupParticipation($contactId, 'NON VOTING MEMBERS 2026');
+        // } catch (\Throwable $e) {
+        //     Log::warning('uploadIdCardFromLocalPath: failed to add NON VOTING MEMBERS 2026 group', [
+        //         'contact_id' => $contactId,
+        //         'error'      => $e->getMessage(),
+        //     ]);
+        // }
     }
 
     /**
