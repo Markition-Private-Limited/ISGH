@@ -28,7 +28,7 @@ return [
     'verification' => [
         'internal_email'    => env('MEMBERSHIP_VERIFY_EMAIL', 'membership.verify@isgh.org'),
         // Last day a registration / renewal counted toward 2026 voting eligibility.
-        'voting_cutoff'     => env('MEMBERSHIP_VOTING_CUTOFF', '2026-06-30'),
+        'voting_cutoff'     => env('MEMBERSHIP_VOTING_CUTOFF', '2026-07-01'),
         'renewal_link'      => env('MEMBERSHIP_RENEWAL_LINK'),
         'phone'             => env('MEMBERSHIP_PHONE', '(713) 524-6615 ext 105/108'),
         'website'           => env('MEMBERSHIP_WEBSITE', 'https://www.isgh.org'),
